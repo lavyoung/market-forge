@@ -19,6 +19,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /**
+     * 将业务异常转换为统一失败响应。
+     *
+     * @param exception 业务异常
+     * @return 包含业务错误码和错误信息的失败响应
+     */
     @ExceptionHandler(BusinessException.class)
     public Response<Void> handleBusinessException(
             BusinessException exception) {
@@ -29,6 +35,12 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * 处理请求体字段校验失败。
+     *
+     * @param exception 方法参数校验异常
+     * @return 参数校验失败响应
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public Response<Void> handleMethodArgumentNotValidException(
             MethodArgumentNotValidException exception) {
@@ -47,6 +59,12 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * 处理路径参数或查询参数约束校验失败。
+     *
+     * @param exception 约束校验异常
+     * @return 参数约束校验失败响应
+     */
     @ExceptionHandler(ConstraintViolationException.class)
     public Response<Void> handleConstraintViolationException(
             ConstraintViolationException exception) {
@@ -57,6 +75,12 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * 处理请求体缺失或无法反序列化的情况。
+     *
+     * @param exception 请求体读取异常
+     * @return 请求体格式错误响应
+     */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public Response<Void> handleHttpMessageNotReadableException(
             HttpMessageNotReadableException exception) {
@@ -67,6 +91,12 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * 处理未被其他处理器捕获的系统异常。
+     *
+     * @param exception 未知系统异常
+     * @return 隐藏内部细节的系统错误响应
+     */
     @ExceptionHandler(Exception.class)
     public Response<Void> handleException(
             Exception exception) {

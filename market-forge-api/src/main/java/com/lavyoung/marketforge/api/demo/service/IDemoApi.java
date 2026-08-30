@@ -13,6 +13,12 @@ import com.lavyoung.marketforge.types.model.Response;
  */
 public interface IDemoApi {
 
+    /**
+     * 创建演示对象。
+     *
+     * @param request 创建请求
+     * @return 包含新建演示对象的统一响应
+     */
     Response<DemoDTO> create(CreateDemoRequest request);
 
 }

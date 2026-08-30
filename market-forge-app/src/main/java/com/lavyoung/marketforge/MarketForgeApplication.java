@@ -13,6 +13,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class MarketForgeApplication {
 
+    /**
+     * 启动 Market Forge Spring Boot 应用。
+     *
+     * @param args 应用启动参数
+     */
     public static void main(String[] args) {
 
         SpringApplication.run(
