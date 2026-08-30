@@ -2,9 +2,23 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3306/ddd_forge_demo?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: root
-    password: root
+    url: jdbc:mysql://192.168.3.127:3306/market-forge?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: dev
+    password: Fssm76GKB
+
+  data:
+    redis:
+      host: 192.168.3.127
+      password: sYogkA6cjqyZBwuI+5bE7AFTWKtVvBQs
 
 server:
-  port: 8080
+  port: 23001
+
+
+
+
+
+mybatis:
+  mapper-locations:
+    - classpath*:mybatis/mapper/*.xml
+#  config-location: classpath*:mybatis/config/mybatis-conifg.xml

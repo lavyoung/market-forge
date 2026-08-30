@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lavyoung.marketforge.infrastructure.persistent.dao.IAwardDao">
+
+    <resultMap id="awardResultMap" type="com.lavyoung.marketforge.infrastructure.persistent.po.AwardPO">
+        <id column="id" property="id"/>
+        <result column="award_id" property="awardId"/>
+        <result column="award_key" property="awardKey"/>
+        <result column="award_config" property="awardConfig"/>
+        <result column="award_desc" property="awardDesc"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="awardColumns">
+        id, award_key, award_config, award_desc, create_time, update_time
+    </sql>
+
+    <select id="queryAwardByAwardKey" resultMap="awardResultMap">
+        SELECT
+        <include refid="awardColumns"/>
+        FROM award
+        WHERE award_key = #{awardKey}
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.lavyoung.marketforge.infrastructure.persistent.po.AwardPO"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO award (award_key, award_config, award_desc)
+        VALUES (#{awardKey}, #{awardConfig}, #{awardDesc})
+    </insert>
+
+    <update id="updateByAwardKey" parameterType="com.lavyoung.marketforge.infrastructure.persistent.po.AwardPO">
+        UPDATE award
+        SET award_config = #{awardConfig},
+        award_desc = #{awardDesc}
+        WHERE award_key = #{awardKey}
+    </update>
+
+</mapper>
