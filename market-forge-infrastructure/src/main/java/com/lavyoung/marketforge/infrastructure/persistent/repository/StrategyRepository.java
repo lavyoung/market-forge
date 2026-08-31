@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -55,9 +54,9 @@ public class StrategyRepository implements IStrategyRepository {
      * @param shuffleStrategyAwardSearchTables 下标到奖品标识的乱序查找表
      */
     @Override
-    public void storeStrategyAwardSearchTables(Long strategyId, BigDecimal rateRange, Map<Integer, Integer> shuffleStrategyAwardSearchTables) {
+    public void storeStrategyAwardSearchTables(Long strategyId, Integer rateRange, Map<Integer, Long> shuffleStrategyAwardSearchTables) {
         // 1. 存储抽奖策略范围值 如随机数的范围
-        redisService.setValue(Constants.RedisKeys.STRATEGY_RATE_RANGE_KEY + strategyId, rateRange.intValue());
+        redisService.setValue(Constants.RedisKeys.STRATEGY_RATE_RANGE_KEY + strategyId, rateRange);
         // 2. 存储概率查找表
         redisService.putHashValues(Constants.RedisKeys.STRATEGY_RATE_TABLE_KEY + strategyId, shuffleStrategyAwardSearchTables);
     }
@@ -81,8 +80,8 @@ public class StrategyRepository implements IStrategyRepository {
      * @return 奖品标识；查找表中不存在对应下标时返回 {@code 0}
      */
     @Override
-    public int getStrategyAwardAssemble(Long strategyId, int rateKey) {
-        return redisService.getHashValue(Constants.RedisKeys.STRATEGY_RATE_TABLE_KEY + strategyId, rateKey, Integer.class).orElse(0);
+    public long getStrategyAwardAssemble(Long strategyId, int rateKey) {
+        return redisService.getHashValue(Constants.RedisKeys.STRATEGY_RATE_TABLE_KEY + strategyId, rateKey, Long.class).orElse(0L);
     }
 
     /**

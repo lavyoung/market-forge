@@ -25,5 +25,5 @@ public interface IStrategyArmory {
      * @return 随机选中的奖品标识
      * @throws IllegalArgumentException 策略尚未装配或随机数范围无效时抛出
      */
-    int getRandomAwardId(Long strategyId);
+    long getRandomAwardId(Long strategyId);
 }

@@ -68,13 +68,13 @@ public class StrategyArmory implements IStrategyArmory {
         Collections.shuffle(strategyAwardSearchTables);
 
         // 7.
-        HashMap<Integer, Integer> shuffleStrategyAwardSearchTables = new HashMap<>();
+        HashMap<Integer, Long> shuffleStrategyAwardSearchTables = new HashMap<>();
         for (int i = 0; i < strategyAwardSearchTables.size(); i++) {
-            shuffleStrategyAwardSearchTables.put(i, shuffleStrategyAwardSearchTables.get(i));
+            shuffleStrategyAwardSearchTables.put(i, strategyAwardSearchTables.get(i));
         }
 
         // 8. 存储到缓存
-        repository.storeStrategyAwardSearchTables(strategyId, rateRange, shuffleStrategyAwardSearchTables);
+        repository.storeStrategyAwardSearchTables(strategyId, shuffleStrategyAwardSearchTables.size(), shuffleStrategyAwardSearchTables);
 
     }
 
@@ -86,7 +86,7 @@ public class StrategyArmory implements IStrategyArmory {
      * @throws IllegalArgumentException 策略尚未装配或随机数范围无效时抛出
      */
     @Override
-    public int getRandomAwardId(Long strategyId) {
+    public long getRandomAwardId(Long strategyId) {
         return repository.getStrategyAwardAssemble(strategyId, new SecureRandom().nextInt(repository.getRateRange(strategyId)));
     }
 }

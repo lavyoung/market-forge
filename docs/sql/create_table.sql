@@ -36,7 +36,7 @@ create table strategy_award
     award_subtitle      varchar(128)                       null comment '奖品副标题',
     award_count         int      default 0                 not null comment '奖品库存总量',
     award_count_surplus int      default 0                 not null comment '奖品库存剩余量',
-    award_rate          decimal  default 0                 not null comment '奖品中奖概率',
+    award_rate decimal(10, 5) default 0.00000 not null comment '奖品中奖概率',
     rule_models         varchar(32)                        null comment '规则模型',
     sort                int                                not null comment '奖品顺序',
     create_time         datetime default (now())           not null comment '创建时间',

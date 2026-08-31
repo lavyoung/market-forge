@@ -2,7 +2,6 @@ package com.lavyoung.marketforge.domain.strategy.repository;
 
 import com.lavyoung.marketforge.domain.strategy.model.StrategyAwardEntity;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -30,7 +29,7 @@ public interface IStrategyRepository {
      * @param rateRange                        概率查找范围
      * @param shuffleStrategyAwardSearchTables 下标到奖品标识的乱序查找表
      */
-    void storeStrategyAwardSearchTables(Long strategyId, BigDecimal rateRange, Map<Integer, Integer> shuffleStrategyAwardSearchTables);
+    void storeStrategyAwardSearchTables(Long strategyId, Integer rateRange, Map<Integer, Long> shuffleStrategyAwardSearchTables);
 
     /**
      * 获取指定策略装配后的随机数范围。
@@ -47,5 +46,5 @@ public interface IStrategyRepository {
      * @param rateKey    概率查找表下标
      * @return 奖品标识；查找表中不存在对应下标时返回 {@code 0}
      */
-    int getStrategyAwardAssemble(Long strategyId, int rateKey);
+    long getStrategyAwardAssemble(Long strategyId, int rateKey);
 }
