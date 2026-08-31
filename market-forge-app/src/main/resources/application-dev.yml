@@ -10,6 +10,7 @@ spring:
     redis:
       host: 192.168.3.127
       password: sYogkA6cjqyZBwuI+5bE7AFTWKtVvBQs
+      port: 6379
 
 server:
   port: 23001

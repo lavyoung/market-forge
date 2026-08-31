@@ -9,9 +9,8 @@ spring:
 server:
   port: 8080
 
-
-  configuration:
-    map-underscore-to-camel-case: true
+mybatis:
+  config-location: classpath:mybatis/config/mybatis-config.xml
 
 logging:
   level:

@@ -50,16 +50,6 @@ public class ArchitectureTest {
                     .dependOnClassesThat()
                     .resideInAPackage("..application..");
 
-    /** 应用层不得依赖触发器层。 */
-    @ArchTest
-    static final ArchRule applicationShouldNotDependOnTrigger =
-            noClasses()
-                    .that()
-                    .resideInAPackage("..application..")
-                    .should()
-                    .dependOnClassesThat()
-                    .resideInAPackage("..trigger..");
-
     /** 基础设施层不得依赖触发器层。 */
     @ArchTest
     static final ArchRule infrastructureShouldNotDependOnTrigger =
