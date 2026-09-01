@@ -1,6 +1,6 @@
 package com.lavyoung.marketforge;
 
-import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyArmory;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.StrategyArmoryDispatch;
 import com.lavyoung.marketforge.types.common.Constants;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @ActiveProfiles("dev")
 @EnabledIfEnvironmentVariable(named = "RUN_DEV_INTEGRATION_TESTS", matches = "true")
 @Slf4j
-class StrategyArmoryDevIntegrationTest {
+class StrategyArmoryDispatchDevIntegrationTest {
 
     private static final long STRATEGY_ID = 900_831_001L;
     private static final int DRAW_COUNT = 1_000;
@@ -42,7 +42,7 @@ class StrategyArmoryDevIntegrationTest {
     private RedissonClient redissonClient;
 
     @Autowired
-    private IStrategyArmory strategyArmory;
+    private StrategyArmoryDispatch strategyArmoryDispatch;
 
     /**
      * 写入独立的开发验证数据，装配概率表并重复抽取验证结果范围。
@@ -52,7 +52,7 @@ class StrategyArmoryDevIntegrationTest {
         prepareDevelopmentAwards();
         clearAssembledStrategyCache();
 
-        strategyArmory.assembleLotteryStrategy(STRATEGY_ID);
+        strategyArmoryDispatch.assembleLotteryStrategy(STRATEGY_ID);
 
         assertRandomAwardResults();
     }
@@ -78,7 +78,7 @@ class StrategyArmoryDevIntegrationTest {
     private void assertRandomAwardResults() {
         Map<Long, Integer> awardCounts = new HashMap<>();
         for (int i = 0; i < DRAW_COUNT; i++) {
-            long awardId = strategyArmory.getRandomAwardId(STRATEGY_ID);
+            long awardId = strategyArmoryDispatch.getRandomAwardId(STRATEGY_ID);
             assertTrue(EXPECTED_AWARD_IDS.contains(awardId), "返回了未配置的奖品: " + awardId);
             awardCounts.merge(awardId, 1, Integer::sum);
         }

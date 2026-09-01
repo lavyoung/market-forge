@@ -1,6 +1,7 @@
 package com.lavyoung.marketforge.domain.strategy.service.armorcy;
 
 import com.lavyoung.marketforge.domain.strategy.model.StrategyAwardEntity;
+import com.lavyoung.marketforge.domain.strategy.model.StrategyEntity;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +26,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class StrategyArmory implements IStrategyArmory {
+public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatch {
 
     private final IStrategyRepository repository;
 
@@ -38,22 +39,51 @@ public class StrategyArmory implements IStrategyArmory {
      * @throws ArithmeticException 奖品概率无法形成有效概率范围时抛出
      */
     @Override
-    public void assembleLotteryStrategy(Long strategyId) {
+    public boolean assembleLotteryStrategy(Long strategyId) {
         // 1. 查询策略配置
         List<StrategyAwardEntity> strategyAwardEntities = repository.queryStrategyAwardList(strategyId);
 
-        // 2. 获取最小概率值
+        // 2. 组装策略查询表
+        assembleLotteryStrategy(String.valueOf(strategyId), strategyAwardEntities);
+
+        // 3. 权重策略配置
+        StrategyEntity strategyEntity = repository.queryStrategyEntityByStrategyId(strategyId);
+
+        // todo
+
+        return true;
+    }
+
+    private void assembleLotteryStrategy(String key, List<StrategyAwardEntity> strategyAwardEntities) {
+        // 1. 获取最小概率值
         BigDecimal minAwardRate = strategyAwardEntities.stream().map(StrategyAwardEntity::getAwardRate).min(BigDecimal::compareTo)
                 .orElse(BigDecimal.ZERO);
 
-        // 3. 获取概率值的总和
+        // 2. 获取概率值的总和
         BigDecimal totalAwardRate = strategyAwardEntities.stream().map(StrategyAwardEntity::getAwardRate)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // 4. 获取概率范围
+        // 3. 获取概率范围
+        ArrayList<Long> strategyAwardSearchTables = getStrategyAwardSearchTables(strategyAwardEntities, totalAwardRate, minAwardRate);
+
+        // 5. 乱序
+        Collections.shuffle(strategyAwardSearchTables);
+
+        // 6.
+        HashMap<Integer, Long> shuffleStrategyAwardSearchTables = new HashMap<>();
+        for (int i = 0; i < strategyAwardSearchTables.size(); i++) {
+            shuffleStrategyAwardSearchTables.put(i, strategyAwardSearchTables.get(i));
+        }
+
+        // 7. 存储到缓存
+        repository.storeStrategyAwardSearchTables(key, shuffleStrategyAwardSearchTables.size(), shuffleStrategyAwardSearchTables);
+
+    }
+
+    private static ArrayList<Long> getStrategyAwardSearchTables(List<StrategyAwardEntity> strategyAwardEntities, BigDecimal totalAwardRate, BigDecimal minAwardRate) {
         BigDecimal rateRange = totalAwardRate.divide(minAwardRate, 0, RoundingMode.CEILING);
 
-        // 5. 生成值的范围 概率查询表
+        //  生成值的范围 概率查询表
         ArrayList<Long> strategyAwardSearchTables = new ArrayList<>(rateRange.intValue());
         for (StrategyAwardEntity strategyAwardEntity : strategyAwardEntities) {
             Long awardId = strategyAwardEntity.getAwardId();
@@ -63,19 +93,7 @@ public class StrategyArmory implements IStrategyArmory {
                 strategyAwardSearchTables.add(awardId);
             }
         }
-
-        // 6. 乱序
-        Collections.shuffle(strategyAwardSearchTables);
-
-        // 7.
-        HashMap<Integer, Long> shuffleStrategyAwardSearchTables = new HashMap<>();
-        for (int i = 0; i < strategyAwardSearchTables.size(); i++) {
-            shuffleStrategyAwardSearchTables.put(i, strategyAwardSearchTables.get(i));
-        }
-
-        // 8. 存储到缓存
-        repository.storeStrategyAwardSearchTables(strategyId, shuffleStrategyAwardSearchTables.size(), shuffleStrategyAwardSearchTables);
-
+        return strategyAwardSearchTables;
     }
 
     /**

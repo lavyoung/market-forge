@@ -21,6 +21,11 @@ public class Constants {
         public static final String STRATEGY_AWARD_KEY = "strategy_award_key:";
 
         /**
+         *
+         */
+        public static final String STRATEGY_KEY = "strategy_key:";
+
+        /**
          * 策略概率范围的缓存键前缀。
          */
         public static final String STRATEGY_RATE_RANGE_KEY = "strategy_rate_range_key:";

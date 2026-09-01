@@ -18,10 +18,6 @@ import java.time.LocalDateTime;
 public class StrategyAwardEntity {
 
     /**
-     * 自增id
-     */
-    private Long id;
-    /**
      * 抽奖策略id
      */
     private Long strategyId;

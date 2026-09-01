@@ -1,9 +1,12 @@
 package com.lavyoung.marketforge.infrastructure.persistent.repository;
 
 import com.lavyoung.marketforge.domain.strategy.model.StrategyAwardEntity;
+import com.lavyoung.marketforge.domain.strategy.model.StrategyEntity;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyAwardDao;
+import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyDao;
 import com.lavyoung.marketforge.infrastructure.persistent.mapper.StrategyAwardMapper;
+import com.lavyoung.marketforge.infrastructure.persistent.mapper.StrategyMapper;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
 import com.lavyoung.marketforge.types.common.Constants;
 import lombok.RequiredArgsConstructor;
@@ -27,9 +30,13 @@ public class StrategyRepository implements IStrategyRepository {
 
     private final IStrategyAwardDao strategyAwardDao;
 
+    private final IStrategyDao strategyDao;
+
     private final IRedisService redisService;
 
     private final StrategyAwardMapper strategyAwardMapper;
+
+    private final StrategyMapper strategyMapper;
 
     /**
      * {@inheritDoc}
@@ -49,16 +56,16 @@ public class StrategyRepository implements IStrategyRepository {
     /**
      * {@inheritDoc}
      *
-     * @param strategyId                       策略标识
+     * @param key                              策略标识
      * @param rateRange                        概率查找范围
      * @param shuffleStrategyAwardSearchTables 下标到奖品标识的乱序查找表
      */
     @Override
-    public void storeStrategyAwardSearchTables(Long strategyId, Integer rateRange, Map<Integer, Long> shuffleStrategyAwardSearchTables) {
+    public void storeStrategyAwardSearchTables(String key, Integer rateRange, Map<Integer, Long> shuffleStrategyAwardSearchTables) {
         // 1. 存储抽奖策略范围值 如随机数的范围
-        redisService.setValue(Constants.RedisKeys.STRATEGY_RATE_RANGE_KEY + strategyId, rateRange);
+        redisService.setValue(Constants.RedisKeys.STRATEGY_RATE_RANGE_KEY + key, rateRange);
         // 2. 存储概率查找表
-        redisService.putHashValues(Constants.RedisKeys.STRATEGY_RATE_TABLE_KEY + strategyId, shuffleStrategyAwardSearchTables);
+        redisService.putHashValues(Constants.RedisKeys.STRATEGY_RATE_TABLE_KEY + key, shuffleStrategyAwardSearchTables);
     }
 
     /**
@@ -82,6 +89,14 @@ public class StrategyRepository implements IStrategyRepository {
     @Override
     public long getStrategyAwardAssemble(Long strategyId, int rateKey) {
         return redisService.getHashValue(Constants.RedisKeys.STRATEGY_RATE_TABLE_KEY + strategyId, rateKey, Long.class).orElse(0L);
+    }
+
+    @Override
+    public StrategyEntity queryStrategyEntityByStrategyId(Long strategyId) {
+        // 缓存key
+        String cacheKey = Constants.RedisKeys.STRATEGY_KEY + strategyId;
+        return redisService.getValue(cacheKey, StrategyEntity.class)
+                .orElseGet(() -> strategyMapper.toEntity(strategyDao.queryStrategyByStrategyId(strategyId).orElse(null)));
     }
 
     /**

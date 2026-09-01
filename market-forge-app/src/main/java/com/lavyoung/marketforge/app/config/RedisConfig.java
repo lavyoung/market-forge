@@ -1,4 +1,4 @@
-package com.lavyoung.marketforge.config;
+package com.lavyoung.marketforge.app.config;
 
 
 import org.redisson.Redisson;

@@ -1,5 +1,7 @@
 package com.lavyoung.marketforge.types.exception;
 
+import lombok.Getter;
+
 /**
  * 表示可预期的业务异常。
  *
@@ -7,9 +9,15 @@ package com.lavyoung.marketforge.types.exception;
  * @email lavyoung1325@outlook.com
  * @version 1.0.0-SNAPSHOT
  */
+@Getter
 public class BusinessException extends RuntimeException {
 
-    /** 业务错误码。 */
+    /**
+     * 业务错误码。
+     * -- GETTER --
+     * 获取业务错误码。
+     *
+     */
     private final String code;
 
     /**
@@ -21,15 +29,6 @@ public class BusinessException extends RuntimeException {
     public BusinessException(String code, String message) {
         super(message);
         this.code = code;
-    }
-
-    /**
-     * 获取业务错误码。
-     *
-     * @return 业务错误码
-     */
-    public String getCode() {
-        return code;
     }
 
 }
