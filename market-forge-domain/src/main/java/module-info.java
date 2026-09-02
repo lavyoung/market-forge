@@ -8,5 +8,6 @@ module market.forge.domain {
     requires org.slf4j;
     requires static lombok;
     requires spring.core;
-
+    requires org.apache.commons.lang3;
+    requires market.forge.types;
 }

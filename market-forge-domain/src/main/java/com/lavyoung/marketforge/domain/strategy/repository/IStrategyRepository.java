@@ -2,6 +2,8 @@ package com.lavyoung.marketforge.domain.strategy.repository;
 
 import com.lavyoung.marketforge.domain.strategy.model.StrategyAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.StrategyEntity;
+import com.lavyoung.marketforge.domain.strategy.model.StrategyRuleEntity;
+import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 
 import java.util.List;
 import java.util.Map;
@@ -53,7 +55,16 @@ public interface IStrategyRepository {
      * 策略
      *
      * @param strategyId 策略id
-     * @return todo
+     * @return 策略基本信息
      */
     StrategyEntity queryStrategyEntityByStrategyId(Long strategyId);
+
+    /**
+     * 查询策略规则详情
+     *
+     * @param strategyId 规则id
+     * @param ruleModel  规则模型
+     * @return 规则详情
+     */
+    StrategyRuleEntity getStrategyRule(Long strategyId, RuleModel ruleModel);
 }

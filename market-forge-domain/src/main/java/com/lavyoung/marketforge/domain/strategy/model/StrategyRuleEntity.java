@@ -1,9 +1,12 @@
 package com.lavyoung.marketforge.domain.strategy.model;
 
+import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 策略规则实体
@@ -31,10 +34,17 @@ public class StrategyRuleEntity {
     private Integer ruleType;
     /**
      * 抽奖规则类型:【rule_lock】
+     * com.lavyoung.marketforge.types.domain.strategy.RuleModel
      */
     private String ruleModel;
     /**
      * 抽奖规则比值
+     * <p>
+     * rule_lock: 配置抽奖次数解锁某个奖品
+     * rule_weight: 达到或者消耗积分到达多少 可选抽奖范围 格式： 积分值1:奖品编号1/奖品编号2/奖品编号3;积分值2:奖品编号2/奖品编号3
+     * rule_random: 随机奖
+     * rule_luck_award: 兜底的幸运星
+     *
      */
     private String ruleValue;
     /**
@@ -49,4 +59,13 @@ public class StrategyRuleEntity {
      * 更新时间
      */
     private LocalDateTime updateTime;
+
+
+    public Map<String, List<Long>> getRuleWeightValues() {
+        if (RuleModel.WEIGHT.getCode().equals(ruleModel)) {
+            return Map.of();
+        }
+
+        return null;
+    }
 }

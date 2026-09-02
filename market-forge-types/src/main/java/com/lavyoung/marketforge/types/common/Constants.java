@@ -10,6 +10,15 @@ package com.lavyoung.marketforge.types.common;
 public class Constants {
 
 
+    public static final String SPLIT = "/";
+
+    public static final String COLON = ":";
+
+    public static final String SPACE = "";
+
+    public static final String SEMICOLON = ";";
+
+
     /**
      * 抽奖策略相关的 Redis 键前缀。
      */

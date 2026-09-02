@@ -2,7 +2,11 @@ package com.lavyoung.marketforge.domain.strategy.service.armorcy;
 
 import com.lavyoung.marketforge.domain.strategy.model.StrategyAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.StrategyEntity;
+import com.lavyoung.marketforge.domain.strategy.model.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
+import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
+import com.lavyoung.marketforge.types.exception.BusinessException;
+import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -48,8 +52,14 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
 
         // 3. 权重策略配置
         StrategyEntity strategyEntity = repository.queryStrategyEntityByStrategyId(strategyId);
-
-        // todo
+        if (strategyEntity == null || !strategyEntity.toRuleModes().contains(RuleModel.WEIGHT)) {
+            return true;
+        }
+        StrategyRuleEntity strategyRule = repository.getStrategyRule(strategyId, RuleModel.WEIGHT);
+        if (strategyRule == null) {
+            throw new BusinessException(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID.getCode(), BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID.getMsg());
+        }
+        //
 
         return true;
     }

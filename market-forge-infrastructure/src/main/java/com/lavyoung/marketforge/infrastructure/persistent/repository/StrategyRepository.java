@@ -2,6 +2,7 @@ package com.lavyoung.marketforge.infrastructure.persistent.repository;
 
 import com.lavyoung.marketforge.domain.strategy.model.StrategyAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.StrategyEntity;
+import com.lavyoung.marketforge.domain.strategy.model.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyAwardDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyDao;
@@ -9,6 +10,7 @@ import com.lavyoung.marketforge.infrastructure.persistent.mapper.StrategyAwardMa
 import com.lavyoung.marketforge.infrastructure.persistent.mapper.StrategyMapper;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
 import com.lavyoung.marketforge.types.common.Constants;
+import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -97,6 +99,11 @@ public class StrategyRepository implements IStrategyRepository {
         String cacheKey = Constants.RedisKeys.STRATEGY_KEY + strategyId;
         return redisService.getValue(cacheKey, StrategyEntity.class)
                 .orElseGet(() -> strategyMapper.toEntity(strategyDao.queryStrategyByStrategyId(strategyId).orElse(null)));
+    }
+
+    @Override
+    public StrategyRuleEntity getStrategyRule(Long strategyId, RuleModel ruleModel) {
+        return null;
     }
 
     /**
