@@ -8,6 +8,7 @@ permissions:
   contents: read
   issues: write
   pull-requests: write
+  security-events: write
 
 concurrency:
   group: ai-code-review-pr-${{ github.event.pull_request.number }}
@@ -19,12 +20,47 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out the PR head commit
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Detect Java source
+        id: java
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-tree -r --name-only HEAD | grep -Eq '\.java$'; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Initialize Java CodeQL evidence
+        if: steps.java.outputs.enabled == 'true'
+        uses: github/codeql-action/init@v4
+        with:
+          languages: java
+          build-mode: none
+
+      - name: Analyze Java source
+        if: steps.java.outputs.enabled == 'true'
+        uses: github/codeql-action/analyze@v4
+        with:
+          output: ${{ github.workspace }}/sarif-results
+          upload: never
+
+      - name: Locate Java SARIF evidence
+        if: steps.java.outputs.enabled == 'true'
+        id: sarif
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          reports=("$GITHUB_WORKSPACE"/sarif-results/*.sarif)
+          [[ ${#reports[@]} -eq 1 ]]
+          printf 'path=%s\n' "${reports[0]}" >> "$GITHUB_OUTPUT"
 
       - name: Run unified AI Code Review
         uses: lavyoung/ai-code-review@v0.1.1
@@ -32,6 +68,9 @@ jobs:
           output-language: zh-CN
           comment-enabled: "true"
           deepseek-enabled: "true"
+          java-ast-enabled: ${{ steps.java.outputs.enabled }}
+          sarif-enabled: ${{ steps.java.outputs.enabled }}
+          sarif-report: ${{ steps.sarif.outputs.path }}
           secret-scan-enabled: "true"
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
