@@ -27,7 +27,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Run unified AI Code Review
-        uses: lavyoung/ai-code-review@v0.1.0
+        uses: lavyoung/ai-code-review@v0.1.1
         with:
           output-language: zh-CN
           comment-enabled: "true"
