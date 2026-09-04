@@ -26,16 +26,11 @@
         LIMIT 1
     </select>
 
-    <insert id="insert" parameterType="com.lavyoung.marketforge.infrastructure.persistent.po.AwardPO"
-            useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO award (award_key, award_config, award_desc)
-        VALUES (#{awardKey}, #{awardConfig}, #{awardDesc})
-    </insert>
-
     <update id="updateByAwardKey" parameterType="com.lavyoung.marketforge.infrastructure.persistent.po.AwardPO">
         UPDATE award
         SET award_config = #{awardConfig},
-        award_desc = #{awardDesc}
+        award_desc = #{awardDesc},
+        update_time = CURRENT_TIMESTAMP
         WHERE award_key = #{awardKey}
     </update>
 

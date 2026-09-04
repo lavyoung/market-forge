@@ -1,6 +1,6 @@
 package com.lavyoung.marketforge.infrastructure.persistent.mapper;
 
-import com.lavyoung.marketforge.domain.strategy.model.StrategyAwardEntity;
+import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyAwardPO;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingConstants;

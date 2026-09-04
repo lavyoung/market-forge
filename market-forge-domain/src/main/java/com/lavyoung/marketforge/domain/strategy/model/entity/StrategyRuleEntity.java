@@ -1,15 +1,21 @@
-package com.lavyoung.marketforge.domain.strategy.model;
+package com.lavyoung.marketforge.domain.strategy.model.entity;
 
+import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import lombok.Builder;
 import lombok.Data;
+import org.apache.commons.lang3.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
- * 策略规则实体
+ * 抽奖策略规则实体。
+ * <p>
+ * 描述策略级或奖品级规则，并提供对权重规则配置值的结构化解析能力。
  *
  * @author lavyoung
  * @version 1.0.0
@@ -61,11 +67,24 @@ public class StrategyRuleEntity {
     private LocalDateTime updateTime;
 
 
+    /**
+     * 将规则值解析为“权重门槛—可选奖品标识列表”的映射。
+     * <p>
+     * 规则值格式为 {@code 权重值:奖品ID/奖品ID;权重值:奖品ID}；
+     * 当前规则无需解析或规则值为空时返回空映射。
+     *
+     * @return 权重门槛到奖品标识列表的映射，不返回 {@code null}
+     * @throws NumberFormatException     规则值中的奖品标识不是有效数字时抛出
+     * @throws IndexOutOfBoundsException 规则值缺少权重门槛或奖品列表时抛出
+     */
     public Map<String, List<Long>> getRuleWeightValues() {
         if (RuleModel.WEIGHT.getCode().equals(ruleModel)) {
             return Map.of();
         }
-
-        return null;
+        if (StringUtils.isBlank(ruleValue)) {
+            return Map.of();
+        }
+        return Arrays.stream(ruleValue.split(Constants.SEMICOLON)).map(e -> Arrays.stream(e.split(Constants.COLON)).toList())
+                .collect(Collectors.toMap(x -> x.get(0), v -> Arrays.stream(v.get(1).split(Constants.SPLIT)).map(Long::valueOf).toList()));
     }
 }

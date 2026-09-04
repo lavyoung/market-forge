@@ -1,6 +1,6 @@
 package com.lavyoung.marketforge;
 
-import com.lavyoung.marketforge.domain.strategy.service.armorcy.StrategyArmoryDispatch;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.impl.StrategyArmoryDispatch;
 import com.lavyoung.marketforge.types.common.Constants;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;

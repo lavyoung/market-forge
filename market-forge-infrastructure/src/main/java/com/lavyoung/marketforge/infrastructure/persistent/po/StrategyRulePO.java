@@ -4,10 +4,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
-
 /**
- * 抽奖策略规则持久化对象。
+ * 抽奖策略规则表持久化对象。
+ * <p>
+ * 记录策略级或奖品级规则配置，并继承 {@link BasePO} 的审计字段。
  *
  * @author lavyoung
  * @version 1.0.0-SNAPSHOT
@@ -16,43 +16,35 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-public class StrategyRulePO {
+public class StrategyRulePO extends BasePO {
 
     /**
-     * 自增id
+     * 数据库自增主键。
      */
     private Long id;
     /**
-     * 策略id
+     * 策略业务标识。
      */
     private Long strategyId;
     /**
-     * 奖品id
+     * 奖品业务标识；策略级规则可为空。
      */
     private Long awardId;
     /**
-     * 规则类型：【1-策略规则、2-奖品规则】
+     * 规则类型：{@code 1} 表示策略规则，{@code 2} 表示奖品规则。
      */
     private Integer ruleType;
     /**
-     * 抽奖规则类型:【rule_lock】
+     * 抽奖规则模型编码，例如 {@code rule_lock} 或 {@code rule_weight}。
      */
     private String ruleModel;
     /**
-     * 抽奖规则比值
+     * 规则配置值，具体格式由规则模型决定。
      */
     private String ruleValue;
     /**
-     * 抽奖规则描述
+     * 规则描述。
      */
     private String ruleDesc;
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
 
 }

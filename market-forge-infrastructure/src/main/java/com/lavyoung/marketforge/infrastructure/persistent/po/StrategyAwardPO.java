@@ -5,10 +5,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 /**
- * 抽奖策略奖品持久化对象。
+ * 抽奖策略奖品关联表持久化对象。
+ * <p>
+ * 记录策略内奖品的库存、概率、规则及展示顺序，并继承 {@link BasePO} 的审计字段。
  *
  * @author lavyoung
  * @version 1.0.0-SNAPSHOT
@@ -17,54 +18,46 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-public class StrategyAwardPO {
+public class StrategyAwardPO extends BasePO {
     /**
-     * 自增id
+     * 数据库自增主键。
      */
     private Long id;
     /**
-     * 抽奖策略id
+     * 抽奖策略业务标识。
      */
     private Long strategyId;
     /**
-     * 奖品ID
+     * 奖品业务标识。
      */
     private Long awardId;
     /**
-     * 奖品标题
+     * 奖品标题。
      */
     private String awardTitle;
     /**
-     * 奖品副标题
+     * 奖品副标题。
      */
     private String awardSubtitle;
     /**
-     * 奖品库存总量
+     * 奖品库存总量。
      */
     private Integer awardCount;
     /**
-     * 奖品库存剩余量
+     * 奖品库存剩余量。
      */
     private Integer awardCountSurplus;
     /**
-     * 奖品中奖概率
+     * 奖品中奖概率。
      */
     private BigDecimal awardRate;
     /**
-     * 规则模型
+     * 以分隔符连接的规则模型编码。
      */
     private String ruleModels;
     /**
-     * 奖品顺序
+     * 奖品展示顺序。
      */
     private Integer sort;
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
 
 }

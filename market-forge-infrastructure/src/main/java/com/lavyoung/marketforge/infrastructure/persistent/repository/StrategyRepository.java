@@ -1,13 +1,17 @@
 package com.lavyoung.marketforge.infrastructure.persistent.repository;
 
-import com.lavyoung.marketforge.domain.strategy.model.StrategyAwardEntity;
-import com.lavyoung.marketforge.domain.strategy.model.StrategyEntity;
-import com.lavyoung.marketforge.domain.strategy.model.StrategyRuleEntity;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
+import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
+import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyAwardDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyDao;
+import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyRuleDao;
 import com.lavyoung.marketforge.infrastructure.persistent.mapper.StrategyAwardMapper;
 import com.lavyoung.marketforge.infrastructure.persistent.mapper.StrategyMapper;
+import com.lavyoung.marketforge.infrastructure.persistent.mapper.StrategyRuleMapper;
+import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyRulePO;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
 import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
@@ -17,9 +21,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
- * 策略仓库实现
+ * 抽奖策略仓储端口的基础设施实现。
+ * <p>
+ * 使用 MyBatis/MyBatis-Plus 读取策略配置，并使用 Redis 保存策略缓存和装配后的概率查找表。
  *
  * @author lavyoung
  * @version 1.0.0
@@ -34,11 +41,21 @@ public class StrategyRepository implements IStrategyRepository {
 
     private final IStrategyDao strategyDao;
 
+    /**
+     * 策略规则数据访问对象。
+     */
+    private final IStrategyRuleDao strategyRuleDao;
+
     private final IRedisService redisService;
 
     private final StrategyAwardMapper strategyAwardMapper;
 
     private final StrategyMapper strategyMapper;
+
+    /**
+     * 策略规则持久化对象转换器。
+     */
+    private final StrategyRuleMapper strategyRuleMapper;
 
     /**
      * {@inheritDoc}
@@ -84,15 +101,23 @@ public class StrategyRepository implements IStrategyRepository {
     /**
      * {@inheritDoc}
      *
-     * @param strategyId 策略标识
-     * @param rateKey    概率查找表下标
-     * @return 奖品标识；查找表中不存在对应下标时返回 {@code 0}
+     * @param key     策略装配键
+     * @param rateKey 概率查找表下标
+     * @return 奖品标识；缓存字段不存在时返回 {@code 0}
      */
     @Override
-    public long getStrategyAwardAssemble(Long strategyId, int rateKey) {
-        return redisService.getHashValue(Constants.RedisKeys.STRATEGY_RATE_TABLE_KEY + strategyId, rateKey, Long.class).orElse(0L);
+    public long getStrategyAwardAssemble(String key, int rateKey) {
+        return redisService.getHashValue(Constants.RedisKeys.STRATEGY_RATE_TABLE_KEY + key, rateKey, Long.class).orElse(0L);
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * 优先读取 Redis 缓存，缓存未命中时查询数据库。
+     *
+     * @param strategyId 策略标识
+     * @return 策略实体；策略不存在时返回 {@code null}
+     */
     @Override
     public StrategyEntity queryStrategyEntityByStrategyId(Long strategyId) {
         // 缓存key
@@ -101,9 +126,21 @@ public class StrategyRepository implements IStrategyRepository {
                 .orElseGet(() -> strategyMapper.toEntity(strategyDao.queryStrategyByStrategyId(strategyId).orElse(null)));
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * 使用 MyBatis-Plus 条件构造器按策略标识和规则模型查询唯一规则。
+     *
+     * @param strategyId 策略标识
+     * @param ruleModel  需要查询的规则模型
+     * @return 策略规则实体；规则不存在时返回 {@code null}
+     */
     @Override
     public StrategyRuleEntity getStrategyRule(Long strategyId, RuleModel ruleModel) {
-        return null;
+        return Optional.ofNullable(strategyRuleDao.selectOne(Wrappers.lambdaQuery(StrategyRulePO.class)
+                .eq(StrategyRulePO::getStrategyId, strategyId)
+                .eq(StrategyRulePO::getRuleModel, ruleModel)
+        )).stream().map(strategyRuleMapper::toEntity).findFirst().orElse(null);
     }
 
     /**

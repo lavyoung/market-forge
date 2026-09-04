@@ -5,10 +5,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
-
 /**
- * 奖品持久化对象
+ * 奖品表持久化对象。
+ * <p>
+ * 继承 {@link BasePO} 统一维护创建时间和更新时间。
  *
  * @author lavyoung
  * @version 1.0.0-SNAPSHOT
@@ -17,41 +17,26 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-public class AwardPO {
+public class AwardPO extends BasePO {
 
     /**
-     * 自增id
-     *
+     * 数据库自增主键。
      */
     private Long id;
     /**
-     * 奖品id
-     *
+     * 奖品业务标识。
      */
     private Long awardId;
     /**
-     * 奖品key
-     *
+     * 奖品业务键。
      */
     private String awardKey;
     /**
-     * 奖品配置
-     *
+     * 奖品发放配置。
      */
     private String awardConfig;
     /**
-     * 奖品描述
-     *
+     * 奖品描述。
      */
     private String awardDesc;
-    /**
-     * 创建时间
-     *
-     */
-    private LocalDateTime createTime;
-    /**
-     * 更新时间
-     *
-     */
-    private LocalDateTime updateTime;
 }

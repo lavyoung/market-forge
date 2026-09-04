@@ -1,4 +1,4 @@
-package com.lavyoung.marketforge.domain.strategy.model;
+package com.lavyoung.marketforge.domain.strategy.model.entity;
 
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import lombok.Builder;
@@ -34,6 +34,10 @@ public class StrategyEntity {
      */
     private String ruleModels;
 
+    /**
+     *
+     * @return
+     */
     public List<RuleModel> toRuleModes() {
         if (StringUtils.isBlank(ruleModels)) {
             return List.of();

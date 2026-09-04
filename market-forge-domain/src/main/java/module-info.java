@@ -4,6 +4,7 @@
 module market.forge.domain {
     exports com.lavyoung.marketforge.domain.strategy.model;
     exports com.lavyoung.marketforge.domain.strategy.repository;
+    exports com.lavyoung.marketforge.domain.strategy.model.entity;
     requires spring.context;
     requires org.slf4j;
     requires static lombok;

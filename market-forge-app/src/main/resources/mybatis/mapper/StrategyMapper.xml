@@ -24,16 +24,11 @@
         LIMIT 1
     </select>
 
-    <insert id="insert" parameterType="com.lavyoung.marketforge.infrastructure.persistent.po.StrategyPO"
-            useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO strategy (strategy_id, strategy_desc, rule_models)
-        VALUES (#{strategyId}, #{strategyDesc}, #{ruleModels})
-    </insert>
-
     <update id="updateByStrategyId" parameterType="com.lavyoung.marketforge.infrastructure.persistent.po.StrategyPO">
         UPDATE strategy
         SET strategy_desc = #{strategyDesc},
-            rule_models = #{ruleModels}
+        rule_models = #{ruleModels},
+        update_time = CURRENT_TIMESTAMP
         WHERE strategy_id = #{strategyId}
     </update>
 

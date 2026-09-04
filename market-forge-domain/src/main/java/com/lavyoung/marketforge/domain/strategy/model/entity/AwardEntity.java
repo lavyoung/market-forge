@@ -1,4 +1,4 @@
-package com.lavyoung.marketforge.domain.strategy.model;
+package com.lavyoung.marketforge.domain.strategy.model.entity;
 
 import lombok.Builder;
 import lombok.Data;

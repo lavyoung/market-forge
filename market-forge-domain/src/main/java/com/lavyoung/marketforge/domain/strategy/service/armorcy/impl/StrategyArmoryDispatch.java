@@ -1,9 +1,12 @@
-package com.lavyoung.marketforge.domain.strategy.service.armorcy;
+package com.lavyoung.marketforge.domain.strategy.service.armorcy.impl;
 
-import com.lavyoung.marketforge.domain.strategy.model.StrategyAwardEntity;
-import com.lavyoung.marketforge.domain.strategy.model.StrategyEntity;
-import com.lavyoung.marketforge.domain.strategy.model.StrategyRuleEntity;
+import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
+import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
+import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyArmory;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
+import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
@@ -14,14 +17,12 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 /**
- *
- * 策略装配库 负责初始化策略计算
+ * 抽奖策略装配与调度服务。
+ * <p>
+ * 根据奖品概率生成随机下标查找表，并支持从普通策略或权重策略查找表中随机选择奖品。
  *
  * @author lavyoung
  * @version 1.0.0
@@ -59,11 +60,27 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
         if (strategyRule == null) {
             throw new BusinessException(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID.getCode(), BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID.getMsg());
         }
-        //
+        // 4. 设置权重范围查询表
+        Map<String, List<Long>> ruleWeightValueMap = strategyRule.getRuleWeightValues();
+        for (Map.Entry<String, List<Long>> entry : ruleWeightValueMap.entrySet()) {
+            List<Long> ruleWeightValues = entry.getValue();
+            // 移除后重新存储
+            List<StrategyAwardEntity> awardEntities = new ArrayList<>(strategyAwardEntities);
+            awardEntities.removeIf(e -> !ruleWeightValues.contains(e.getAwardId()));
+            // 存储对应的权重值
+            assembleLotteryStrategy(String.valueOf(strategyId).concat(Constants.UNDERLINE) + entry.getKey(), awardEntities);
+        }
 
         return true;
     }
 
+    /**
+     * 根据一组奖品概率生成乱序查找表，并以指定装配键写入仓储。
+     *
+     * @param key                   策略装配键
+     * @param strategyAwardEntities 参与本次装配的奖品配置
+     * @throws ArithmeticException 奖品概率无法形成有效概率范围时抛出
+     */
     private void assembleLotteryStrategy(String key, List<StrategyAwardEntity> strategyAwardEntities) {
         // 1. 获取最小概率值
         BigDecimal minAwardRate = strategyAwardEntities.stream().map(StrategyAwardEntity::getAwardRate).min(BigDecimal::compareTo)
@@ -90,6 +107,15 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
 
     }
 
+    /**
+     * 按奖品概率生成未乱序的奖品查找表。
+     *
+     * @param strategyAwardEntities 参与装配的奖品配置
+     * @param totalAwardRate        奖品概率总和
+     * @param minAwardRate          最小奖品概率
+     * @return 按概率重复填充奖品标识的查找表
+     * @throws ArithmeticException 最小概率为零或概率无法整除时抛出
+     */
     private static ArrayList<Long> getStrategyAwardSearchTables(List<StrategyAwardEntity> strategyAwardEntities, BigDecimal totalAwardRate, BigDecimal minAwardRate) {
         BigDecimal rateRange = totalAwardRate.divide(minAwardRate, 0, RoundingMode.CEILING);
 
@@ -115,6 +141,21 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
      */
     @Override
     public long getRandomAwardId(Long strategyId) {
-        return repository.getStrategyAwardAssemble(strategyId, new SecureRandom().nextInt(repository.getRateRange(strategyId)));
+        return repository.getStrategyAwardAssemble(String.valueOf(strategyId), new SecureRandom().nextInt(repository.getRateRange(strategyId)));
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * 使用“策略标识_权重规则值”作为装配键，从相应的权重概率表中查询奖品。
+     *
+     * @param strategyId      策略标识
+     * @param ruleWeightValue 当前命中的权重规则值
+     * @return 随机选中的奖品标识
+     * @throws IllegalArgumentException 策略尚未装配或随机数范围无效时抛出
+     */
+    @Override
+    public long getRandomAwardIdAndWeight(Long strategyId, String ruleWeightValue) {
+        return repository.getStrategyAwardAssemble(strategyId + Constants.UNDERLINE + ruleWeightValue, new SecureRandom().nextInt(repository.getRateRange(strategyId)));
     }
 }

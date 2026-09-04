@@ -66,6 +66,8 @@
         <!-- Architecture Test -->
         <archunit.version>1.2.1</archunit.version>
 
+        <!-- MyBatisPlus-->
+        <mybatis.plus.version>3.5.17</mybatis.plus.version>
     </properties>
 
 
@@ -109,6 +111,12 @@
                 <groupId>org.mapstruct</groupId>
                 <artifactId>mapstruct</artifactId>
                 <version>${mapstruct.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-boot-starter</artifactId>
+                <version>${mybatis.plus.version}</version>
             </dependency>
 
             <!-- ============================= -->
