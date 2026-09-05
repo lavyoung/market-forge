@@ -17,7 +17,7 @@
 
     <artifactId>market-forge-app</artifactId>
 
-    <name>market-forge-app</name>
+    <name>${artifactId}-${revision}</name>
 
     <dependencies>
 

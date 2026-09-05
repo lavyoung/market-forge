@@ -3,7 +3,7 @@ package com.lavyoung.marketforge.domain.strategy.service.armorcy;
 /**
  * 抽奖策略调度接口。
  * <p>
- * 根据已装配的概率查找表执行普通抽奖或带权重门槛的抽奖。
+ * 只负责抽奖的处理 不关心使用方或者调用抽奖的初始化。
  *
  * @author lavyoung
  * @version 1.0.0

@@ -21,7 +21,7 @@
 
     <packaging>pom</packaging>
 
-    <name>market-forge</name>
+    <name>${artifactId}-${revision}</name>
     <description>DDD Forge generated project</description>
 
     <modules>

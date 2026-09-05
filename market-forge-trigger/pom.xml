@@ -17,7 +17,7 @@
 
     <artifactId>market-forge-trigger</artifactId>
 
-    <name>market-forge-trigger</name>
+    <name>${artifactId}-${revision}</name>
 
     <dependencies>
 

@@ -22,21 +22,22 @@ import java.util.Objects;
 public class StrategyEntity {
 
     /**
-     * 策略id
+     * 策略标识。
      */
     private Long strategyId;
     /**
-     * 描述
+     * 策略描述。
      */
     private String strategyDesc;
     /**
-     * 规则模型
+     * 逗号分隔的规则模型编码集合。
      */
     private String ruleModels;
 
     /**
+     * 将策略配置中的规则模型编码转换为枚举列表。
      *
-     * @return
+     * @return 有效的规则模型列表；未配置规则时返回空列表
      */
     public List<RuleModel> toRuleModes() {
         if (StringUtils.isBlank(ruleModels)) {
@@ -46,10 +47,10 @@ public class StrategyEntity {
     }
 
     /**
-     * 是否包含
+     * 判断策略是否配置了指定规则模型。
      *
-     * @param ruleModel 权重模型
-     * @return true
+     * @param ruleModel 待判断的规则模型编码
+     * @return 配置中包含该规则模型时返回 {@code true}，否则返回 {@code false}
      */
     public boolean containsModel(String ruleModel) {
         RuleModel model = RuleModel.get(ruleModel);

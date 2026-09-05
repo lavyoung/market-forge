@@ -75,4 +75,16 @@ public interface IStrategyRepository {
      * @return 策略规则实体；规则不存在时返回 {@code null}
      */
     StrategyRuleEntity getStrategyRule(Long strategyId, RuleModel ruleModel);
+
+    /**
+     * 查询策略级或奖品级规则的配置值。
+     * <p>
+     * 当 {@code awardId} 为空时查询策略级规则，否则同时按奖品标识过滤。
+     *
+     * @param strategyId 策略标识
+     * @param awardId    奖品标识；查询策略级规则时可为空
+     * @param ruleModel  规则模型编码
+     * @return 规则配置值；未找到匹配规则时返回 {@code null}
+     */
+    String queryStrategyRuleValue(Long strategyId, Long awardId, String ruleModel);
 }

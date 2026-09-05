@@ -17,7 +17,7 @@
 
     <artifactId>market-forge-api</artifactId>
 
-    <name>market-forge-api</name>
+    <name>${artifactId}-${revision}</name>
 
     <dependencies>
 

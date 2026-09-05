@@ -17,7 +17,7 @@
 
     <artifactId>market-forge-domain</artifactId>
 
-    <name>market-forge-domain</name>
+    <name>${artifactId}-${revision}</name>
 
     <dependencies>
 
@@ -51,6 +51,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>jakarta.annotation</groupId>
+            <artifactId>jakarta.annotation-api</artifactId>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 

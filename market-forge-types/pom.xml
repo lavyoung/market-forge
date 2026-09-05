@@ -17,7 +17,7 @@
 
     <artifactId>market-forge-types</artifactId>
 
-    <name>market-forge-types</name>
+    <name>${artifactId}-${revision}</name>
 
     <dependencies>
 

@@ -19,10 +19,14 @@ public class Constants {
      */
     public static final String COLON = ":";
 
-    /** 空字符串。 */
+    /**
+     * 空字符串。
+     */
     public static final String SPACE = "";
 
-    /** 多组配置之间的分隔符。 */
+    /**
+     * 多组配置之间的分隔符。
+     */
     public static final String SEMICOLON = ";";
 
     /**
@@ -41,7 +45,9 @@ public class Constants {
          */
         public static final String STRATEGY_AWARD_KEY = "strategy_award_key:";
 
-        /** 策略基础信息缓存键前缀。 */
+        /**
+         * 策略基础信息缓存键前缀。
+         */
         public static final String STRATEGY_KEY = "strategy_key:";
 
         /**

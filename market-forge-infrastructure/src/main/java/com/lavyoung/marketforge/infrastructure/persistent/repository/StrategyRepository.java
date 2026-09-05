@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -37,8 +38,14 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class StrategyRepository implements IStrategyRepository {
 
+    /**
+     * 策略奖品数据访问对象。
+     */
     private final IStrategyAwardDao strategyAwardDao;
 
+    /**
+     * 策略基础信息数据访问对象。
+     */
     private final IStrategyDao strategyDao;
 
     /**
@@ -46,10 +53,19 @@ public class StrategyRepository implements IStrategyRepository {
      */
     private final IStrategyRuleDao strategyRuleDao;
 
+    /**
+     * Redis 缓存服务。
+     */
     private final IRedisService redisService;
 
+    /**
+     * 策略奖品持久化对象转换器。
+     */
     private final StrategyAwardMapper strategyAwardMapper;
 
+    /**
+     * 策略持久化对象转换器。
+     */
     private final StrategyMapper strategyMapper;
 
     /**
@@ -141,6 +157,25 @@ public class StrategyRepository implements IStrategyRepository {
                 .eq(StrategyRulePO::getStrategyId, strategyId)
                 .eq(StrategyRulePO::getRuleModel, ruleModel)
         )).stream().map(strategyRuleMapper::toEntity).findFirst().orElse(null);
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * 使用 MyBatis-Plus 按策略、可选奖品标识和规则模型查询唯一规则值。
+     *
+     * @param strategyId 策略标识
+     * @param awardId    奖品标识；查询策略级规则时可为空
+     * @param ruleModel  规则模型编码
+     * @return 规则配置值；未找到匹配规则时返回 {@code null}
+     */
+    @Override
+    public String queryStrategyRuleValue(Long strategyId, Long awardId, String ruleModel) {
+        return Optional.ofNullable(strategyRuleDao.selectOne(Wrappers.lambdaQuery(StrategyRulePO.class)
+                .eq(StrategyRulePO::getStrategyId, strategyId)
+                .eq(Objects.nonNull(awardId), StrategyRulePO::getAwardId, awardId)
+                .eq(StrategyRulePO::getRuleModel, ruleModel))
+        ).stream().map(StrategyRulePO::getRuleValue).findFirst().orElse(null);
     }
 
     /**

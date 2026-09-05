@@ -18,7 +18,7 @@ public class BusinessException extends RuntimeException {
      * 获取业务错误码。
      *
      */
-    private final int code;
+    private final String code;
 
     /**
      * 创建业务异常。
@@ -28,7 +28,7 @@ public class BusinessException extends RuntimeException {
      */
     public BusinessException(int code, String message) {
         super(message);
-        this.code = code;
+        this.code = String.valueOf(code);
     }
 
 }
