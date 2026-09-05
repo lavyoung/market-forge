@@ -10,9 +10,8 @@ import java.util.*;
  * 不暴露 Redisson 等具体客户端类型。
  * 阻塞队列方法保留线程中断语义，调用方应正确处理中断，避免业务线程无限等待。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  */
 public interface IRedisService {
 

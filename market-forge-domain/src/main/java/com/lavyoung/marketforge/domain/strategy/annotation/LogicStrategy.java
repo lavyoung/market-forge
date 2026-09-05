@@ -12,9 +12,8 @@ import java.lang.annotation.Target;
  * <p>
  * 规则工厂在启动时读取该注解，并以规则模型为键注册过滤器实现。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  * @date 2026/09/04
  */
 @Target(ElementType.TYPE)

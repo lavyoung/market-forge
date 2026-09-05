@@ -10,9 +10,8 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * 验证 {@link StrategyEntity} 的规则模型转换行为。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
- * @email lavyoung1325@outlook.com
  */
 class StrategyEntityTest {
 

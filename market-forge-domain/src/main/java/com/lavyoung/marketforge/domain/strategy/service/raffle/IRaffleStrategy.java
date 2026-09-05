@@ -6,9 +6,8 @@ import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 /**
  * 抽奖策略领域服务。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  * @date 2026/09/04
  */
 public interface IRaffleStrategy {

@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Configuration;
  * <p>
  * 根据应用的 Redis 外部化配置创建并托管 {@link RedissonClient}。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
  */
 @Configuration

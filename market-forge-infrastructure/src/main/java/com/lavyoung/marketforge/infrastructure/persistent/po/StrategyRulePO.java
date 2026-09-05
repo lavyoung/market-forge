@@ -9,9 +9,8 @@ import lombok.Setter;
  * <p>
  * 记录策略级或奖品级规则配置，并继承 {@link BasePO} 的审计字段。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
- * @email lavyoung1325@outlook.com
  */
 @Getter
 @Setter

@@ -27,9 +27,8 @@ import static org.mockito.Mockito.*;
 /**
  * 使用真实规则过滤器和模拟外部端口验证抽奖策略的规则编排与调度行为。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  * @date 2026/09/05
  */
 @Slf4j
@@ -80,7 +79,7 @@ class RaffleStrategyRunnerTest {
         RaffleAwardEntity award = raffleStrategy.performRaffle(validFactor());
 
         // Then
-        assertEquals(DEFAULT_AWARD_ID, award.getAwardId());
+        assertEquals(DEFAULT_AWARD_ID, award.awardId());
         verify(strategyDispatch).getRandomAwardId(STRATEGY_ID);
         verify(strategyDispatch, never()).getRandomAwardIdAndWeight(STRATEGY_ID, WEIGHT_KEY);
     }
@@ -104,7 +103,7 @@ class RaffleStrategyRunnerTest {
         RaffleAwardEntity award = raffleStrategy.performRaffle(validFactor());
 
         // Then
-        assertEquals(BLACKLIST_AWARD_ID, award.getAwardId());
+        assertEquals(BLACKLIST_AWARD_ID, award.awardId());
         verifyNoInteractions(strategyDispatch);
     }
 
@@ -129,7 +128,7 @@ class RaffleStrategyRunnerTest {
         RaffleAwardEntity award = raffleStrategy.performRaffle(validFactor());
 
         // Then
-        assertEquals(DEFAULT_AWARD_ID, award.getAwardId());
+        assertEquals(DEFAULT_AWARD_ID, award.awardId());
         verify(strategyDispatch).getRandomAwardIdAndWeight(STRATEGY_ID, WEIGHT_KEY);
         verify(strategyDispatch, never()).getRandomAwardId(STRATEGY_ID);
     }

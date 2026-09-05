@@ -13,9 +13,8 @@ package com.lavyoung.marketforge.types.model;
  * 不属于实际数值。
  * </p>
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  * @date 2026/09/02
  * @see BusinessResponseCode
  */

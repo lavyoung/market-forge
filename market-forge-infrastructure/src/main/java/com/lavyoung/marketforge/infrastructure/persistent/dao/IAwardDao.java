@@ -12,9 +12,8 @@ import java.util.Optional;
  * <p>
  * 在 MyBatis-Plus 通用 CRUD 能力之外，提供按奖品业务标识查询和更新的方法。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
- * @email lavyoung1325@outlook.com
  */
 @Mapper
 public interface IAwardDao extends BaseMapper<AwardPO> {

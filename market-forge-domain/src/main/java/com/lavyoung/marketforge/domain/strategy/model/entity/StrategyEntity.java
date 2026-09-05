@@ -2,7 +2,6 @@ package com.lavyoung.marketforge.domain.strategy.model.entity;
 
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import lombok.Builder;
-import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Arrays;
@@ -10,29 +9,21 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 策略实体
+ * 抽奖策略基础配置。
  *
- * @author lavyoung
+ * @param strategyId   策略标识
+ * @param strategyDesc 策略描述
+ * @param ruleModels   逗号分隔的规则模型编码集合
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  * @date 2026/08/31
  */
-@Data
 @Builder
-public class StrategyEntity {
-
-    /**
-     * 策略标识。
-     */
-    private Long strategyId;
-    /**
-     * 策略描述。
-     */
-    private String strategyDesc;
-    /**
-     * 逗号分隔的规则模型编码集合。
-     */
-    private String ruleModels;
+public record StrategyEntity(
+        Long strategyId,
+        String strategyDesc,
+        String ruleModels
+) {
 
     /**
      * 将策略配置中的规则模型编码转换为枚举列表。

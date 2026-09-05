@@ -13,9 +13,8 @@ import java.util.Optional;
  * <p>
  * 在 MyBatis-Plus 通用 CRUD 能力之外，提供策略规则列表及复合条件查询方法。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
- * @email lavyoung1325@outlook.com
  */
 @Mapper
 public interface IStrategyRuleDao extends BaseMapper<StrategyRulePO> {

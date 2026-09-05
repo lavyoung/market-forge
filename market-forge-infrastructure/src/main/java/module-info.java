@@ -3,8 +3,7 @@
  * <p>
  * 提供数据库访问、对象映射、Redis 缓存及领域仓储端口实现。
  *
- * @author lavyoung
- * @email lavyoung1325@outlook.com
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @date 2026/09/01
  */
 module market.forge.infrastructure {

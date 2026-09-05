@@ -16,9 +16,8 @@ import static org.mockito.Mockito.*;
 /**
  * 验证 {@link StrategyArmoryDispatch} 的权重策略随机抽奖行为。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
- * @email lavyoung1325@outlook.com
  */
 @ExtendWith(MockitoExtension.class)
 class StrategyArmoryDispatchTest {

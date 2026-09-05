@@ -6,9 +6,8 @@ import lombok.Getter;
 /**
  * 规则检查结果类型。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  * @date 2026/09/04
  */
 @Getter

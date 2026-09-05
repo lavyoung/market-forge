@@ -1,64 +1,39 @@
 package com.lavyoung.marketforge.domain.strategy.model.entity;
 
 import lombok.Builder;
-import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 策略奖品实体
+ * 策略下参与抽奖的奖品配置。
  *
- * @author lavyoung
+ * @param strategyId        抽奖策略标识
+ * @param awardId           奖品标识
+ * @param awardTitle        奖品标题
+ * @param awardSubtitle     奖品副标题
+ * @param awardCount        奖品库存总量
+ * @param awardCountSurplus 奖品库存剩余量
+ * @param awardRate         奖品中奖概率
+ * @param ruleModels        奖品规则模型配置
+ * @param sort              奖品顺序
+ * @param createTime        创建时间
+ * @param updateTime        更新时间
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  */
-@Data
 @Builder
-public class StrategyAwardEntity {
-
-    /**
-     * 抽奖策略id
-     */
-    private Long strategyId;
-    /**
-     * 奖品ID
-     */
-    private Long awardId;
-    /**
-     * 奖品标题
-     */
-    private String awardTitle;
-    /**
-     * 奖品副标题
-     */
-    private String awardSubtitle;
-    /**
-     * 奖品库存总量
-     */
-    private Integer awardCount;
-    /**
-     * 奖品库存剩余量
-     */
-    private Integer awardCountSurplus;
-    /**
-     * 奖品中奖概率
-     */
-    private BigDecimal awardRate;
-    /**
-     * 规则模型
-     */
-    private String ruleModels;
-    /**
-     * 奖品顺序
-     */
-    private Integer sort;
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
+public record StrategyAwardEntity(
+        Long strategyId,
+        Long awardId,
+        String awardTitle,
+        String awardSubtitle,
+        Integer awardCount,
+        Integer awardCountSurplus,
+        BigDecimal awardRate,
+        String ruleModels,
+        Integer sort,
+        LocalDateTime createTime,
+        LocalDateTime updateTime
+) {
 }

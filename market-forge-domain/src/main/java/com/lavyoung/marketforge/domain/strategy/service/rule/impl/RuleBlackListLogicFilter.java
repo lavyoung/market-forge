@@ -18,9 +18,8 @@ import org.springframework.stereotype.Component;
  * <p>
  * 当用户命中规则配置中的黑名单时接管抽奖流程，并返回规则指定的奖品。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  * @date 2026/09/05
  */
 @Slf4j
@@ -44,22 +43,22 @@ public class RuleBlackListLogicFilter implements ILogicFilter<RuleActionEntity.R
      */
     @Override
     public RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> filter(RuleMatterEntity ruleMatterEntity) {
-        log.info("规则过滤-黑名单 userId={}, strategyId={}, ruleModel={}", ruleMatterEntity.getUserId(), ruleMatterEntity.getStrategyId(), ruleMatterEntity.getRuleModel());
+        log.info("规则过滤-黑名单 userId={}, strategyId={}, ruleModel={}", ruleMatterEntity.userId(), ruleMatterEntity.strategyId(), ruleMatterEntity.ruleModel());
         // 查询规则值
-        String ruleValue = repository.queryStrategyRuleValue(ruleMatterEntity.getStrategyId(), ruleMatterEntity.getAwardId(), ruleMatterEntity.getRuleModel());
+        String ruleValue = repository.queryStrategyRuleValue(ruleMatterEntity.strategyId(), ruleMatterEntity.awardId(), ruleMatterEntity.ruleModel());
         if (StringUtils.isNotBlank(ruleValue)) {
             // 一般是这样的格式 100:user1/user002
             String[] splitRuleValue = ruleValue.split(Constants.COLON);
             long awardId = Long.parseLong(splitRuleValue[0]);
             String[] blackUserIds = splitRuleValue[1].split(Constants.SPLIT);
             for (String blackUserId : blackUserIds) {
-                if (ruleMatterEntity.getUserId().equals(blackUserId)) {
+                if (ruleMatterEntity.userId().equals(blackUserId)) {
                     return RuleActionEntity.<RuleActionEntity.RaffleBeforeEntity>builder()
                             .ruleModel(RuleModel.RULE_BLACKLIST.getCode())
                             .code(RuleLogicCheckTypeVO.TAKE_OVER.getCode())
                             .msg(RuleLogicCheckTypeVO.TAKE_OVER.getInfo())
                             .data(RuleActionEntity.RaffleBeforeEntity.builder()
-                                    .strategyId(ruleMatterEntity.getStrategyId())
+                                    .strategyId(ruleMatterEntity.strategyId())
                                     .awardId(awardId)
                                     .build()
                             ).build();

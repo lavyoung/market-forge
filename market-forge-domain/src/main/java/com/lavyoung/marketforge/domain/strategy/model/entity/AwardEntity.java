@@ -1,50 +1,30 @@
 package com.lavyoung.marketforge.domain.strategy.model.entity;
 
 import lombok.Builder;
-import lombok.Data;
 
 import java.time.LocalDateTime;
 
 /**
- * 奖品
+ * 奖品基础信息。
  *
- * @author lavyoung
+ * @param awardId     奖品标识
+ * @param awardKey    奖品业务键
+ * @param awardConfig 奖品发放配置
+ * @param awardDesc   奖品描述
+ * @param createTime  创建时间
+ * @param updateTime  更新时间
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  * @date 2026/08/31
  */
-@Data
 @Builder
-public class AwardEntity {
+public record AwardEntity(
+        Long awardId,
+        String awardKey,
+        String awardConfig,
+        String awardDesc,
+        LocalDateTime createTime,
+        LocalDateTime updateTime
+) {
 
-    /**
-     * 奖品id
-     *
-     */
-    private Long awardId;
-    /**
-     * 奖品key
-     *
-     */
-    private String awardKey;
-    /**
-     * 奖品配置
-     *
-     */
-    private String awardConfig;
-    /**
-     * 奖品描述
-     *
-     */
-    private String awardDesc;
-    /**
-     * 创建时间
-     *
-     */
-    private LocalDateTime createTime;
-    /**
-     * 更新时间
-     *
-     */
-    private LocalDateTime updateTime;
 }

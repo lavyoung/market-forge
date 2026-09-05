@@ -9,7 +9,7 @@ import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import com.lavyoung.marketforge.types.exception.BusinessException;
-import com.lavyoung.marketforge.types.model.BusinessResponseCode;
+import com.lavyoung.marketforge.types.model.CommonResponseCode;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -21,9 +21,8 @@ import java.util.List;
  * <p>
  * 统一完成入参校验、抽奖前规则判断和奖品随机选择，具体的前置规则编排由子类实现。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  * @date 2026/09/04
  */
 @Slf4j
@@ -50,10 +49,10 @@ public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
     @Override
     public RaffleAwardEntity performRaffle(RaffleFactorEntity raffleFactorEntity) {
         // 1. 参数校验
-        Long strategyId = raffleFactorEntity.getStrategyId();
-        String userId = raffleFactorEntity.getUserId();
+        Long strategyId = raffleFactorEntity.strategyId();
+        String userId = raffleFactorEntity.userId();
         if (strategyId == null || StringUtils.isBlank(userId)) {
-            throw new BusinessException(BusinessResponseCode.PARAM_INVALID.getCode(), BusinessResponseCode.PARAM_INVALID.getMsg());
+            throw new BusinessException(CommonResponseCode.PARAM_INVALID);
         }
 
         StrategyEntity strategyEntity = repository.queryStrategyEntityByStrategyId(strategyId);
@@ -62,16 +61,16 @@ public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
                 RaffleFactorEntity.builder().userId(userId).strategyId(strategyId).build(),
                 strategyEntity.toRuleModes()
         );
-        if (ruleActionEntity != null && RuleLogicCheckTypeVO.TAKE_OVER.getCode().equals(ruleActionEntity.getCode())) {
-            if (RuleModel.RULE_BLACKLIST.getCode().equals(ruleActionEntity.getRuleModel())) {
+        if (ruleActionEntity != null && RuleLogicCheckTypeVO.TAKE_OVER.getCode().equals(ruleActionEntity.code())) {
+            if (RuleModel.RULE_BLACKLIST.getCode().equals(ruleActionEntity.ruleModel())) {
                 return RaffleAwardEntity.builder()
-                        .awardId(ruleActionEntity.getData().getAwardId())
+                        .awardId(ruleActionEntity.data().awardId())
                         .build();
             }
-            if (RuleModel.WEIGHT.getCode().equals(ruleActionEntity.getRuleModel())) {
+            if (RuleModel.WEIGHT.getCode().equals(ruleActionEntity.ruleModel())) {
                 // 根据返回的权重进行抽奖
-                RuleActionEntity.RaffleBeforeEntity beforeEntity = ruleActionEntity.getData();
-                String ruleWeightValueKey = beforeEntity.getRuleWeightValueKey();
+                RuleActionEntity.RaffleBeforeEntity beforeEntity = ruleActionEntity.data();
+                String ruleWeightValueKey = beforeEntity.ruleWeightValueKey();
 
                 long awardId = strategyDispatch.getRandomAwardIdAndWeight(strategyId, ruleWeightValueKey);
                 return RaffleAwardEntity.builder()
@@ -80,7 +79,7 @@ public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
             }
         }
         // 执行抽奖 默认
-        long awardId = strategyDispatch.getRandomAwardId(raffleFactorEntity.getStrategyId());
+        long awardId = strategyDispatch.getRandomAwardId(raffleFactorEntity.strategyId());
         return RaffleAwardEntity.builder()
                 .awardId(awardId)
                 .build();

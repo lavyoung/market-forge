@@ -6,8 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 /**
  * DDD Forge 生成项目的 Spring Boot 启动入口。
  *
- * @author lavyoung
- * @email lavyoung1325@outlook.com
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
  */
 @SpringBootApplication

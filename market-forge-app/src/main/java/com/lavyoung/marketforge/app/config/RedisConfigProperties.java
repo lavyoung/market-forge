@@ -9,7 +9,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * {@code spring.data.redis} 命名空间下的 Redis 配置属性。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
  */
 @ConfigurationProperties(value = "spring.data.redis")

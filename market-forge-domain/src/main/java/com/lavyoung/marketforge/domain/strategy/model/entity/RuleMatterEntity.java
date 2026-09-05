@@ -1,41 +1,24 @@
 package com.lavyoung.marketforge.domain.strategy.model.entity;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
- * 规则物料实体类对象，用于过滤规则的必要参数信息
+ * 规则过滤所需的业务物料。
  *
- * @author lavyoung
+ * @param userId     参与规则判断的用户标识
+ * @param strategyId 规则所属的策略标识
+ * @param awardId    规则所属的奖品标识；策略级规则可为空
+ * @param ruleModel  待执行的规则模型编码
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  * @date 2026/09/04
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-public class RuleMatterEntity {
+public record RuleMatterEntity(
+        String userId,
+        Long strategyId,
+        Long awardId,
+        String ruleModel
+) {
 
-    /**
-     * 参与规则判断的用户标识。
-     */
-    private String userId;
-
-    /**
-     * 规则所属的策略标识。
-     */
-    private Long strategyId;
-
-    /**
-     * 规则所属的奖品标识；策略级规则可为空。
-     */
-    private Long awardId;
-
-    /**
-     * 待执行的规则模型编码。
-     */
-    private String ruleModel;
 }

@@ -8,8 +8,7 @@ import java.util.List;
  * 聚合根的基础抽象类型，负责暂存聚合产生的领域事件。
  *
  * @param <ID> 聚合根标识类型
- * @author lavyoung
- * @email lavyoung1325@outlook.com
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
  */
 public abstract class AggregateRoot<ID> {

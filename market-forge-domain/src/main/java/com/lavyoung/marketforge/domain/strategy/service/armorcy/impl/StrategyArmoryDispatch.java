@@ -24,9 +24,8 @@ import java.util.*;
  * <p>
  * 根据奖品概率生成随机下标查找表，并支持从普通策略或权重策略查找表中随机选择奖品。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  */
 @Slf4j
 @Service
@@ -58,15 +57,15 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
         }
         StrategyRuleEntity strategyRule = repository.getStrategyRule(strategyId, RuleModel.WEIGHT);
         if (strategyRule == null) {
-            throw new BusinessException(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID.getCode(), BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID.getMsg());
+            throw new BusinessException(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID);
         }
         // 4. 设置权重范围查询表
-        Map<String, List<Long>> ruleWeightValueMap = strategyRule.getRuleWeightValues();
+        Map<String, List<Long>> ruleWeightValueMap = strategyRule.ruleWeightValues();
         for (Map.Entry<String, List<Long>> entry : ruleWeightValueMap.entrySet()) {
             List<Long> ruleWeightValues = entry.getValue();
             // 移除后重新存储
             List<StrategyAwardEntity> awardEntities = new ArrayList<>(strategyAwardEntities);
-            awardEntities.removeIf(e -> !ruleWeightValues.contains(e.getAwardId()));
+            awardEntities.removeIf(e -> !ruleWeightValues.contains(e.awardId()));
             // 存储对应的权重值
             assembleLotteryStrategy(String.valueOf(strategyId).concat(Constants.UNDERLINE) + entry.getKey(), awardEntities);
         }
@@ -83,11 +82,11 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
      */
     private void assembleLotteryStrategy(String key, List<StrategyAwardEntity> strategyAwardEntities) {
         // 1. 获取最小概率值
-        BigDecimal minAwardRate = strategyAwardEntities.stream().map(StrategyAwardEntity::getAwardRate).min(BigDecimal::compareTo)
+        BigDecimal minAwardRate = strategyAwardEntities.stream().map(StrategyAwardEntity::awardRate).min(BigDecimal::compareTo)
                 .orElse(BigDecimal.ZERO);
 
         // 2. 获取概率值的总和
-        BigDecimal totalAwardRate = strategyAwardEntities.stream().map(StrategyAwardEntity::getAwardRate)
+        BigDecimal totalAwardRate = strategyAwardEntities.stream().map(StrategyAwardEntity::awardRate)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // 3. 获取概率范围
@@ -122,8 +121,8 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
         //  生成值的范围 概率查询表
         ArrayList<Long> strategyAwardSearchTables = new ArrayList<>(rateRange.intValue());
         for (StrategyAwardEntity strategyAwardEntity : strategyAwardEntities) {
-            Long awardId = strategyAwardEntity.getAwardId();
-            BigDecimal awardRate = strategyAwardEntity.getAwardRate();
+            Long awardId = strategyAwardEntity.awardId();
+            BigDecimal awardRate = strategyAwardEntity.awardRate();
             // 计算概率值需要存储表的数量 存储对应的奖品id
             for (int i = 0; i < rateRange.multiply(awardRate).setScale(0, RoundingMode.CEILING).intValue(); i++) {
                 strategyAwardSearchTables.add(awardId);

@@ -7,8 +7,7 @@ import com.lavyoung.marketforge.types.model.Response;
 /**
  * 演示业务的对外 API 契约。
  *
- * @author lavyoung
- * @email lavyoung1325@outlook.com
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
  */
 public interface IDemoApi {

@@ -23,6 +23,25 @@
 
     <name>${artifactId}-${revision}</name>
     <description>DDD Forge generated project</description>
+    <url>https://github.com/lavyoung/market-forge</url>
+
+    <developers>
+        <developer>
+            <id>lavyoung</id>
+            <name>lavyoung</name>
+            <email>lavyoung1325@outlook.com</email>
+            <roles>
+                <role>dev</role>
+            </roles>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:https://github.com/lavyoung/market-forge.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/lavyoung/market-forge.git</developerConnection>
+        <url>https://github.com/lavyoung/market-forge</url>
+        <tag>HEAD</tag>
+    </scm>
 
     <modules>
         <module>market-forge-types</module>
@@ -156,6 +175,20 @@
         </dependencies>
     </dependencyManagement>
 
+    <repositories>
+        <repository>
+            <id>central</id>
+            <name>Maven Central Repository</name>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
 
     <build>
 
@@ -215,13 +248,15 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-
                 <configuration>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                    <docencoding>${project.reporting.outputEncoding}</docencoding>
+                    <charset>UTF-8</charset>
                     <tags>
                         <tag>
-                            <name>email</name>
+                            <name>date</name>
                             <placement>a</placement>
-                            <head>Email:</head>
+                            <head>Date:</head>
                         </tag>
                     </tags>
                 </configuration>

@@ -1,98 +1,77 @@
 package com.lavyoung.marketforge.domain.strategy.model.entity;
 
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleLogicCheckTypeVO;
-import lombok.*;
+import lombok.Builder;
 
 /**
  * 规则过滤后的动作结果。
  *
- * @param <T> 规则执行阶段对应的结果数据类型
- * @author lavyoung
+ * @param code      规则检查结果编码
+ * @param msg       规则检查结果说明
+ * @param ruleModel 产生当前动作的规则模型编码
+ * @param data      规则执行阶段对应的业务数据
+ * @param <T>       规则执行阶段对应的结果数据类型
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  * @date 2026/09/04
  */
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
 @Builder
-public class RuleActionEntity<T extends RuleActionEntity.RaffleEntity> {
+public record RuleActionEntity<T extends RuleActionEntity.RaffleEntity>(
+        String code,
+        String msg,
+        String ruleModel,
+        T data
+) {
 
     /**
-     * 规则检查结果编码，默认表示放行。
+     * 使用放行结果填充缺省的编码和说明。
+     *
+     * @param code      规则检查结果编码
+     * @param msg       规则检查结果说明
+     * @param ruleModel 产生当前动作的规则模型编码
+     * @param data      规则执行阶段对应的业务数据
      */
-    private String code = RuleLogicCheckTypeVO.ALLOW.getCode();
-
-    /**
-     * 规则检查结果说明，默认使用放行说明。
-     */
-    private String msg = RuleLogicCheckTypeVO.ALLOW.getInfo();
-
-    /**
-     * 产生当前动作的规则模型编码。
-     */
-    private String ruleModel;
-
-    /**
-     * 规则执行阶段对应的业务数据。
-     */
-    private T data;
+    public RuleActionEntity {
+        code = code == null ? RuleLogicCheckTypeVO.ALLOW.getCode() : code;
+        msg = msg == null ? RuleLogicCheckTypeVO.ALLOW.getInfo() : msg;
+    }
 
     /**
      * 各抽奖规则执行阶段结果的基础类型。
      */
-    @Getter
-    @Setter
-    public static class RaffleEntity {
-
+    public sealed interface RaffleEntity
+            permits RaffleBeforeEntity, RaffleExecutingEntity, RaffleAfterEntity {
     }
 
     /**
      * 抽奖前规则的执行结果数据。
+     *
+     * @param strategyId         规则作用的策略标识
+     * @param ruleWeightValueKey 命中的权重规则值
+     * @param awardId            规则直接指定的奖品标识
      */
-    @EqualsAndHashCode(callSuper = true)
-    @Data
     @Builder
-    public static class RaffleBeforeEntity extends RaffleEntity {
-
-        /**
-         * 规则作用的策略标识。
-         */
-        private Long strategyId;
-
-        /**
-         * 命中的权重规则值，用于选择对应的概率查找表。
-         */
-        private String ruleWeightValueKey;
-
-        /**
-         * 规则直接指定的奖品标识。
-         */
-        private Long awardId;
+    public record RaffleBeforeEntity(
+            Long strategyId,
+            String ruleWeightValueKey,
+            Long awardId
+    ) implements RaffleEntity {
     }
 
     /**
      * 抽奖执行中规则的结果数据。
      */
-    @EqualsAndHashCode(callSuper = true)
-    @Data
     @Builder
-    public static class RaffleExecutingEntity extends RaffleEntity {
-
+    public record RaffleExecutingEntity() implements RaffleEntity {
     }
 
     /**
      * 抽奖后规则的结果数据。
      */
-    @EqualsAndHashCode(callSuper = true)
-    @Data
     @Builder
-    public static class RaffleAfterEntity extends RaffleEntity {
-
+    public record RaffleAfterEntity() implements RaffleEntity {
     }
 }
-
-
 
 
 

@@ -14,9 +14,8 @@ import java.util.Map;
  * 为策略领域服务提供策略、规则和奖品配置的读取能力，并负责持久化装配后的
  * 概率范围及奖品查找表。具体的数据来源和缓存策略由基础设施层实现。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  */
 public interface IStrategyRepository {
 

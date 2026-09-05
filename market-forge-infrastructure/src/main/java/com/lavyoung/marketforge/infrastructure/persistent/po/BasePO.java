@@ -12,9 +12,8 @@ import java.time.LocalDateTime;
  * <p>
  * 所有数据库实体均应继承该类，由 MyBatis-Plus 在新增和更新时自动维护审计时间。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  * @date 2026/09/03
  */
 @Getter

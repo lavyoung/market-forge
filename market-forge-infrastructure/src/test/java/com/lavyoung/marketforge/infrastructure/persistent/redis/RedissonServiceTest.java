@@ -21,9 +21,8 @@ import static org.mockito.Mockito.when;
 /**
  * 验证 {@link RedissonService} 的 Redis 操作委托与参数边界。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
- * @email lavyoung1325@outlook.com
  */
 @ExtendWith(MockitoExtension.class)
 class RedissonServiceTest {

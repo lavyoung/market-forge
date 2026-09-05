@@ -11,9 +11,8 @@ import java.util.List;
 /**
  * 策略持久化对象与领域实体的转换器。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
- * @email lavyoung1325@outlook.com
  */
 @Mapper(
         componentModel = MappingConstants.ComponentModel.SPRING,

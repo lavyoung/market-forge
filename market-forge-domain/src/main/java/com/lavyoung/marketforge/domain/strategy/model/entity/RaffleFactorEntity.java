@@ -1,31 +1,20 @@
 package com.lavyoung.marketforge.domain.strategy.model.entity;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
  * 执行抽奖所需的输入因子。
  *
- * @author lavyoung
+ * @param userId     参与抽奖的用户标识
+ * @param strategyId 本次抽奖使用的策略标识
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  * @date 2026/09/04
  */
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
 @Builder
-public class RaffleFactorEntity {
+public record RaffleFactorEntity(
+        String userId,
+        Long strategyId
+) {
 
-    /**
-     * 参与抽奖的用户标识。
-     */
-    private String userId;
-
-    /**
-     * 本次抽奖使用的策略标识。
-     */
-    private Long strategyId;
 }

@@ -16,9 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>
  * 收集 Spring 容器中的规则过滤器，并依据 {@link LogicStrategy} 声明的规则模型建立索引。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  * @date 2026/09/04
  */
 @Service

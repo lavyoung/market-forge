@@ -10,9 +10,8 @@ import lombok.Setter;
  * <p>
  * 继承 {@link BasePO} 统一维护创建时间和更新时间。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
- * @email lavyoung1325@outlook.com
  */
 @Getter
 @Setter

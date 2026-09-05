@@ -7,12 +7,11 @@ package com.lavyoung.marketforge.types.model;
  * @param message 响应说明
  * @param data    响应数据
  * @param <T>     响应数据类型
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
- * @email lavyoung1325@outlook.com
  */
 public record Response<T>(
-        String code,
+        int code,
         String message,
         T data
 ) {
@@ -25,7 +24,7 @@ public record Response<T>(
      * @return 成功响应
      */
     public static <T> Response<T> success(T data) {
-        return new Response<>("0000", "success", data);
+        return of(CommonResponseCode.SUCCESS, data);
     }
 
     /**
@@ -35,19 +34,56 @@ public record Response<T>(
      * @return 成功响应
      */
     public static <T> Response<T> success() {
-        return new Response<>("0000", "success", null);
+        return of(CommonResponseCode.SUCCESS, null);
     }
 
     /**
-     * 创建失败响应。
+     * 根据指定响应编码创建包含业务数据的成功响应。
      *
-     * @param code    错误码
-     * @param message 错误说明
-     * @param <T>     响应数据类型
+     * @param responseCode 响应编码
+     * @param data         响应数据
+     * @param <T>          响应数据类型
+     * @return 成功响应
+     */
+    public static <T> Response<T> success(IResponseCode responseCode, T data) {
+        return of(responseCode, data);
+    }
+
+    /**
+     * 根据统一响应编码创建失败响应。
+     *
+     * @param responseCode 失败响应编码
      * @return 失败响应
      */
-    public static <T> Response<T> fail(String code, String message) {
-        return new Response<>(code, message, null);
+    public static Response<Void> fail(IResponseCode responseCode) {
+        return of(responseCode, null);
+    }
+
+    /**
+     * 根据统一响应编码和解析后的文案创建失败响应。
+     *
+     * @param responseCode 失败响应编码
+     * @param message      国际化或场景化处理后的响应文案
+     * @return 失败响应
+     */
+    public static Response<Void> fail(IResponseCode responseCode, String message) {
+        return new Response<>(responseCode.getCode(), message, null);
+    }
+
+    /**
+     * 根据统一响应编码创建响应。
+     *
+     * @param responseCode 响应编码
+     * @param data         响应数据
+     * @param <T>          响应数据类型
+     * @return 统一响应
+     */
+    private static <T> Response<T> of(IResponseCode responseCode, T data) {
+        return new Response<>(
+                responseCode.getCode(),
+                responseCode.getMsg(),
+                data
+        );
     }
 
 }

@@ -10,8 +10,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 /**
  * 校验 DDD 分层依赖边界的架构测试。
  *
- * @author lavyoung
- * @email lavyoung1325@outlook.com
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
  */
 @AnalyzeClasses(

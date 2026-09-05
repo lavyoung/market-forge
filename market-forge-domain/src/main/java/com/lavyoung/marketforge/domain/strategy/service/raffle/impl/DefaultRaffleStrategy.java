@@ -21,9 +21,8 @@ import java.util.Map;
  * <p>
  * 优先执行黑名单规则，再依次执行其余前置规则，并在规则接管时立即返回规则结果。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  * @date 2026/09/05
  */
 @Slf4j
@@ -70,12 +69,12 @@ public class DefaultRaffleStrategy extends AbstractRaffleStrategy {
         if (model != null) {
             ILogicFilter<RuleActionEntity.RaffleBeforeEntity> logicFilter = logicFilterMap.get(model);
             RuleMatterEntity ruleMatterEntity = RuleMatterEntity.builder()
-                    .userId(factorEntity.getUserId())
+                    .userId(factorEntity.userId())
                     .awardId(null) // 无奖品ID
-                    .strategyId(factorEntity.getStrategyId())
+                    .strategyId(factorEntity.strategyId())
                     .ruleModel(model.getCode()).build();
             RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> ruleAction = logicFilter.filter(ruleMatterEntity);
-            if (!RuleLogicCheckTypeVO.ALLOW.getCode().equals(ruleAction.getCode())) {
+            if (!RuleLogicCheckTypeVO.ALLOW.getCode().equals(ruleAction.code())) {
                 return ruleAction;
             }
         }
@@ -86,14 +85,14 @@ public class DefaultRaffleStrategy extends AbstractRaffleStrategy {
         for (RuleModel ruleModel : ruleModelList) {
             ILogicFilter<RuleActionEntity.RaffleBeforeEntity> logicFilter = logicFilterMap.get(ruleModel);
             RuleMatterEntity ruleMatterEntity = RuleMatterEntity.builder()
-                    .userId(factorEntity.getUserId())
-                    .strategyId(factorEntity.getStrategyId())
+                    .userId(factorEntity.userId())
+                    .strategyId(factorEntity.strategyId())
                     .awardId(null)
                     .ruleModel(ruleModel.getCode())
                     .build();
             RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> ruleAction = logicFilter.filter(ruleMatterEntity);
-            log.info("抽奖前规则过滤 userId={} ruleModel={} code={} info={}", factorEntity.getUserId(), ruleModel, ruleAction.getCode(), ruleAction.getMsg());
-            if (!RuleLogicCheckTypeVO.ALLOW.getCode().equals(ruleAction.getCode())) {
+            log.info("抽奖前规则过滤 userId={} ruleModel={} code={} info={}", factorEntity.userId(), ruleModel, ruleAction.code(), ruleAction.msg());
+            if (!RuleLogicCheckTypeVO.ALLOW.getCode().equals(ruleAction.code())) {
                 return ruleAction;
             }
         }

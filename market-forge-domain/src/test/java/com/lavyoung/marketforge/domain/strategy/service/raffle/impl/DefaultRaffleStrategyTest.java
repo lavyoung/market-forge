@@ -25,9 +25,8 @@ import static org.mockito.Mockito.*;
 /**
  * 验证 {@link DefaultRaffleStrategy} 的规则编排与抽奖分派行为。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
- * @email lavyoung1325@outlook.com
  */
 @ExtendWith(MockitoExtension.class)
 class DefaultRaffleStrategyTest {
@@ -92,7 +91,7 @@ class DefaultRaffleStrategyTest {
         RaffleAwardEntity award = raffleStrategy.performRaffle(validFactor());
 
         // Then
-        assertEquals(DEFAULT_AWARD_ID, award.getAwardId());
+        assertEquals(DEFAULT_AWARD_ID, award.awardId());
         verify(strategyDispatch).getRandomAwardId(STRATEGY_ID);
         verify(strategyDispatch, never()).getRandomAwardIdAndWeight(any(), any());
     }
@@ -113,7 +112,7 @@ class DefaultRaffleStrategyTest {
         RaffleAwardEntity award = raffleStrategy.performRaffle(validFactor());
 
         // Then
-        assertEquals(RULE_AWARD_ID, award.getAwardId());
+        assertEquals(RULE_AWARD_ID, award.awardId());
         verify(weightFilter, never()).filter(any());
         verifyNoInteractions(strategyDispatch);
     }
@@ -138,7 +137,7 @@ class DefaultRaffleStrategyTest {
         RaffleAwardEntity award = raffleStrategy.performRaffle(validFactor());
 
         // Then
-        assertEquals(DEFAULT_AWARD_ID, award.getAwardId());
+        assertEquals(DEFAULT_AWARD_ID, award.awardId());
         InOrder ruleOrder = inOrder(blackListFilter, weightFilter);
         ruleOrder.verify(blackListFilter).filter(any(RuleMatterEntity.class));
         ruleOrder.verify(weightFilter).filter(any(RuleMatterEntity.class));

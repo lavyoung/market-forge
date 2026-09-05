@@ -10,9 +10,8 @@ import java.util.concurrent.TimeUnit;
 /**
  * 基于 Redisson 的 Redis 通用服务实现。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  */
 @Service("redissonService")
 public class RedissonService implements IRedisService {

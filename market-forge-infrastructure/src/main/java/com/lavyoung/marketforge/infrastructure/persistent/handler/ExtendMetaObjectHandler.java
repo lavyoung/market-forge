@@ -11,9 +11,8 @@ import java.time.LocalDateTime;
  * <p>
  * 新增数据时填充创建时间和更新时间，更新数据时刷新更新时间。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
- * @email lavyoung1325@outlook.com
  */
 @Component
 public class ExtendMetaObjectHandler implements MetaObjectHandler {

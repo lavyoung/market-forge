@@ -6,8 +6,7 @@ import java.util.UUID;
 /**
  * 领域事件的基础实现，记录事件标识和发生时间。
  *
- * @author lavyoung
- * @email lavyoung1325@outlook.com
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
  */
 public abstract class BaseDomainEvent implements DomainEvent {

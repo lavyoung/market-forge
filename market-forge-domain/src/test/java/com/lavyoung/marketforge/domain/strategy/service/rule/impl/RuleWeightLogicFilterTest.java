@@ -17,9 +17,8 @@ import static org.mockito.Mockito.when;
 /**
  * 验证 {@link RuleWeightLogicFilter} 的权重门槛匹配行为。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
- * @email lavyoung1325@outlook.com
  */
 @ExtendWith(MockitoExtension.class)
 class RuleWeightLogicFilterTest {
@@ -61,10 +60,10 @@ class RuleWeightLogicFilterTest {
         RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> action = filter.filter(ruleMatter);
 
         // Then
-        assertEquals(RuleLogicCheckTypeVO.TAKE_OVER.getCode(), action.getCode());
-        assertEquals(RuleModel.WEIGHT.getCode(), action.getRuleModel());
-        assertEquals("5000", action.getData().getRuleWeightValueKey());
-        assertEquals(STRATEGY_ID, action.getData().getStrategyId());
+        assertEquals(RuleLogicCheckTypeVO.TAKE_OVER.getCode(), action.code());
+        assertEquals(RuleModel.WEIGHT.getCode(), action.ruleModel());
+        assertEquals("5000", action.data().ruleWeightValueKey());
+        assertEquals(STRATEGY_ID, action.data().strategyId());
     }
 
     /**
@@ -81,8 +80,8 @@ class RuleWeightLogicFilterTest {
         RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> action = filter.filter(ruleMatter);
 
         // Then
-        assertEquals(RuleLogicCheckTypeVO.ALLOW.getCode(), action.getCode());
-        assertNull(action.getData());
+        assertEquals(RuleLogicCheckTypeVO.ALLOW.getCode(), action.code());
+        assertNull(action.data());
     }
 
     /**
@@ -98,8 +97,8 @@ class RuleWeightLogicFilterTest {
         RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> action = filter.filter(ruleMatter);
 
         // Then
-        assertEquals(RuleLogicCheckTypeVO.ALLOW.getCode(), action.getCode());
-        assertNull(action.getData());
+        assertEquals(RuleLogicCheckTypeVO.ALLOW.getCode(), action.code());
+        assertNull(action.data());
     }
 
     /**

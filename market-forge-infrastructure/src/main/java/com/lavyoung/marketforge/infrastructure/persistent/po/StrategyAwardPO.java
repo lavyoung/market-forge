@@ -11,9 +11,8 @@ import java.math.BigDecimal;
  * <p>
  * 记录策略内奖品的库存、概率、规则及展示顺序，并继承 {@link BasePO} 的审计字段。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
- * @email lavyoung1325@outlook.com
  */
 @Getter
 @Setter

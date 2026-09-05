@@ -22,9 +22,8 @@ import java.util.Map;
  * <p>
  * 根据用户分值匹配权重门槛，并返回相应权重策略的概率查找表键。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  * @date 2026/09/05
  */
 @Slf4j
@@ -54,8 +53,8 @@ public class RuleWeightLogicFilter implements ILogicFilter<RuleActionEntity.Raff
      */
     @Override
     public RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> filter(RuleMatterEntity ruleMatterEntity) {
-        log.info("规则过滤-权重 userId={} strategyId={} awardId={}, ruleModel={}", ruleMatterEntity.getUserId(), ruleMatterEntity.getStrategyId(), ruleMatterEntity.getAwardId(), ruleMatterEntity.getRuleModel());
-        String weightRuleValue = repository.queryStrategyRuleValue(ruleMatterEntity.getStrategyId(), ruleMatterEntity.getAwardId(), ruleMatterEntity.getRuleModel());
+        log.info("规则过滤-权重 userId={} strategyId={} awardId={}, ruleModel={}", ruleMatterEntity.userId(), ruleMatterEntity.strategyId(), ruleMatterEntity.awardId(), ruleMatterEntity.ruleModel());
+        String weightRuleValue = repository.queryStrategyRuleValue(ruleMatterEntity.strategyId(), ruleMatterEntity.awardId(), ruleMatterEntity.ruleModel());
         Map<Long, String> ruleValueMap = ruleValueMap(weightRuleValue);
         if (!CollectionUtils.isEmpty(ruleValueMap)) {
             // todo 这里需要实际的用户分数
@@ -69,8 +68,8 @@ public class RuleWeightLogicFilter implements ILogicFilter<RuleActionEntity.Raff
                         .msg(RuleLogicCheckTypeVO.TAKE_OVER.getInfo())
                         .ruleModel(RuleModel.WEIGHT.getCode())
                         .data(RuleActionEntity.RaffleBeforeEntity.builder()
-                                .strategyId(ruleMatterEntity.getStrategyId())
-                                .awardId(ruleMatterEntity.getAwardId())
+                                .strategyId(ruleMatterEntity.strategyId())
+                                .awardId(ruleMatterEntity.awardId())
                                 .ruleWeightValueKey(ruleValueMap.get(weightKey))
                                 .build()
                         )

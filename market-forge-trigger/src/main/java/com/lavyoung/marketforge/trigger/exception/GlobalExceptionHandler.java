@@ -1,6 +1,7 @@
 package com.lavyoung.marketforge.trigger.exception;
 
 import com.lavyoung.marketforge.types.exception.BusinessException;
+import com.lavyoung.marketforge.types.model.CommonResponseCode;
 import com.lavyoung.marketforge.types.model.Response;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
@@ -12,8 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 /**
  * 将应用异常转换为统一 HTTP 响应。
  *
- * @author lavyoung
- * @email lavyoung1325@outlook.com
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
  */
 @RestControllerAdvice
@@ -30,7 +30,7 @@ public class GlobalExceptionHandler {
             BusinessException exception) {
 
         return Response.fail(
-                exception.getCode(),
+                exception.getResponseCode(),
                 exception.getMessage()
         );
     }
@@ -54,7 +54,7 @@ public class GlobalExceptionHandler {
                 .orElse("Parameter validation failed");
 
         return Response.fail(
-                "PARAM_001",
+                CommonResponseCode.PARAM_INVALID,
                 message
         );
     }
@@ -70,7 +70,7 @@ public class GlobalExceptionHandler {
             ConstraintViolationException exception) {
 
         return Response.fail(
-                "PARAM_002",
+                CommonResponseCode.PARAM_INVALID,
                 exception.getMessage()
         );
     }
@@ -86,7 +86,7 @@ public class GlobalExceptionHandler {
             HttpMessageNotReadableException exception) {
 
         return Response.fail(
-                "PARAM_003",
+                CommonResponseCode.REQUEST_BODY_INVALID,
                 "Request body is invalid"
         );
     }
@@ -102,7 +102,7 @@ public class GlobalExceptionHandler {
             Exception exception) {
 
         return Response.fail(
-                "SYSTEM_001",
+                CommonResponseCode.SYSTEM_ERROR,
                 "System error"
         );
     }

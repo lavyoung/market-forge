@@ -9,9 +9,8 @@ import java.util.Optional;
 /**
  * 业务编码
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  * @date 2026/09/02
  */
 @Getter
@@ -23,15 +22,6 @@ public enum BusinessResponseCode implements IResponseCode {
      * AAA：业务域；BBB：业务场景；CCC：具体状态。
      * 公共域编码在展示为九位编码时需要在左侧补零，源码中不使用前导零以避免被 Java 解析为八进制。
      */
-
-    // 000 - 公共响应
-    SUCCESS(0, "common.success", "成功"),
-    PARAM_INVALID(1_001, "common.param.invalid", "请求参数无效"),
-    PARAM_MISSING(1_002, "common.param.missing", "缺少必要的请求参数"),
-    REQUEST_BODY_INVALID(1_003, "common.request.body.invalid", "请求体格式无效"),
-    DATA_NOT_FOUND(2_001, "common.data.not-found", "数据不存在"),
-    DUPLICATE_REQUEST(3_001, "common.request.duplicate", "请勿重复提交"),
-    OPERATION_NOT_ALLOWED(3_002, "common.operation.not-allowed", "当前状态不允许执行该操作"),
 
     // 100 - 策略域
     STRATEGY_NOT_FOUND(100_001_001, "strategy.not-found", "抽奖策略不存在"),
@@ -66,13 +56,7 @@ public enum BusinessResponseCode implements IResponseCode {
     POINTS_ACCOUNT_NOT_FOUND(400_001_001, "points.account.not-found", "积分账户不存在"),
     POINTS_BALANCE_NOT_ENOUGH(400_002_001, "points.balance.not-enough", "积分余额不足"),
     POINTS_DEDUCTION_FAILED(400_002_002, "points.deduction.failed", "积分扣减失败"),
-    POINTS_TRANSACTION_DUPLICATED(400_003_001, "points.transaction.duplicated", "积分流水已处理"),
-
-    // 900 - 系统与依赖
-    SYSTEM_ERROR(900_000_001, "system.error", "系统异常，请稍后重试"),
-    SERVICE_UNAVAILABLE(900_001_001, "system.service.unavailable", "服务暂时不可用"),
-    DATABASE_ERROR(900_002_001, "system.database.error", "数据服务异常"),
-    CACHE_ERROR(900_003_001, "system.cache.error", "缓存服务异常");
+    POINTS_TRANSACTION_DUPLICATED(400_003_001, "points.transaction.duplicated", "积分流水已处理");
 
 
     /**

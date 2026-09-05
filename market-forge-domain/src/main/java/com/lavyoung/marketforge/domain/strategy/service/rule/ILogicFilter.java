@@ -7,9 +7,8 @@ import com.lavyoung.marketforge.domain.strategy.model.entity.RuleMatterEntity;
  * 抽奖规则过滤器。
  *
  * @param <T> 规则执行阶段对应的结果数据类型
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  * @date 2026/09/04
  */
 public interface ILogicFilter<T extends RuleActionEntity.RaffleEntity> {

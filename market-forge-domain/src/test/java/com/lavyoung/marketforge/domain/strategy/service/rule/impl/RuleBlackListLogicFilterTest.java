@@ -18,9 +18,8 @@ import static org.mockito.Mockito.when;
 /**
  * 验证 {@link RuleBlackListLogicFilter} 的黑名单匹配行为。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
- * @email lavyoung1325@outlook.com
  */
 @ExtendWith(MockitoExtension.class)
 class RuleBlackListLogicFilterTest {
@@ -61,10 +60,10 @@ class RuleBlackListLogicFilterTest {
         RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> action = filter.filter(ruleMatter);
 
         // Then
-        assertEquals(RuleLogicCheckTypeVO.TAKE_OVER.getCode(), action.getCode());
-        assertEquals(RuleModel.RULE_BLACKLIST.getCode(), action.getRuleModel());
-        assertEquals(STRATEGY_ID, action.getData().getStrategyId());
-        assertEquals(BLACKLIST_AWARD_ID, action.getData().getAwardId());
+        assertEquals(RuleLogicCheckTypeVO.TAKE_OVER.getCode(), action.code());
+        assertEquals(RuleModel.RULE_BLACKLIST.getCode(), action.ruleModel());
+        assertEquals(STRATEGY_ID, action.data().strategyId());
+        assertEquals(BLACKLIST_AWARD_ID, action.data().awardId());
         verify(repository).queryStrategyRuleValue(STRATEGY_ID, null, RuleModel.RULE_BLACKLIST.getCode());
     }
 
@@ -81,8 +80,8 @@ class RuleBlackListLogicFilterTest {
         RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> action = filter.filter(ruleMatter);
 
         // Then
-        assertEquals(RuleLogicCheckTypeVO.ALLOW.getCode(), action.getCode());
-        assertNull(action.getData());
+        assertEquals(RuleLogicCheckTypeVO.ALLOW.getCode(), action.code());
+        assertNull(action.data());
     }
 
     /**
@@ -98,8 +97,8 @@ class RuleBlackListLogicFilterTest {
         RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> action = filter.filter(ruleMatter);
 
         // Then
-        assertEquals(RuleLogicCheckTypeVO.ALLOW.getCode(), action.getCode());
-        assertNull(action.getData());
+        assertEquals(RuleLogicCheckTypeVO.ALLOW.getCode(), action.code());
+        assertNull(action.data());
     }
 
     /**

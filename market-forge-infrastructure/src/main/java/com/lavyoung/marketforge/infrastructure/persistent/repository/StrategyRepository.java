@@ -29,9 +29,8 @@ import java.util.Optional;
  * <p>
  * 使用 MyBatis/MyBatis-Plus 读取策略配置，并使用 Redis 保存策略缓存和装配后的概率查找表。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  */
 @Slf4j
 @Service

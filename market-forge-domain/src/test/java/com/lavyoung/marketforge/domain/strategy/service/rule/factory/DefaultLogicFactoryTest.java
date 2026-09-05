@@ -18,9 +18,8 @@ import static org.mockito.Mockito.mock;
 /**
  * 验证 {@link DefaultLogicFactory} 基于注解注册规则过滤器的行为。
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
- * @email lavyoung1325@outlook.com
  */
 class DefaultLogicFactoryTest {
 

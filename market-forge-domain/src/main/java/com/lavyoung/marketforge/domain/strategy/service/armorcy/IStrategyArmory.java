@@ -6,9 +6,8 @@ package com.lavyoung.marketforge.domain.strategy.service.armorcy;
  * <p>
  * 负责抽奖前策略的初始化工作 不负责抽奖的处理工作
  *
- * @author lavyoung
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @email lavyoung1325@outlook.com
  */
 public interface IStrategyArmory {
 
