@@ -1,13 +1,13 @@
-package com.lavyoung.marketforge.domain.strategy.service.raffle;
+package com.lavyoung.marketforge.domain.strategy.service;
 
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RuleActionEntity;
-import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleLogicCheckTypeVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
-import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
+import com.lavyoung.marketforge.domain.strategy.service.rule.chain.ILogicChain;
+import com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.CommonResponseCode;
@@ -21,7 +21,7 @@ import java.util.Optional;
 /**
  * 抽奖策略执行模板。
  * <p>
- * 统一完成入参校验、抽奖前规则判断和奖品随机选择，具体的前置规则编排由子类实现。
+ * 统一完成入参校验、责任链抽奖和抽奖中规则判断，具体的阶段规则编排由子类实现。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -37,16 +37,17 @@ public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
     protected IStrategyRepository repository;
 
     /**
-     * 已装配策略的随机调度服务。
+     * 根据策略配置装配抽奖前责任链的工厂。
      */
-    protected IStrategyDispatch strategyDispatch;
+    private DefaultChainFactory defaultChainFactory;
 
     /**
      * {@inheritDoc}
      *
-     * @param raffleFactorEntity 包含用户和策略标识的抽奖因子
+     * @param raffleFactorEntity 包含用户和策略标识的抽奖因子，不可为 {@code null}
      * @return 规则指定或随机选中的奖品信息
-     * @throws BusinessException 用户标识为空或策略标识为空时抛出
+     * @throws BusinessException    用户标识为空或策略标识为空时抛出
+     * @throws NullPointerException 抽奖因子为 {@code null} 时抛出
      */
     @Override
     public RaffleAwardEntity performRaffle(RaffleFactorEntity raffleFactorEntity) {
@@ -57,25 +58,9 @@ public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
             throw new BusinessException(CommonResponseCode.PARAM_INVALID);
         }
 
-        StrategyEntity strategyEntity = repository.queryStrategyEntityByStrategyId(strategyId);
-        // 抽奖前 - 规则
-        RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> ruleActionEntity = this.doCheckRaffleBeforeLogic(RaffleFactorEntity.builder().userId(userId).strategyId(strategyId).build(),
-                strategyEntity.toRuleModes());
-        if (ruleActionEntity != null && RuleLogicCheckTypeVO.TAKE_OVER.getCode().equals(ruleActionEntity.code())) {
-            if (RuleModel.RULE_BLACKLIST.getCode().equals(ruleActionEntity.ruleModel())) {
-                return RaffleAwardEntity.builder().awardId(ruleActionEntity.data().awardId()).build();
-            }
-            if (RuleModel.WEIGHT.getCode().equals(ruleActionEntity.ruleModel())) {
-                // 根据返回的权重进行抽奖
-                RuleActionEntity.RaffleBeforeEntity beforeEntity = ruleActionEntity.data();
-                String ruleWeightValueKey = beforeEntity.ruleWeightValueKey();
-
-                long awardId = strategyDispatch.getRandomAwardIdAndWeight(strategyId, ruleWeightValueKey);
-                return RaffleAwardEntity.builder().awardId(awardId).build();
-            }
-        }
-        // 执行抽奖 默认
-        long awardId = strategyDispatch.getRandomAwardId(raffleFactorEntity.strategyId());
+        // 责任链抽奖模式
+        ILogicChain logicChain = defaultChainFactory.openLogicChain(strategyId);
+        Long awardId = logicChain.logic(userId, strategyId);
 
         // 抽奖中处理
         RuleActionEntity<RuleActionEntity.RaffleExecutingEntity> executingEntityRuleActionEntity = this.doCheckRaffleExecutingLogic(

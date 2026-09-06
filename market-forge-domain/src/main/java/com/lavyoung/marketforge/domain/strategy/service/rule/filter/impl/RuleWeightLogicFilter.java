@@ -1,11 +1,12 @@
-package com.lavyoung.marketforge.domain.strategy.service.rule.impl;
+package com.lavyoung.marketforge.domain.strategy.service.rule.filter.impl;
 
 import com.lavyoung.marketforge.domain.strategy.annotation.LogicStrategy;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RuleActionEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RuleMatterEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleLogicCheckTypeVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
-import com.lavyoung.marketforge.domain.strategy.service.rule.ILogicFilter;
+import com.lavyoung.marketforge.domain.strategy.service.rule.chain.impl.WeightLogicChain;
+import com.lavyoung.marketforge.domain.strategy.service.rule.filter.ILogicFilter;
 import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,8 @@ import java.util.Map;
  * <p>
  * 根据用户分值匹配权重门槛，并返回相应权重策略的概率查找表键。
  *
+ * @deprecated 权重前置规则已迁移至责任链，请使用 {@link WeightLogicChain}
+ *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
  * @date 2026/09/05
@@ -30,6 +33,7 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 @LogicStrategy(logicModel = RuleModel.WEIGHT)
+@Deprecated(since = "1.0.0", forRemoval = false)
 public class RuleWeightLogicFilter implements ILogicFilter<RuleActionEntity.RaffleBeforeEntity> {
 
     /**

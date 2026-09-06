@@ -4,6 +4,7 @@ import com.lavyoung.marketforge.domain.strategy.model.entity.RuleActionEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RuleMatterEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleLogicCheckTypeVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
+import com.lavyoung.marketforge.domain.strategy.service.rule.filter.impl.RuleBlackListLogicFilter;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -1,4 +1,4 @@
-package com.lavyoung.marketforge.domain.strategy.service.rule;
+package com.lavyoung.marketforge.domain.strategy.service.rule.filter;
 
 import com.lavyoung.marketforge.domain.strategy.model.entity.RuleActionEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RuleMatterEntity;

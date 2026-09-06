@@ -89,6 +89,17 @@ public interface IStrategyRepository {
     String queryStrategyRuleValue(Long strategyId, Long awardId, String ruleModel);
 
     /**
+     * 查询指定策略的策略级规则配置值。
+     * <p>
+     * 该方法不限定奖品标识，适用于黑名单、权重等策略级规则。
+     *
+     * @param strategyId 策略标识
+     * @param ruleModel  规则模型编码
+     * @return 规则配置值；未找到匹配规则时返回 {@code null}
+     */
+    String queryStrategyRuleValue(Long strategyId, String ruleModel);
+
+    /**
      * 查询指定策略奖品配置的规则模型。
      *
      * @param strategyId 策略标识

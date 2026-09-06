@@ -17,27 +17,32 @@ public enum RuleModel {
     /**
      * 抽奖次数解锁
      */
-    LOCK("rule_lock", "executing"),
+    LOCK("rule_lock", "executing", -1),
 
     /**
      * 权重
      */
-    WEIGHT("rule_weight", "before"),
+    WEIGHT("rule_weight", "before", 0),
 
     /**
      * 随机值
      */
-    RANDOM("rule_random", "after"),
+    RANDOM("rule_random", "after", 0),
 
     /**
      * 兜底奖品 幸运奖
      */
-    LUCK_AWARD("rule_luck_award", "executing"),
+    LUCK_AWARD("rule_luck_award", "executing", -98),
 
     /**
      * 黑名单
      */
-    RULE_BLACKLIST("rule_blacklist", "before"),
+    RULE_BLACKLIST("rule_blacklist", "before", 99),
+
+    /**
+     * 默认抽奖处理，不作为可配置业务规则。
+     */
+    DEFAULT("default", "", -99),
 
     ;
 
@@ -50,6 +55,11 @@ public enum RuleModel {
      * 规则执行阶段，取值为 {@code before}、{@code executing} 或 {@code after}。
      */
     private final String type;
+
+    /**
+     * 责任链执行优先级，数值越大越先执行。
+     */
+    private final int order;
 
     /**
      * 根据规则模型编码查找枚举值。

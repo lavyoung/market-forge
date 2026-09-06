@@ -1,14 +1,14 @@
-package com.lavyoung.marketforge.domain.strategy.service.raffle.impl;
+package com.lavyoung.marketforge.domain.strategy.service.impl;
 
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RuleActionEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RuleMatterEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleLogicCheckTypeVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
-import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
-import com.lavyoung.marketforge.domain.strategy.service.raffle.AbstractRaffleStrategy;
-import com.lavyoung.marketforge.domain.strategy.service.rule.ILogicFilter;
-import com.lavyoung.marketforge.domain.strategy.service.rule.factory.DefaultLogicFactory;
+import com.lavyoung.marketforge.domain.strategy.service.AbstractRaffleStrategy;
+import com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
+import com.lavyoung.marketforge.domain.strategy.service.rule.filter.ILogicFilter;
+import com.lavyoung.marketforge.domain.strategy.service.rule.filter.factory.DefaultLogicFactory;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -20,7 +20,7 @@ import java.util.Map;
 /**
  * 默认抽奖策略实现。
  * <p>
- * 优先执行黑名单规则，再依次执行其余前置规则，并在规则接管时立即返回规则结果。
+ * 使用责任链完成抽奖前规则与奖品随机选择，并按配置顺序执行抽奖中、抽奖后过滤器。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -39,14 +39,14 @@ public class DefaultRaffleStrategy extends AbstractRaffleStrategy {
      * 创建默认抽奖策略。
      *
      * @param repository          抽奖策略仓储端口
-     * @param strategyDispatch    已装配策略的随机调度服务
+     * @param defaultChainFactory 抽奖前责任链装配工厂
      * @param defaultLogicFactory 规则模型与过滤器的注册工厂
      */
     public DefaultRaffleStrategy(
             IStrategyRepository repository,
-            IStrategyDispatch strategyDispatch,
+            DefaultChainFactory defaultChainFactory,
             DefaultLogicFactory defaultLogicFactory) {
-        super(repository, strategyDispatch);
+        super(repository, defaultChainFactory);
         this.defaultLogicFactory = defaultLogicFactory;
     }
 
@@ -113,7 +113,7 @@ public class DefaultRaffleStrategy extends AbstractRaffleStrategy {
      *
      * @param factorEntity 包含用户、策略及已命中奖品标识的抽奖因子
      * @param logics       待执行的抽奖中规则模型列表；可为空
-     * @return 首个非放行规则动作；未配置规则时返回放行动作，全部规则放行时返回 {@code null}
+     * @return 首个非放行规则动作；未配置规则或全部规则放行时返回放行动作
      */
     @Override
     protected RuleActionEntity<RuleActionEntity.RaffleExecutingEntity> doCheckRaffleExecutingLogic(RaffleFactorEntity factorEntity, List<RuleModel> logics) {
@@ -138,7 +138,10 @@ public class DefaultRaffleStrategy extends AbstractRaffleStrategy {
                 return ruleAction;
             }
         }
-        return null;
+        return RuleActionEntity.<RuleActionEntity.RaffleExecutingEntity>builder()
+                .code(RuleLogicCheckTypeVO.ALLOW.getCode())
+                .msg(RuleLogicCheckTypeVO.ALLOW.getInfo())
+                .build();
     }
 
     /**
@@ -148,7 +151,7 @@ public class DefaultRaffleStrategy extends AbstractRaffleStrategy {
      *
      * @param factorEntity 包含用户、策略及奖品标识的抽奖因子
      * @param logics       待执行的抽奖后规则模型列表；可为空
-     * @return 首个非放行规则动作；未配置规则时返回放行动作，全部规则放行时返回 {@code null}
+     * @return 首个非放行规则动作；未配置规则或全部规则放行时返回放行动作
      */
     @Override
     protected RuleActionEntity<RuleActionEntity.RaffleAfterEntity> doCheckRaffleAfterLogic(RaffleFactorEntity factorEntity, List<RuleModel> logics) {
@@ -173,6 +176,9 @@ public class DefaultRaffleStrategy extends AbstractRaffleStrategy {
                 return ruleAction;
             }
         }
-        return null;
+        return RuleActionEntity.<RuleActionEntity.RaffleAfterEntity>builder()
+                .code(RuleLogicCheckTypeVO.ALLOW.getCode())
+                .msg(RuleLogicCheckTypeVO.ALLOW.getInfo())
+                .build();
     }
 }

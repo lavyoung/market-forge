@@ -2,9 +2,10 @@ package com.lavyoung.marketforge.domain.strategy.service.rule.factory;
 
 import com.lavyoung.marketforge.domain.strategy.model.entity.RuleActionEntity;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
-import com.lavyoung.marketforge.domain.strategy.service.rule.ILogicFilter;
-import com.lavyoung.marketforge.domain.strategy.service.rule.impl.RuleBlackListLogicFilter;
-import com.lavyoung.marketforge.domain.strategy.service.rule.impl.RuleWeightLogicFilter;
+import com.lavyoung.marketforge.domain.strategy.service.rule.filter.ILogicFilter;
+import com.lavyoung.marketforge.domain.strategy.service.rule.filter.factory.DefaultLogicFactory;
+import com.lavyoung.marketforge.domain.strategy.service.rule.filter.impl.RuleBlackListLogicFilter;
+import com.lavyoung.marketforge.domain.strategy.service.rule.filter.impl.RuleWeightLogicFilter;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import org.junit.jupiter.api.Test;
 

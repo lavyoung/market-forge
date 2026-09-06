@@ -1,11 +1,12 @@
-package com.lavyoung.marketforge.domain.strategy.service.rule.impl;
+package com.lavyoung.marketforge.domain.strategy.service.rule.filter.impl;
 
 import com.lavyoung.marketforge.domain.strategy.annotation.LogicStrategy;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RuleActionEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RuleMatterEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleLogicCheckTypeVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
-import com.lavyoung.marketforge.domain.strategy.service.rule.ILogicFilter;
+import com.lavyoung.marketforge.domain.strategy.service.rule.chain.impl.BlackListLogicChain;
+import com.lavyoung.marketforge.domain.strategy.service.rule.filter.ILogicFilter;
 import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,8 @@ import org.springframework.stereotype.Component;
  * <p>
  * 当用户命中规则配置中的黑名单时接管抽奖流程，并返回规则指定的奖品。
  *
+ * @deprecated 黑名单前置规则已迁移至责任链，请使用 {@link BlackListLogicChain}
+ *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
  * @date 2026/09/05
@@ -26,6 +29,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @LogicStrategy(logicModel = RuleModel.RULE_BLACKLIST)
+@Deprecated(since = "1.0.0", forRemoval = false)
 public class RuleBlackListLogicFilter implements ILogicFilter<RuleActionEntity.RaffleBeforeEntity> {
 
     /**

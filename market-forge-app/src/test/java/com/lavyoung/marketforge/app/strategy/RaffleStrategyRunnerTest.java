@@ -4,12 +4,16 @@ import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
+import com.lavyoung.marketforge.domain.strategy.service.IRaffleStrategy;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
-import com.lavyoung.marketforge.domain.strategy.service.raffle.IRaffleStrategy;
-import com.lavyoung.marketforge.domain.strategy.service.raffle.impl.DefaultRaffleStrategy;
-import com.lavyoung.marketforge.domain.strategy.service.rule.factory.DefaultLogicFactory;
-import com.lavyoung.marketforge.domain.strategy.service.rule.impl.RuleBlackListLogicFilter;
-import com.lavyoung.marketforge.domain.strategy.service.rule.impl.RuleWeightLogicFilter;
+import com.lavyoung.marketforge.domain.strategy.service.impl.DefaultRaffleStrategy;
+import com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
+import com.lavyoung.marketforge.domain.strategy.service.rule.chain.impl.BlackListLogicChain;
+import com.lavyoung.marketforge.domain.strategy.service.rule.chain.impl.DefaultRuleChain;
+import com.lavyoung.marketforge.domain.strategy.service.rule.chain.impl.WeightLogicChain;
+import com.lavyoung.marketforge.domain.strategy.service.rule.filter.factory.DefaultLogicFactory;
+import com.lavyoung.marketforge.domain.strategy.service.rule.filter.impl.RuleBlackListLogicFilter;
+import com.lavyoung.marketforge.domain.strategy.service.rule.filter.impl.RuleWeightLogicFilter;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,12 +24,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 /**
- * 使用真实规则过滤器和模拟外部端口验证抽奖策略的规则编排与调度行为。
+ * 使用真实责任链节点、规则过滤器和模拟外部端口验证抽奖策略的编排与调度行为。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -51,7 +56,7 @@ class RaffleStrategyRunnerTest {
     private RuleWeightLogicFilter ruleWeightLogicFilter;
 
     /**
-     * Given 模拟外部端口，When 初始化真实规则链，Then 使用固定用户分值执行每个场景。
+     * Given 模拟外部端口，When 初始化真实责任链和过滤器，Then 使用固定用户分值执行每个场景。
      */
     @BeforeEach
     void setUp() {
@@ -61,7 +66,15 @@ class RaffleStrategyRunnerTest {
         DefaultLogicFactory logicFactory = new DefaultLogicFactory(
                 List.of(blackListLogicFilter, ruleWeightLogicFilter)
         );
-        raffleStrategy = new DefaultRaffleStrategy(repository, strategyDispatch, logicFactory);
+        DefaultChainFactory chainFactory = new DefaultChainFactory(
+                Map.of(
+                        RuleModel.RULE_BLACKLIST, new BlackListLogicChain(repository),
+                        RuleModel.WEIGHT, new WeightLogicChain(repository, strategyDispatch),
+                        RuleModel.DEFAULT, new DefaultRuleChain(strategyDispatch)
+                ),
+                repository
+        );
+        raffleStrategy = new DefaultRaffleStrategy(repository, chainFactory, logicFactory);
     }
 
     /**
@@ -93,11 +106,8 @@ class RaffleStrategyRunnerTest {
         // Given
         when(repository.queryStrategyEntityByStrategyId(STRATEGY_ID))
                 .thenReturn(strategyWithRules(RuleModel.RULE_BLACKLIST.getCode()));
-        when(repository.queryStrategyRuleValue(
-                STRATEGY_ID,
-                null,
-                RuleModel.RULE_BLACKLIST.getCode()
-        )).thenReturn(BLACKLIST_AWARD_ID + ":user-002/" + USER_ID);
+        when(repository.queryStrategyRuleValue(STRATEGY_ID, RuleModel.RULE_BLACKLIST.getCode()))
+                .thenReturn(BLACKLIST_AWARD_ID + ":user-002/" + USER_ID);
 
         // When
         RaffleAwardEntity award = raffleStrategy.performRaffle(validFactor());
@@ -116,11 +126,8 @@ class RaffleStrategyRunnerTest {
         // Given
         when(repository.queryStrategyEntityByStrategyId(STRATEGY_ID))
                 .thenReturn(strategyWithRules(RuleModel.WEIGHT.getCode()));
-        when(repository.queryStrategyRuleValue(
-                STRATEGY_ID,
-                null,
-                RuleModel.WEIGHT.getCode()
-        )).thenReturn("4000:100011/100012;5000:100011/100012/100013");
+        when(repository.queryStrategyRuleValue(STRATEGY_ID, RuleModel.WEIGHT.getCode()))
+                .thenReturn("4000:100011/100012;5000:100011/100012/100013");
         when(strategyDispatch.getRandomAwardIdAndWeight(STRATEGY_ID, WEIGHT_KEY))
                 .thenReturn(DEFAULT_AWARD_ID);
 

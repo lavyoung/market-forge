@@ -182,6 +182,20 @@ public class StrategyRepository implements IStrategyRepository {
     /**
      * {@inheritDoc}
      * <p>
+     * 委托奖品标识可为空的查询方法读取策略级规则值。
+     *
+     * @param strategyId 策略标识
+     * @param ruleModel  规则模型编码
+     * @return 规则配置值；未找到匹配规则时返回 {@code null}
+     */
+    @Override
+    public String queryStrategyRuleValue(Long strategyId, String ruleModel) {
+        return queryStrategyRuleValue(strategyId, null, ruleModel);
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
      * 使用 MyBatis-Plus 按策略标识和奖品标识查询奖品配置，并将规则模型字段转换为值对象。
      *
      * @param strategyId 策略标识

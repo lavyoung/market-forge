@@ -1,4 +1,4 @@
-package com.lavyoung.marketforge.domain.strategy.service.raffle;
+package com.lavyoung.marketforge.domain.strategy.service;
 
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;

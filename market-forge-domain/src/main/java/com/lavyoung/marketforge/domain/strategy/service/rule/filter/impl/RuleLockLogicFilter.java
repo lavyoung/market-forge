@@ -1,10 +1,10 @@
-package com.lavyoung.marketforge.domain.strategy.service.rule.impl;
+package com.lavyoung.marketforge.domain.strategy.service.rule.filter.impl;
 
 import com.lavyoung.marketforge.domain.strategy.annotation.LogicStrategy;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RuleActionEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RuleMatterEntity;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
-import com.lavyoung.marketforge.domain.strategy.service.rule.ILogicFilter;
+import com.lavyoung.marketforge.domain.strategy.service.rule.filter.ILogicFilter;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

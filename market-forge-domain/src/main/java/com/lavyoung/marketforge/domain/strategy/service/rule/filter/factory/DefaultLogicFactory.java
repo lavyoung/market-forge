@@ -1,8 +1,8 @@
-package com.lavyoung.marketforge.domain.strategy.service.rule.factory;
+package com.lavyoung.marketforge.domain.strategy.service.rule.filter.factory;
 
 import com.lavyoung.marketforge.domain.strategy.annotation.LogicStrategy;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RuleActionEntity;
-import com.lavyoung.marketforge.domain.strategy.service.rule.ILogicFilter;
+import com.lavyoung.marketforge.domain.strategy.service.rule.filter.ILogicFilter;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.stereotype.Service;
