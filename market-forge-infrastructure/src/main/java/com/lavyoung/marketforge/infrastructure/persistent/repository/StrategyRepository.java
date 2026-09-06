@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
+import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyAwardDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyDao;
@@ -11,6 +12,7 @@ import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyRuleDao;
 import com.lavyoung.marketforge.infrastructure.persistent.mapper.StrategyAwardMapper;
 import com.lavyoung.marketforge.infrastructure.persistent.mapper.StrategyMapper;
 import com.lavyoung.marketforge.infrastructure.persistent.mapper.StrategyRuleMapper;
+import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyAwardPO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyRulePO;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
 import com.lavyoung.marketforge.types.common.Constants;
@@ -175,6 +177,23 @@ public class StrategyRepository implements IStrategyRepository {
                 .eq(Objects.nonNull(awardId), StrategyRulePO::getAwardId, awardId)
                 .eq(StrategyRulePO::getRuleModel, ruleModel))
         ).stream().map(StrategyRulePO::getRuleValue).findFirst().orElse(null);
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * 使用 MyBatis-Plus 按策略标识和奖品标识查询奖品配置，并将规则模型字段转换为值对象。
+     *
+     * @param strategyId 策略标识
+     * @param awardId    奖品标识
+     * @return 策略奖品规则模型值对象；未找到奖品配置时返回 {@code null}
+     */
+    @Override
+    public StrategyAwardRuleModelVO queryStrategyAwardRuleModels(Long strategyId, long awardId) {
+        StrategyAwardPO strategyRulePO = strategyAwardDao.selectOne(Wrappers.lambdaQuery(StrategyAwardPO.class)
+                .eq(StrategyAwardPO::getStrategyId, strategyId)
+                .eq(StrategyAwardPO::getAwardId, awardId));
+        return Optional.ofNullable(strategyRulePO).map(x -> StrategyAwardRuleModelVO.builder().ruleModels(x.getRuleModels()).build()).orElse(null);
     }
 
     /**

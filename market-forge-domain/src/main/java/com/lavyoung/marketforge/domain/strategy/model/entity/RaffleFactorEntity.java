@@ -7,6 +7,7 @@ import lombok.Builder;
  *
  * @param userId     参与抽奖的用户标识
  * @param strategyId 本次抽奖使用的策略标识
+ * @param awardId    随机命中的奖品标识；抽奖前阶段可为空
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
  * @date 2026/09/04
@@ -14,7 +15,8 @@ import lombok.Builder;
 @Builder
 public record RaffleFactorEntity(
         String userId,
-        Long strategyId
+        Long strategyId,
+        Long awardId
 ) {
 
 }

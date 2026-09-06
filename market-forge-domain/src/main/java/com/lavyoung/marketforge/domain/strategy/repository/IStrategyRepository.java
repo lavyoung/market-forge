@@ -3,6 +3,7 @@ package com.lavyoung.marketforge.domain.strategy.repository;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
+import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 
 import java.util.List;
@@ -86,4 +87,13 @@ public interface IStrategyRepository {
      * @return 规则配置值；未找到匹配规则时返回 {@code null}
      */
     String queryStrategyRuleValue(Long strategyId, Long awardId, String ruleModel);
+
+    /**
+     * 查询指定策略奖品配置的规则模型。
+     *
+     * @param strategyId 策略标识
+     * @param awardId    奖品标识
+     * @return 策略奖品规则模型值对象；未找到奖品配置时返回 {@code null}
+     */
+    StrategyAwardRuleModelVO queryStrategyAwardRuleModels(Long strategyId, long awardId);
 }

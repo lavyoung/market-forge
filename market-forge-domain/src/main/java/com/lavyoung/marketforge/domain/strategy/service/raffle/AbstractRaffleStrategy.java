@@ -5,6 +5,7 @@ import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RuleActionEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleLogicCheckTypeVO;
+import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
@@ -15,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 抽奖策略执行模板。
@@ -57,15 +59,11 @@ public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
 
         StrategyEntity strategyEntity = repository.queryStrategyEntityByStrategyId(strategyId);
         // 抽奖前 - 规则
-        RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> ruleActionEntity = this.doCheckRaffleBeforeLogic(
-                RaffleFactorEntity.builder().userId(userId).strategyId(strategyId).build(),
-                strategyEntity.toRuleModes()
-        );
+        RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> ruleActionEntity = this.doCheckRaffleBeforeLogic(RaffleFactorEntity.builder().userId(userId).strategyId(strategyId).build(),
+                strategyEntity.toRuleModes());
         if (ruleActionEntity != null && RuleLogicCheckTypeVO.TAKE_OVER.getCode().equals(ruleActionEntity.code())) {
             if (RuleModel.RULE_BLACKLIST.getCode().equals(ruleActionEntity.ruleModel())) {
-                return RaffleAwardEntity.builder()
-                        .awardId(ruleActionEntity.data().awardId())
-                        .build();
+                return RaffleAwardEntity.builder().awardId(ruleActionEntity.data().awardId()).build();
             }
             if (RuleModel.WEIGHT.getCode().equals(ruleActionEntity.ruleModel())) {
                 // 根据返回的权重进行抽奖
@@ -73,16 +71,23 @@ public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
                 String ruleWeightValueKey = beforeEntity.ruleWeightValueKey();
 
                 long awardId = strategyDispatch.getRandomAwardIdAndWeight(strategyId, ruleWeightValueKey);
-                return RaffleAwardEntity.builder()
-                        .awardId(awardId)
-                        .build();
+                return RaffleAwardEntity.builder().awardId(awardId).build();
             }
         }
         // 执行抽奖 默认
         long awardId = strategyDispatch.getRandomAwardId(raffleFactorEntity.strategyId());
-        return RaffleAwardEntity.builder()
-                .awardId(awardId)
-                .build();
+
+        // 抽奖中处理
+        RuleActionEntity<RuleActionEntity.RaffleExecutingEntity> executingEntityRuleActionEntity = this.doCheckRaffleExecutingLogic(
+                RaffleFactorEntity.builder().strategyId(strategyId).userId(userId).awardId(awardId).build(),
+                Optional.ofNullable(repository.queryStrategyAwardRuleModels(strategyId, awardId)).map(StrategyAwardRuleModelVO::raffleExecutingRuleModelsList).orElse(null));
+        // 规则结果处理 使用兜底
+        if (executingEntityRuleActionEntity.code().equals(RuleLogicCheckTypeVO.TAKE_OVER.getCode())) {
+            // 返回null 直接获取兜底奖励返回即可
+            return RaffleAwardEntity.builder().awardId(null).build();
+        }
+
+        return RaffleAwardEntity.builder().awardId(awardId).build();
     }
 
     /**
@@ -95,4 +100,26 @@ public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
      * @return 接管抽奖流程的规则动作；全部放行时返回 {@code null}
      */
     protected abstract RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> doCheckRaffleBeforeLogic(RaffleFactorEntity factorEntity, List<RuleModel> logics);
+
+    /**
+     * 按奖品配置执行抽奖中规则。
+     * <p>
+     * 规则可根据已随机命中的奖品决定放行、接管或改写后续抽奖结果。
+     *
+     * @param factorEntity 包含用户、策略及已命中奖品标识的抽奖因子
+     * @param logics       待执行的抽奖中规则模型列表；可为空
+     * @return 抽奖中规则动作；具体的空值语义由实现类约定
+     */
+    protected abstract RuleActionEntity<RuleActionEntity.RaffleExecutingEntity> doCheckRaffleExecutingLogic(RaffleFactorEntity factorEntity, List<RuleModel> logics);
+
+    /**
+     * 按奖品配置执行抽奖后规则。
+     * <p>
+     * 用于在奖品结果确定后执行需要补充处理的规则链。
+     *
+     * @param factorEntity 包含用户、策略及奖品标识的抽奖因子
+     * @param logics       待执行的抽奖后规则模型列表；可为空
+     * @return 抽奖后规则动作；具体的空值语义由实现类约定
+     */
+    protected abstract RuleActionEntity<RuleActionEntity.RaffleAfterEntity> doCheckRaffleAfterLogic(RaffleFactorEntity factorEntity, List<RuleModel> logics);
 }

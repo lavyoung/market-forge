@@ -12,6 +12,7 @@ import com.lavyoung.marketforge.domain.strategy.service.rule.factory.DefaultLogi
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -60,6 +61,12 @@ public class DefaultRaffleStrategy extends AbstractRaffleStrategy {
      */
     @Override
     protected RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> doCheckRaffleBeforeLogic(RaffleFactorEntity factorEntity, List<RuleModel> logics) {
+        if (CollectionUtils.isEmpty(logics)) {
+            return RuleActionEntity.<RuleActionEntity.RaffleBeforeEntity>builder()
+                    .code(RuleLogicCheckTypeVO.ALLOW.getCode())
+                    .msg(RuleLogicCheckTypeVO.ALLOW.getInfo())
+                    .build();
+        }
         Map<RuleModel, ILogicFilter<RuleActionEntity.RaffleBeforeEntity>> logicFilterMap = defaultLogicFactory.openLogicFilter();
 
         // 前置
@@ -87,11 +94,81 @@ public class DefaultRaffleStrategy extends AbstractRaffleStrategy {
             RuleMatterEntity ruleMatterEntity = RuleMatterEntity.builder()
                     .userId(factorEntity.userId())
                     .strategyId(factorEntity.strategyId())
-                    .awardId(null)
+                    .awardId(factorEntity.awardId())
                     .ruleModel(ruleModel.getCode())
                     .build();
             RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> ruleAction = logicFilter.filter(ruleMatterEntity);
             log.info("抽奖前规则过滤 userId={} ruleModel={} code={} info={}", factorEntity.userId(), ruleModel, ruleAction.code(), ruleAction.msg());
+            if (!RuleLogicCheckTypeVO.ALLOW.getCode().equals(ruleAction.code())) {
+                return ruleAction;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * 按配置顺序执行抽奖中规则。未配置规则时返回放行动作；任一规则不放行时立即停止。
+     *
+     * @param factorEntity 包含用户、策略及已命中奖品标识的抽奖因子
+     * @param logics       待执行的抽奖中规则模型列表；可为空
+     * @return 首个非放行规则动作；未配置规则时返回放行动作，全部规则放行时返回 {@code null}
+     */
+    @Override
+    protected RuleActionEntity<RuleActionEntity.RaffleExecutingEntity> doCheckRaffleExecutingLogic(RaffleFactorEntity factorEntity, List<RuleModel> logics) {
+        if (CollectionUtils.isEmpty(logics)) {
+            return RuleActionEntity.<RuleActionEntity.RaffleExecutingEntity>builder()
+                    .code(RuleLogicCheckTypeVO.ALLOW.getCode())
+                    .msg(RuleLogicCheckTypeVO.ALLOW.getInfo())
+                    .build();
+        }
+        Map<RuleModel, ILogicFilter<RuleActionEntity.RaffleExecutingEntity>> logicFilterMap = defaultLogicFactory.openLogicFilter();
+        for (RuleModel ruleModel : logics) {
+            ILogicFilter<RuleActionEntity.RaffleExecutingEntity> logicFilter = logicFilterMap.get(ruleModel);
+            RuleMatterEntity ruleMatterEntity = RuleMatterEntity.builder()
+                    .userId(factorEntity.userId())
+                    .strategyId(factorEntity.strategyId())
+                    .awardId(factorEntity.awardId())
+                    .ruleModel(ruleModel.getCode())
+                    .build();
+            RuleActionEntity<RuleActionEntity.RaffleExecutingEntity> ruleAction = logicFilter.filter(ruleMatterEntity);
+            log.info("抽奖中规则过滤 userId={} awardId= {} ruleModel={} code={} info={}", factorEntity.userId(), factorEntity.awardId(), ruleModel, ruleAction.code(), ruleAction.msg());
+            if (!RuleLogicCheckTypeVO.ALLOW.getCode().equals(ruleAction.code())) {
+                return ruleAction;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * 按配置顺序执行抽奖后规则。未配置规则时返回放行动作；任一规则不放行时立即停止。
+     *
+     * @param factorEntity 包含用户、策略及奖品标识的抽奖因子
+     * @param logics       待执行的抽奖后规则模型列表；可为空
+     * @return 首个非放行规则动作；未配置规则时返回放行动作，全部规则放行时返回 {@code null}
+     */
+    @Override
+    protected RuleActionEntity<RuleActionEntity.RaffleAfterEntity> doCheckRaffleAfterLogic(RaffleFactorEntity factorEntity, List<RuleModel> logics) {
+        if (CollectionUtils.isEmpty(logics)) {
+            return RuleActionEntity.<RuleActionEntity.RaffleAfterEntity>builder()
+                    .code(RuleLogicCheckTypeVO.ALLOW.getCode())
+                    .msg(RuleLogicCheckTypeVO.ALLOW.getInfo())
+                    .build();
+        }
+        Map<RuleModel, ILogicFilter<RuleActionEntity.RaffleAfterEntity>> logicFilterMap = defaultLogicFactory.openLogicFilter();
+        for (RuleModel ruleModel : logics) {
+            ILogicFilter<RuleActionEntity.RaffleAfterEntity> logicFilter = logicFilterMap.get(ruleModel);
+            RuleMatterEntity ruleMatterEntity = RuleMatterEntity.builder()
+                    .userId(factorEntity.userId())
+                    .strategyId(factorEntity.strategyId())
+                    .awardId(factorEntity.awardId())
+                    .ruleModel(ruleModel.getCode())
+                    .build();
+            RuleActionEntity<RuleActionEntity.RaffleAfterEntity> ruleAction = logicFilter.filter(ruleMatterEntity);
+            log.info("抽奖后规则过滤 userId={} awardId= {} ruleModel={} code={} info={}", factorEntity.userId(), factorEntity.awardId(), ruleModel, ruleAction.code(), ruleAction.msg());
             if (!RuleLogicCheckTypeVO.ALLOW.getCode().equals(ruleAction.code())) {
                 return ruleAction;
             }
