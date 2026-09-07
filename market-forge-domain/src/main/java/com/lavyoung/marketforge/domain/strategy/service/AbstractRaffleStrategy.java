@@ -58,8 +58,9 @@ public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
             throw new BusinessException(CommonResponseCode.PARAM_INVALID);
         }
 
-        // 责任链抽奖模式
+        // 2. 责任链抽奖模式
         ILogicChain logicChain = defaultChainFactory.openLogicChain(strategyId);
+        // 3. 奖品id
         Long awardId = logicChain.logic(userId, strategyId);
 
         // 抽奖中处理

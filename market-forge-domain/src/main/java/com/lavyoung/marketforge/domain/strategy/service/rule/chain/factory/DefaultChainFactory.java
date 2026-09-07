@@ -29,7 +29,7 @@ import java.util.Map;
 public class DefaultChainFactory {
 
     /**
-     * 规则模型与责任链节点的映射。
+     * 规则模型与责任链节点的映射。这里需要处理 todo
      */
     private final Map<RuleModel, ILogicChain> logicChainMap;
 

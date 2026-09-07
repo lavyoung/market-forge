@@ -1,8 +1,10 @@
 package com.lavyoung.marketforge.app.strategy;
 
+import com.google.gson.Gson;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
+import com.lavyoung.marketforge.domain.strategy.model.vo.*;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.IRaffleStrategy;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
@@ -14,6 +16,8 @@ import com.lavyoung.marketforge.domain.strategy.service.rule.chain.impl.WeightLo
 import com.lavyoung.marketforge.domain.strategy.service.rule.filter.factory.DefaultLogicFactory;
 import com.lavyoung.marketforge.domain.strategy.service.rule.filter.impl.RuleBlackListLogicFilter;
 import com.lavyoung.marketforge.domain.strategy.service.rule.filter.impl.RuleWeightLogicFilter;
+import com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory.DefaultTreeFactory;
+import com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory.engine.IDecisionTreeEngine;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +27,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -51,6 +57,9 @@ class RaffleStrategyRunnerTest {
 
     @Mock
     private IStrategyDispatch strategyDispatch;
+
+    @Mock
+    private DefaultTreeFactory defaultTreeFactory;
 
     private IRaffleStrategy raffleStrategy;
     private RuleWeightLogicFilter ruleWeightLogicFilter;
@@ -140,6 +149,83 @@ class RaffleStrategyRunnerTest {
         verify(strategyDispatch, never()).getRandomAwardId(STRATEGY_ID);
     }
 
+
+    /**
+     * rule_lock --左--> rule_luck_award
+     * --右--> rule_stock --右--> rule_luck_award
+     */
+    @Test
+    @DisplayName("自己尝试根据模型信息创建数据库表，并从库中读取数据，完整模型的调用")
+    public void test_tree_rule() {
+        // 构建参数
+        RuleTreeNodeVO rule_lock = RuleTreeNodeVO.builder()
+                .treeId(100000001)
+                .ruleKey("rule_lock")
+                .ruleDesc("限定用户已完成N次抽奖后解锁")
+                .ruleValue("1")
+                .ruleTreeNodeLineVoList(new ArrayList<>() {{
+                    add(RuleTreeNodeLineVo.builder()
+                            .treeId(100000001)
+                            .ruleNodeFrom("rule_lock")
+                            .ruleNodeTo("rule_luck_award")
+                            .ruleLimitTypeVO(RuleLimitTypeVO.EQ)
+                            .ruleLimitValue(RuleLogicCheckTypeVO.TAKE_OVER)
+                            .build());
+
+                    add(RuleTreeNodeLineVo.builder()
+                            .treeId(100000001)
+                            .ruleNodeFrom("rule_lock")
+                            .ruleNodeTo("rule_stock")
+                            .ruleLimitTypeVO(RuleLimitTypeVO.EQ)
+                            .ruleLimitValue(RuleLogicCheckTypeVO.ALLOW)
+                            .build());
+                }})
+                .build();
+
+        RuleTreeNodeVO rule_luck_award = RuleTreeNodeVO.builder()
+                .treeId(100000001)
+                .ruleKey("rule_luck_award")
+                .ruleDesc("限定用户已完成N次抽奖后解锁")
+                .ruleValue("1")
+                .ruleTreeNodeLineVoList(null)
+                .build();
+
+        RuleTreeNodeVO rule_stock = RuleTreeNodeVO.builder()
+                .treeId(100000001)
+                .ruleKey("rule_stock")
+                .ruleDesc("库存处理规则")
+                .ruleValue(null)
+                .ruleTreeNodeLineVoList(new ArrayList<RuleTreeNodeLineVo>() {{
+                    add(RuleTreeNodeLineVo.builder()
+                            .treeId(100000001)
+                            .ruleNodeFrom("rule_lock")
+                            .ruleNodeTo("rule_luck_award")
+                            .ruleLimitTypeVO(RuleLimitTypeVO.EQ)
+                            .ruleLimitValue(RuleLogicCheckTypeVO.TAKE_OVER)
+                            .build());
+                }})
+                .build();
+
+        RuleTreeVO ruleTreeVO = new RuleTreeVO(
+                100000001,
+                "决策树规则；增加dall-e-3画图模型",
+                "决策树规则；增加dall-e-3画图模型",
+                "rule_lock",
+                new HashMap<String, RuleTreeNodeVO>() {{
+                    put("rule_lock", rule_lock);
+                    put("rule_stock", rule_stock);
+                    put("rule_luck_award", rule_luck_award);
+                }}
+        );
+
+        IDecisionTreeEngine treeComposite = defaultTreeFactory.openLogicTree(ruleTreeVO);
+
+        DefaultTreeFactory.StrategyAwardData data = treeComposite.process("xiaofuge", 100001L, 100L);
+        log.info("测试结果：{}", new Gson().toJson(data));
+
+    }
+
+
     /**
      * 创建有效抽奖因子。
      *
@@ -164,4 +250,6 @@ class RaffleStrategyRunnerTest {
                 .ruleModels(ruleModels)
                 .build();
     }
+
+
 }
