@@ -2,7 +2,6 @@ package com.lavyoung.marketforge.infrastructure.persistent.dao;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.lavyoung.marketforge.infrastructure.persistent.po.AwardPO;
-import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.Optional;
@@ -15,7 +14,6 @@ import java.util.Optional;
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
  */
-@Mapper
 public interface IAwardDao extends BaseMapper<AwardPO> {
 
     /**

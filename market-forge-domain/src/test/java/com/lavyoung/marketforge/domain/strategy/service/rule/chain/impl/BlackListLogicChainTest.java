@@ -2,11 +2,11 @@ package com.lavyoung.marketforge.domain.strategy.service.rule.chain.impl;
 
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.ILogicChain;
+import com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
@@ -32,10 +32,11 @@ class BlackListLogicChainTest {
         chain.appendNex(next);
 
         // When
-        Long result = chain.logic(USER_ID, STRATEGY_ID);
+        DefaultChainFactory.StrategyAwardVO result = chain.logic(USER_ID, STRATEGY_ID);
 
         // Then
-        assertEquals(AWARD_ID, result);
+        assertEquals(AWARD_ID, result.awardId());
+        assertEquals(RuleModel.RULE_BLACKLIST, result.ruleModel());
         verifyNoInteractions(next);
     }
 
@@ -49,15 +50,16 @@ class BlackListLogicChainTest {
         ILogicChain next = mock(ILogicChain.class);
         when(repository.queryStrategyRuleValue(STRATEGY_ID, RuleModel.RULE_BLACKLIST.getCode()))
                 .thenReturn(AWARD_ID + ":user-002/user-003");
-        when(next.logic(USER_ID, STRATEGY_ID)).thenReturn(AWARD_ID);
+        DefaultChainFactory.StrategyAwardVO nextResult = strategyAward(RuleModel.DEFAULT);
+        when(next.logic(USER_ID, STRATEGY_ID)).thenReturn(nextResult);
         BlackListLogicChain chain = new BlackListLogicChain(repository);
         chain.appendNex(next);
 
         // When
-        Long result = chain.logic(USER_ID, STRATEGY_ID);
+        DefaultChainFactory.StrategyAwardVO result = chain.logic(USER_ID, STRATEGY_ID);
 
         // Then
-        assertEquals(AWARD_ID, result);
+        assertSame(nextResult, result);
         verify(next).logic(USER_ID, STRATEGY_ID);
     }
 
@@ -71,15 +73,16 @@ class BlackListLogicChainTest {
         ILogicChain next = mock(ILogicChain.class);
         when(repository.queryStrategyRuleValue(STRATEGY_ID, RuleModel.RULE_BLACKLIST.getCode()))
                 .thenReturn(" ");
-        when(next.logic(USER_ID, STRATEGY_ID)).thenReturn(AWARD_ID);
+        DefaultChainFactory.StrategyAwardVO nextResult = strategyAward(RuleModel.DEFAULT);
+        when(next.logic(USER_ID, STRATEGY_ID)).thenReturn(nextResult);
         BlackListLogicChain chain = new BlackListLogicChain(repository);
         chain.appendNex(next);
 
         // When
-        Long result = chain.logic(USER_ID, STRATEGY_ID);
+        DefaultChainFactory.StrategyAwardVO result = chain.logic(USER_ID, STRATEGY_ID);
 
         // Then
-        assertEquals(AWARD_ID, result);
+        assertSame(nextResult, result);
         verify(next).logic(USER_ID, STRATEGY_ID);
     }
 
@@ -96,5 +99,18 @@ class BlackListLogicChainTest {
 
         // When & Then
         assertThrows(NumberFormatException.class, () -> chain.logic(USER_ID, STRATEGY_ID));
+    }
+
+    /**
+     * 创建固定奖品的责任链结果。
+     *
+     * @param ruleModel 命中的规则模型
+     * @return 责任链奖品结果
+     */
+    private DefaultChainFactory.StrategyAwardVO strategyAward(RuleModel ruleModel) {
+        return DefaultChainFactory.StrategyAwardVO.builder()
+                .awardId(AWARD_ID)
+                .ruleModel(ruleModel)
+                .build();
     }
 }

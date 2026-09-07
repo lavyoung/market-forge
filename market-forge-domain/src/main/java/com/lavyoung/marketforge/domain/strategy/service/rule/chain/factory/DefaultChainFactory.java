@@ -6,6 +6,7 @@ import com.lavyoung.marketforge.domain.strategy.service.rule.chain.ILogicChain;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
@@ -29,7 +30,7 @@ import java.util.Map;
 public class DefaultChainFactory {
 
     /**
-     * 规则模型与责任链节点的映射。这里需要处理 todo
+     * 规则模型与责任链节点实现的映射。
      */
     private final Map<RuleModel, ILogicChain> logicChainMap;
 
@@ -66,5 +67,20 @@ public class DefaultChainFactory {
         }
         currentChain.appendNex(logicChainMap.get(RuleModel.DEFAULT));
         return logicChain;
+    }
+
+
+    /**
+     * 责任链执行结果。
+     *
+     * @param awardId   责任链选中的奖品标识
+     * @param ruleModel 最终命中奖品的规则模型
+     */
+    @Builder
+    public record StrategyAwardVO(
+            Long awardId,
+            RuleModel ruleModel
+    ) {
+
     }
 }

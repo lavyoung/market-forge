@@ -3,11 +3,11 @@ package com.lavyoung.marketforge.domain.strategy.service.rule.chain.impl;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.ILogicChain;
+import com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
@@ -33,10 +33,11 @@ class WeightLogicChainTest {
         WeightLogicChain chain = new WeightLogicChain(repository, dispatch);
 
         // When
-        Long result = chain.logic(USER_ID, STRATEGY_ID);
+        DefaultChainFactory.StrategyAwardVO result = chain.logic(USER_ID, STRATEGY_ID);
 
         // Then
-        assertEquals(AWARD_ID, result);
+        assertEquals(AWARD_ID, result.awardId());
+        assertEquals(RuleModel.WEIGHT, result.ruleModel());
         verify(dispatch).getRandomAwardIdAndWeight(STRATEGY_ID, "4000");
     }
 
@@ -51,15 +52,16 @@ class WeightLogicChainTest {
         ILogicChain next = mock(ILogicChain.class);
         when(repository.queryStrategyRuleValue(STRATEGY_ID, RuleModel.WEIGHT.getCode()))
                 .thenReturn("5000:100011;6000:100012");
-        when(next.logic(USER_ID, STRATEGY_ID)).thenReturn(AWARD_ID);
+        DefaultChainFactory.StrategyAwardVO nextResult = strategyAward();
+        when(next.logic(USER_ID, STRATEGY_ID)).thenReturn(nextResult);
         WeightLogicChain chain = new WeightLogicChain(repository, dispatch);
         chain.appendNex(next);
 
         // When
-        Long result = chain.logic(USER_ID, STRATEGY_ID);
+        DefaultChainFactory.StrategyAwardVO result = chain.logic(USER_ID, STRATEGY_ID);
 
         // Then
-        assertEquals(AWARD_ID, result);
+        assertSame(nextResult, result);
         verify(next).logic(USER_ID, STRATEGY_ID);
         verifyNoInteractions(dispatch);
     }
@@ -74,15 +76,16 @@ class WeightLogicChainTest {
         IStrategyDispatch dispatch = mock(IStrategyDispatch.class);
         ILogicChain next = mock(ILogicChain.class);
         when(repository.queryStrategyRuleValue(STRATEGY_ID, RuleModel.WEIGHT.getCode())).thenReturn(null);
-        when(next.logic(USER_ID, STRATEGY_ID)).thenReturn(AWARD_ID);
+        DefaultChainFactory.StrategyAwardVO nextResult = strategyAward();
+        when(next.logic(USER_ID, STRATEGY_ID)).thenReturn(nextResult);
         WeightLogicChain chain = new WeightLogicChain(repository, dispatch);
         chain.appendNex(next);
 
         // When
-        Long result = chain.logic(USER_ID, STRATEGY_ID);
+        DefaultChainFactory.StrategyAwardVO result = chain.logic(USER_ID, STRATEGY_ID);
 
         // Then
-        assertEquals(AWARD_ID, result);
+        assertSame(nextResult, result);
         verify(next).logic(USER_ID, STRATEGY_ID);
     }
 
@@ -100,5 +103,17 @@ class WeightLogicChainTest {
 
         // When & Then
         assertThrows(IllegalArgumentException.class, () -> chain.logic(USER_ID, STRATEGY_ID));
+    }
+
+    /**
+     * 创建默认节点返回的固定奖品结果。
+     *
+     * @return 默认责任链奖品结果
+     */
+    private DefaultChainFactory.StrategyAwardVO strategyAward() {
+        return DefaultChainFactory.StrategyAwardVO.builder()
+                .awardId(AWARD_ID)
+                .ruleModel(RuleModel.DEFAULT)
+                .build();
     }
 }

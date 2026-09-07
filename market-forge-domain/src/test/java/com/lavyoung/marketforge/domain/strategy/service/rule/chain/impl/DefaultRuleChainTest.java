@@ -1,6 +1,8 @@
 package com.lavyoung.marketforge.domain.strategy.service.rule.chain.impl;
 
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
+import com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
+import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -24,10 +26,11 @@ class DefaultRuleChainTest {
         DefaultRuleChain chain = new DefaultRuleChain(dispatch);
 
         // When
-        Long result = chain.logic("user-001", strategyId);
+        DefaultChainFactory.StrategyAwardVO result = chain.logic("user-001", strategyId);
 
         // Then
-        assertEquals(awardId, result);
+        assertEquals(awardId, result.awardId());
+        assertEquals(RuleModel.DEFAULT, result.ruleModel());
         verify(dispatch).getRandomAwardId(strategyId);
     }
 }

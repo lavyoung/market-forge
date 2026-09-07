@@ -2,12 +2,12 @@ package com.lavyoung.marketforge.domain.strategy.service;
 
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
-import com.lavyoung.marketforge.domain.strategy.model.entity.RuleActionEntity;
-import com.lavyoung.marketforge.domain.strategy.model.vo.RuleLogicCheckTypeVO;
-import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
+import com.lavyoung.marketforge.domain.strategy.repository.IRuleTreeRepository;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.ILogicChain;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
+import com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory.DefaultTreeFactory;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.CommonResponseCode;
@@ -15,13 +15,12 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 
 /**
  * 抽奖策略执行模板。
  * <p>
- * 统一完成入参校验、责任链抽奖和抽奖中规则判断，具体的阶段规则编排由子类实现。
+ * 统一完成入参校验、责任链抽奖和规则树决策，具体的责任链与规则树编排由子类实现。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -37,9 +36,24 @@ public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
     protected IStrategyRepository repository;
 
     /**
+     * 查询并组装规则树的仓储端口。
+     */
+    protected IRuleTreeRepository ruleTreeRepository;
+
+    /**
+     * 已装配策略的随机抽奖调度服务。
+     */
+    protected IStrategyDispatch strategyDispatch;
+
+    /**
      * 根据策略配置装配抽奖前责任链的工厂。
      */
-    private DefaultChainFactory defaultChainFactory;
+    protected DefaultChainFactory defaultChainFactory;
+
+    /**
+     * 根据规则树配置创建决策引擎的工厂。
+     */
+    protected DefaultTreeFactory defaultTreeFactory;
 
     /**
      * {@inheritDoc}
@@ -58,54 +72,47 @@ public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
             throw new BusinessException(CommonResponseCode.PARAM_INVALID);
         }
 
-        // 2. 责任链抽奖模式
+        // 2. 责任链抽奖模式 - 黑名单 - 权重 - 兜底
         ILogicChain logicChain = defaultChainFactory.openLogicChain(strategyId);
         // 3. 奖品id
-        Long awardId = logicChain.logic(userId, strategyId);
-
-        // 抽奖中处理
-        RuleActionEntity<RuleActionEntity.RaffleExecutingEntity> executingEntityRuleActionEntity = this.doCheckRaffleExecutingLogic(
-                RaffleFactorEntity.builder().strategyId(strategyId).userId(userId).awardId(awardId).build(),
-                Optional.ofNullable(repository.queryStrategyAwardRuleModels(strategyId, awardId)).map(StrategyAwardRuleModelVO::raffleExecutingRuleModelsList).orElse(null));
-        // 规则结果处理 使用兜底
-        if (executingEntityRuleActionEntity.code().equals(RuleLogicCheckTypeVO.TAKE_OVER.getCode())) {
-            // 返回null 直接获取兜底奖励返回即可
-            return RaffleAwardEntity.builder().awardId(null).build();
+        DefaultChainFactory.StrategyAwardVO chainStrategyAwardVO = logicChain.logic(userId, strategyId);
+        log.info("抽奖策略计算-责任链 userUd={} strategyId={} awardId={} ruleModel={}", userId, strategyId, chainStrategyAwardVO.awardId(), chainStrategyAwardVO.ruleModel());
+        // 没到默认的策略 说明其他策略捕获处理 直接返回结果
+        if (!Objects.equals(RuleModel.DEFAULT, chainStrategyAwardVO.ruleModel())) {
+            return RaffleAwardEntity.builder()
+                    .awardId(chainStrategyAwardVO.awardId())
+                    .build();
         }
-
-        return RaffleAwardEntity.builder().awardId(awardId).build();
+        // 默认兜底处理 继续执行
+        DefaultTreeFactory.StrategyAwardVO treeStrategyAwardVO = raffleLogicTree(userId, strategyId, chainStrategyAwardVO.awardId());
+        log.info("抽奖策略计算-规则树 userUd={} strategyId={} awardId={} ruleModel={} ruleValue={}", userId, strategyId, treeStrategyAwardVO.awardId(),
+                treeStrategyAwardVO.ruleModel(), treeStrategyAwardVO.awardRuleValue());
+        return RaffleAwardEntity.builder()
+                .awardId(treeStrategyAwardVO.awardId())
+                .awardConfig(treeStrategyAwardVO.awardRuleValue())
+                .build();
     }
 
-    /**
-     * 按策略配置执行抽奖前规则。
-     * <p>
-     * 返回接管流程的首个规则结果；所有规则均放行时返回 {@code null}。
-     *
-     * @param factorEntity 抽奖因子
-     * @param logics       待执行的规则模型列表
-     * @return 接管抽奖流程的规则动作；全部放行时返回 {@code null}
-     */
-    protected abstract RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> doCheckRaffleBeforeLogic(RaffleFactorEntity factorEntity, List<RuleModel> logics);
 
     /**
-     * 按奖品配置执行抽奖中规则。
-     * <p>
-     * 规则可根据已随机命中的奖品决定放行、接管或改写后续抽奖结果。
+     * 执行策略的抽奖责任链。
      *
-     * @param factorEntity 包含用户、策略及已命中奖品标识的抽奖因子
-     * @param logics       待执行的抽奖中规则模型列表；可为空
-     * @return 抽奖中规则动作；具体的空值语义由实现类约定
+     * @param userId     参与抽奖的用户标识
+     * @param strategyId 抽奖策略标识
+     * @return 责任链命中的奖品及规则模型
+     * @throws BusinessException 策略不存在或责任链配置不可用时抛出
      */
-    protected abstract RuleActionEntity<RuleActionEntity.RaffleExecutingEntity> doCheckRaffleExecutingLogic(RaffleFactorEntity factorEntity, List<RuleModel> logics);
+    protected abstract DefaultChainFactory.StrategyAwardVO raffleLogicChain(String userId, Long strategyId);
 
     /**
-     * 按奖品配置执行抽奖后规则。
-     * <p>
-     * 用于在奖品结果确定后执行需要补充处理的规则链。
+     * 对责任链随机命中的奖品执行规则树决策。
      *
-     * @param factorEntity 包含用户、策略及奖品标识的抽奖因子
-     * @param logics       待执行的抽奖后规则模型列表；可为空
-     * @return 抽奖后规则动作；具体的空值语义由实现类约定
+     * @param userId     参与抽奖的用户标识
+     * @param strategyId 抽奖策略标识
+     * @param awardId    责任链随机命中的奖品标识
+     * @return 规则树最终确定的奖品、命中规则及奖品规则配置
+     * @throws BusinessException 规则树缺失或节点流转配置无效时抛出
      */
-    protected abstract RuleActionEntity<RuleActionEntity.RaffleAfterEntity> doCheckRaffleAfterLogic(RaffleFactorEntity factorEntity, List<RuleModel> logics);
+    protected abstract DefaultTreeFactory.StrategyAwardVO raffleLogicTree(String userId, Long strategyId, Long awardId);
+
 }

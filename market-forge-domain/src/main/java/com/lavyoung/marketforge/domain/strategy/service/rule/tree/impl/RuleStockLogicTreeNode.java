@@ -8,7 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * 库存判断
+ * 奖品库存规则树节点。
+ * <p>
+ * 校验命中奖品的库存规则，并返回是否接管后续规则树流程的判断结果。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -19,11 +21,14 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class RuleStockLogicTreeNode implements ILogicTreeNode {
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public DefaultTreeFactory.TreeActionEntity logic(String userId, Long strategyId, Long awardId) {
         return DefaultTreeFactory.TreeActionEntity
                 .builder()
-                .strategyAwardData(DefaultTreeFactory.StrategyAwardData.builder()
+                .strategyAwardVO(DefaultTreeFactory.StrategyAwardVO.builder()
                         .awardId(null)
                         .awardRuleValue("1/100")
                         .build())

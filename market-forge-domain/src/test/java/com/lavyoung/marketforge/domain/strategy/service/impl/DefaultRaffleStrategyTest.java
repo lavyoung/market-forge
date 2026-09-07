@@ -2,31 +2,32 @@ package com.lavyoung.marketforge.domain.strategy.service.impl;
 
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
-import com.lavyoung.marketforge.domain.strategy.model.entity.RuleActionEntity;
-import com.lavyoung.marketforge.domain.strategy.model.entity.RuleMatterEntity;
-import com.lavyoung.marketforge.domain.strategy.model.vo.RuleLogicCheckTypeVO;
+import com.lavyoung.marketforge.domain.strategy.model.vo.RuleTreeVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
+import com.lavyoung.marketforge.domain.strategy.repository.IRuleTreeRepository;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.ILogicChain;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
-import com.lavyoung.marketforge.domain.strategy.service.rule.filter.ILogicFilter;
-import com.lavyoung.marketforge.domain.strategy.service.rule.filter.factory.DefaultLogicFactory;
+import com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory.DefaultTreeFactory;
+import com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory.engine.IDecisionTreeEngine;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import com.lavyoung.marketforge.types.exception.BusinessException;
+import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * 验证 {@link DefaultRaffleStrategy} 对责任链抽奖与执行中规则的编排行为。
+ * 验证 {@link DefaultRaffleStrategy} 对责任链抽奖与规则树决策的编排行为。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
@@ -37,30 +38,43 @@ class DefaultRaffleStrategyTest {
     private static final String USER_ID = "user-001";
     private static final Long STRATEGY_ID = 100_001L;
     private static final Long AWARD_ID = 100_011L;
+    private static final Long TREE_AWARD_ID = 100_012L;
 
     @Mock
     private IStrategyRepository repository;
 
     @Mock
+    private IRuleTreeRepository ruleTreeRepository;
+
+    @Mock
+    private IStrategyDispatch strategyDispatch;
+
+    @Mock
     private DefaultChainFactory chainFactory;
 
     @Mock
-    private DefaultLogicFactory logicFactory;
+    private DefaultTreeFactory treeFactory;
 
     @Mock
     private ILogicChain logicChain;
 
     @Mock
-    private ILogicFilter<RuleActionEntity.RaffleExecutingEntity> executingFilter;
+    private IDecisionTreeEngine treeEngine;
 
     private DefaultRaffleStrategy raffleStrategy;
 
     /**
-     * Given 模拟领域依赖，When 初始化默认抽奖策略，Then 使用可控责任链和过滤器执行测试。
+     * Given 模拟领域依赖，When 初始化默认抽奖策略，Then 使用可控责任链和规则树执行测试。
      */
     @BeforeEach
     void setUp() {
-        raffleStrategy = new DefaultRaffleStrategy(repository, chainFactory, logicFactory);
+        raffleStrategy = new DefaultRaffleStrategy(
+                repository,
+                ruleTreeRepository,
+                strategyDispatch,
+                chainFactory,
+                treeFactory
+        );
     }
 
     /**
@@ -73,16 +87,32 @@ class DefaultRaffleStrategyTest {
 
         // When & Then
         assertThrows(BusinessException.class, () -> raffleStrategy.performRaffle(factor));
-        verifyNoInteractions(repository, chainFactory, logicFactory);
+        verifyNoInteractions(repository, ruleTreeRepository, strategyDispatch, chainFactory, treeFactory);
     }
 
     /**
-     * Given 奖品未配置执行中规则，When 执行抽奖，Then 返回责任链选中的奖品。
+     * Given 前置规则接管责任链，When 执行抽奖，Then 直接返回规则奖品且不执行规则树。
      */
     @Test
-    void shouldReturnChainAwardWhenNoExecutingRuleConfigured() {
+    void shouldReturnChainAwardWhenNonDefaultRuleTakesOver() {
         // Given
-        stubChainAward();
+        stubChainAward(RuleModel.RULE_BLACKLIST);
+
+        // When
+        RaffleAwardEntity award = raffleStrategy.performRaffle(validFactor());
+
+        // Then
+        assertEquals(AWARD_ID, award.awardId());
+        verifyNoInteractions(ruleTreeRepository, treeFactory);
+    }
+
+    /**
+     * Given 默认责任链奖品未配置执行阶段规则，When 执行抽奖，Then 保留原始奖品。
+     */
+    @Test
+    void shouldKeepDefaultAwardWhenNoTreeRuleConfigured() {
+        // Given
+        stubChainAward(RuleModel.DEFAULT);
         when(repository.queryStrategyAwardRuleModels(STRATEGY_ID, AWARD_ID)).thenReturn(null);
 
         // When
@@ -90,62 +120,74 @@ class DefaultRaffleStrategyTest {
 
         // Then
         assertEquals(AWARD_ID, award.awardId());
-        verify(logicChain).logic(USER_ID, STRATEGY_ID);
-        verifyNoInteractions(logicFactory);
+        verifyNoInteractions(ruleTreeRepository, treeFactory);
     }
 
     /**
-     * Given 奖品配置的执行中规则全部放行，When 执行抽奖，Then 保留原始奖品结果。
+     * Given 默认奖品配置了可执行规则树，When 执行抽奖，Then 返回规则树改写后的奖品和配置。
      */
     @Test
-    void shouldKeepAwardWhenExecutingRulesAllow() {
+    void shouldReturnTreeDecisionForDefaultAward() {
         // Given
-        stubChainAward();
-        when(repository.queryStrategyAwardRuleModels(STRATEGY_ID, AWARD_ID))
-                .thenReturn(new StrategyAwardRuleModelVO(RuleModel.LOCK.getCode()));
-        when(logicFactory.<RuleActionEntity.RaffleExecutingEntity>openLogicFilter())
-                .thenReturn(Map.of(RuleModel.LOCK, executingFilter));
-        when(executingFilter.filter(any(RuleMatterEntity.class))).thenReturn(allowAction());
+        stubChainAward(RuleModel.DEFAULT);
+        StrategyAwardRuleModelVO ruleModels = new StrategyAwardRuleModelVO(RuleModel.LOCK.getCode());
+        RuleTreeVO ruleTree = ruleTree();
+        DefaultTreeFactory.StrategyAwardVO treeAward = DefaultTreeFactory.StrategyAwardVO.builder()
+                .awardId(TREE_AWARD_ID)
+                .ruleModel(RuleModel.LUCK_AWARD)
+                .awardRuleValue("1/100")
+                .build();
+        when(repository.queryStrategyAwardRuleModels(STRATEGY_ID, AWARD_ID)).thenReturn(ruleModels);
+        when(ruleTreeRepository.queryRuleTreeVOByTreeId(List.of(RuleModel.LOCK))).thenReturn(ruleTree);
+        when(treeFactory.openLogicTree(ruleTree)).thenReturn(treeEngine);
+        when(treeEngine.process(USER_ID, STRATEGY_ID, AWARD_ID)).thenReturn(treeAward);
 
         // When
         RaffleAwardEntity award = raffleStrategy.performRaffle(validFactor());
 
         // Then
-        assertEquals(AWARD_ID, award.awardId());
-        ArgumentCaptor<RuleMatterEntity> captor = ArgumentCaptor.forClass(RuleMatterEntity.class);
-        verify(executingFilter).filter(captor.capture());
-        assertEquals(USER_ID, captor.getValue().userId());
-        assertEquals(STRATEGY_ID, captor.getValue().strategyId());
-        assertEquals(AWARD_ID, captor.getValue().awardId());
-        assertEquals(RuleModel.LOCK.getCode(), captor.getValue().ruleModel());
+        assertAll(
+                () -> assertEquals(TREE_AWARD_ID, award.awardId()),
+                () -> assertEquals("1/100", award.awardConfig())
+        );
+        verify(treeEngine).process(USER_ID, STRATEGY_ID, AWARD_ID);
     }
 
     /**
-     * Given 执行中规则接管抽奖结果，When 执行抽奖，Then 返回空奖品标识作为兜底信号。
+     * Given 奖品规则模型没有对应规则树，When 执行抽奖，Then 抛出策略未装配异常。
      */
     @Test
-    void shouldReturnFallbackSignalWhenExecutingRuleTakesOver() {
+    void shouldRejectMissingRuleTreeConfiguration() {
         // Given
-        stubChainAward();
-        when(repository.queryStrategyAwardRuleModels(STRATEGY_ID, AWARD_ID))
-                .thenReturn(new StrategyAwardRuleModelVO(RuleModel.LUCK_AWARD.getCode()));
-        when(logicFactory.<RuleActionEntity.RaffleExecutingEntity>openLogicFilter())
-                .thenReturn(Map.of(RuleModel.LUCK_AWARD, executingFilter));
-        when(executingFilter.filter(any(RuleMatterEntity.class))).thenReturn(takeOverAction());
+        stubChainAward(RuleModel.DEFAULT);
+        StrategyAwardRuleModelVO ruleModels = new StrategyAwardRuleModelVO(RuleModel.LOCK.getCode());
+        when(repository.queryStrategyAwardRuleModels(STRATEGY_ID, AWARD_ID)).thenReturn(ruleModels);
+        when(ruleTreeRepository.queryRuleTreeVOByTreeId(List.of(RuleModel.LOCK))).thenReturn(null);
 
         // When
-        RaffleAwardEntity award = raffleStrategy.performRaffle(validFactor());
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> raffleStrategy.performRaffle(validFactor())
+        );
 
         // Then
-        assertNull(award.awardId());
+        assertEquals(BusinessResponseCode.STRATEGY_NOT_ASSEMBLED.getCode(), exception.getCode());
+        verifyNoInteractions(treeFactory);
     }
 
     /**
-     * Given 责任链可返回固定奖品，When 配置模拟行为，Then 后续场景共享相同前置条件。
+     * 配置责任链返回固定奖品及指定规则模型。
+     *
+     * @param ruleModel 责任链命中的规则模型
      */
-    private void stubChainAward() {
+    private void stubChainAward(RuleModel ruleModel) {
         when(chainFactory.openLogicChain(STRATEGY_ID)).thenReturn(logicChain);
-        when(logicChain.logic(USER_ID, STRATEGY_ID)).thenReturn(AWARD_ID);
+        when(logicChain.logic(USER_ID, STRATEGY_ID)).thenReturn(
+                DefaultChainFactory.StrategyAwardVO.builder()
+                        .awardId(AWARD_ID)
+                        .ruleModel(ruleModel)
+                        .build()
+        );
     }
 
     /**
@@ -158,28 +200,17 @@ class DefaultRaffleStrategyTest {
     }
 
     /**
-     * 创建执行中规则放行动作。
+     * 创建用于规则树编排测试的最小配置。
      *
-     * @return 放行动作
+     * @return 仅包含根节点信息的规则树
      */
-    private RuleActionEntity<RuleActionEntity.RaffleExecutingEntity> allowAction() {
-        return RuleActionEntity.<RuleActionEntity.RaffleExecutingEntity>builder()
-                .code(RuleLogicCheckTypeVO.ALLOW.getCode())
-                .msg(RuleLogicCheckTypeVO.ALLOW.getInfo())
-                .build();
-    }
-
-    /**
-     * 创建执行中规则接管动作。
-     *
-     * @return 接管动作
-     */
-    private RuleActionEntity<RuleActionEntity.RaffleExecutingEntity> takeOverAction() {
-        return RuleActionEntity.<RuleActionEntity.RaffleExecutingEntity>builder()
-                .code(RuleLogicCheckTypeVO.TAKE_OVER.getCode())
-                .msg(RuleLogicCheckTypeVO.TAKE_OVER.getInfo())
-                .ruleModel(RuleModel.LUCK_AWARD.getCode())
-                .data(RuleActionEntity.RaffleExecutingEntity.builder().build())
-                .build();
+    private RuleTreeVO ruleTree() {
+        return new RuleTreeVO(
+                100_000_001,
+                "测试规则树",
+                "测试规则树",
+                RuleModel.LOCK.getCode(),
+                Map.of()
+        );
     }
 }

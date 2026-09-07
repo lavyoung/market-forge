@@ -3,6 +3,7 @@ package com.lavyoung.marketforge.domain.strategy.service.rule.chain.impl;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.AbstractLogicChain;
+import com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
 import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import lombok.RequiredArgsConstructor;
@@ -49,12 +50,12 @@ public class WeightLogicChain extends AbstractLogicChain {
      *
      * @param userId     参与抽奖的用户标识
      * @param strategyId 抽奖策略标识
-     * @return 权重概率表或后继节点选中的奖品标识
+     * @return 权重概率表或后继节点选中的奖品及命中规则模型
      * @throws IllegalArgumentException 权重规则配置格式非法时抛出
      * @throws NullPointerException     未命中权重且未装配后继节点时抛出
      */
     @Override
-    public Long logic(String userId, Long strategyId) {
+    public DefaultChainFactory.StrategyAwardVO logic(String userId, Long strategyId) {
         log.info("抽奖责任链-权重策略处理 userId={} strategyId={} ruleModel={} ", userId, strategyId, ruleModel());
         String weightRuleValue = repository.queryStrategyRuleValue(strategyId, RuleModel.WEIGHT.getCode());
         Map<Long, String> ruleValueMap = ruleValueMap(weightRuleValue);
@@ -69,7 +70,7 @@ public class WeightLogicChain extends AbstractLogicChain {
         if (weightKey != null) {
             long awardIdAndWeight = strategyDispatch.getRandomAwardIdAndWeight(strategyId, ruleValueMap.get(weightKey));
             log.info("抽奖责任链-权重策略命中 userId={} strategyId={} ruleModel={} userScore={} weightKey={} awardId={}", userId, strategyId, ruleModel(), userScore, weightKey, awardIdAndWeight);
-            return awardIdAndWeight;
+            return DefaultChainFactory.StrategyAwardVO.builder().awardId(awardIdAndWeight).ruleModel(ruleModel()).build();
         }
         return this.next().logic(userId, strategyId);
     }

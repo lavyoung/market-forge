@@ -1,26 +1,23 @@
 package com.lavyoung.marketforge.domain.strategy.service.impl;
 
-import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
-import com.lavyoung.marketforge.domain.strategy.model.entity.RuleActionEntity;
-import com.lavyoung.marketforge.domain.strategy.model.entity.RuleMatterEntity;
-import com.lavyoung.marketforge.domain.strategy.model.vo.RuleLogicCheckTypeVO;
+import com.lavyoung.marketforge.domain.strategy.model.vo.RuleTreeVO;
+import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
+import com.lavyoung.marketforge.domain.strategy.repository.IRuleTreeRepository;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.AbstractRaffleStrategy;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
+import com.lavyoung.marketforge.domain.strategy.service.rule.chain.ILogicChain;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
-import com.lavyoung.marketforge.domain.strategy.service.rule.filter.ILogicFilter;
-import com.lavyoung.marketforge.domain.strategy.service.rule.filter.factory.DefaultLogicFactory;
-import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
+import com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory.DefaultTreeFactory;
+import com.lavyoung.marketforge.types.exception.BusinessException;
+import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * 默认抽奖策略实现。
  * <p>
- * 使用责任链完成抽奖前规则与奖品随机选择，并按配置顺序执行抽奖中、抽奖后过滤器。
+ * 使用责任链完成前置规则判断与默认奖品选择，并对默认奖品继续执行策略配置的规则树。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -31,154 +28,48 @@ import java.util.Map;
 public class DefaultRaffleStrategy extends AbstractRaffleStrategy {
 
     /**
-     * 规则模型与过滤器的注册工厂。
-     */
-    private final DefaultLogicFactory defaultLogicFactory;
-
-    /**
      * 创建默认抽奖策略。
      *
      * @param repository          抽奖策略仓储端口
-     * @param defaultChainFactory 抽奖前责任链装配工厂
-     * @param defaultLogicFactory 规则模型与过滤器的注册工厂
+     * @param ruleTreeRepository  规则树仓储端口
+     * @param strategyDispatch    已装配策略的随机抽奖调度服务
+     * @param defaultChainFactory 抽奖责任链工厂
+     * @param defaultTreeFactory  规则树决策引擎工厂
      */
-    public DefaultRaffleStrategy(
-            IStrategyRepository repository,
-            DefaultChainFactory defaultChainFactory,
-            DefaultLogicFactory defaultLogicFactory) {
-        super(repository, defaultChainFactory);
-        this.defaultLogicFactory = defaultLogicFactory;
+    public DefaultRaffleStrategy(IStrategyRepository repository, IRuleTreeRepository ruleTreeRepository,
+                                 IStrategyDispatch strategyDispatch, DefaultChainFactory defaultChainFactory,
+                                 DefaultTreeFactory defaultTreeFactory) {
+        super(repository, ruleTreeRepository, strategyDispatch, defaultChainFactory, defaultTreeFactory);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected DefaultChainFactory.StrategyAwardVO raffleLogicChain(String userId, Long strategyId) {
+        ILogicChain logicChain = defaultChainFactory.openLogicChain(strategyId);
+        return logicChain.logic(userId, strategyId);
     }
 
     /**
      * {@inheritDoc}
      * <p>
-     * 黑名单规则拥有最高优先级；黑名单放行后，再按配置顺序执行剩余规则。
+     * 奖品未配置执行阶段规则时保留原奖品；规则模型无法组装成规则树时终止抽奖。
      *
-     * @param factorEntity 抽奖因子
-     * @param logics       待执行的前置规则模型列表
-     * @return 首个接管流程的规则动作；全部规则放行时返回 {@code null}
+     * @throws BusinessException 规则树配置缺失、无法完成组装时抛出
      */
     @Override
-    protected RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> doCheckRaffleBeforeLogic(RaffleFactorEntity factorEntity, List<RuleModel> logics) {
-        if (CollectionUtils.isEmpty(logics)) {
-            return RuleActionEntity.<RuleActionEntity.RaffleBeforeEntity>builder()
-                    .code(RuleLogicCheckTypeVO.ALLOW.getCode())
-                    .msg(RuleLogicCheckTypeVO.ALLOW.getInfo())
-                    .build();
+    protected DefaultTreeFactory.StrategyAwardVO raffleLogicTree(String userId, Long strategyId, Long awardId) {
+        StrategyAwardRuleModelVO strategyAwardRuleModelVO = repository.queryStrategyAwardRuleModels(strategyId, awardId);
+        // 组装规则树
+        if (strategyAwardRuleModelVO == null) {
+            return DefaultTreeFactory.StrategyAwardVO.builder().awardId(awardId).build();
         }
-        Map<RuleModel, ILogicFilter<RuleActionEntity.RaffleBeforeEntity>> logicFilterMap = defaultLogicFactory.openLogicFilter();
-
-        // 前置
-        RuleModel model = logics.stream().filter(logic -> logic.getCode().equals(RuleModel.RULE_BLACKLIST.getCode()))
-                .findFirst().orElse(null);
-
-        if (model != null) {
-            ILogicFilter<RuleActionEntity.RaffleBeforeEntity> logicFilter = logicFilterMap.get(model);
-            RuleMatterEntity ruleMatterEntity = RuleMatterEntity.builder()
-                    .userId(factorEntity.userId())
-                    .awardId(null) // 无奖品ID
-                    .strategyId(factorEntity.strategyId())
-                    .ruleModel(model.getCode()).build();
-            RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> ruleAction = logicFilter.filter(ruleMatterEntity);
-            if (!RuleLogicCheckTypeVO.ALLOW.getCode().equals(ruleAction.code())) {
-                return ruleAction;
-            }
+        RuleTreeVO ruleTreeVO = ruleTreeRepository.queryRuleTreeVOByTreeId(strategyAwardRuleModelVO.raffleExecutingRuleModelsList());
+        if (ruleTreeVO == null) {
+            log.error("存在抽奖策略 strategyId={} 配置的规则模型Key={} 未在库表中配置 rule_tree、rule_tree_node、tree_node_line 配置相应的规则树信息", strategyId, strategyAwardRuleModelVO.ruleModels());
+            throw new BusinessException(BusinessResponseCode.STRATEGY_NOT_ASSEMBLED);
         }
-
-        // 处理剩余的
-        List<RuleModel> ruleModelList = logics.stream().filter(logic -> !RuleModel.RULE_BLACKLIST.equals(logic))
-                .toList();
-        for (RuleModel ruleModel : ruleModelList) {
-            ILogicFilter<RuleActionEntity.RaffleBeforeEntity> logicFilter = logicFilterMap.get(ruleModel);
-            RuleMatterEntity ruleMatterEntity = RuleMatterEntity.builder()
-                    .userId(factorEntity.userId())
-                    .strategyId(factorEntity.strategyId())
-                    .awardId(factorEntity.awardId())
-                    .ruleModel(ruleModel.getCode())
-                    .build();
-            RuleActionEntity<RuleActionEntity.RaffleBeforeEntity> ruleAction = logicFilter.filter(ruleMatterEntity);
-            log.info("抽奖前规则过滤 userId={} ruleModel={} code={} info={}", factorEntity.userId(), ruleModel, ruleAction.code(), ruleAction.msg());
-            if (!RuleLogicCheckTypeVO.ALLOW.getCode().equals(ruleAction.code())) {
-                return ruleAction;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * {@inheritDoc}
-     * <p>
-     * 按配置顺序执行抽奖中规则。未配置规则时返回放行动作；任一规则不放行时立即停止。
-     *
-     * @param factorEntity 包含用户、策略及已命中奖品标识的抽奖因子
-     * @param logics       待执行的抽奖中规则模型列表；可为空
-     * @return 首个非放行规则动作；未配置规则或全部规则放行时返回放行动作
-     */
-    @Override
-    protected RuleActionEntity<RuleActionEntity.RaffleExecutingEntity> doCheckRaffleExecutingLogic(RaffleFactorEntity factorEntity, List<RuleModel> logics) {
-        if (CollectionUtils.isEmpty(logics)) {
-            return RuleActionEntity.<RuleActionEntity.RaffleExecutingEntity>builder()
-                    .code(RuleLogicCheckTypeVO.ALLOW.getCode())
-                    .msg(RuleLogicCheckTypeVO.ALLOW.getInfo())
-                    .build();
-        }
-        Map<RuleModel, ILogicFilter<RuleActionEntity.RaffleExecutingEntity>> logicFilterMap = defaultLogicFactory.openLogicFilter();
-        for (RuleModel ruleModel : logics) {
-            ILogicFilter<RuleActionEntity.RaffleExecutingEntity> logicFilter = logicFilterMap.get(ruleModel);
-            RuleMatterEntity ruleMatterEntity = RuleMatterEntity.builder()
-                    .userId(factorEntity.userId())
-                    .strategyId(factorEntity.strategyId())
-                    .awardId(factorEntity.awardId())
-                    .ruleModel(ruleModel.getCode())
-                    .build();
-            RuleActionEntity<RuleActionEntity.RaffleExecutingEntity> ruleAction = logicFilter.filter(ruleMatterEntity);
-            log.info("抽奖中规则过滤 userId={} awardId= {} ruleModel={} code={} info={}", factorEntity.userId(), factorEntity.awardId(), ruleModel, ruleAction.code(), ruleAction.msg());
-            if (!RuleLogicCheckTypeVO.ALLOW.getCode().equals(ruleAction.code())) {
-                return ruleAction;
-            }
-        }
-        return RuleActionEntity.<RuleActionEntity.RaffleExecutingEntity>builder()
-                .code(RuleLogicCheckTypeVO.ALLOW.getCode())
-                .msg(RuleLogicCheckTypeVO.ALLOW.getInfo())
-                .build();
-    }
-
-    /**
-     * {@inheritDoc}
-     * <p>
-     * 按配置顺序执行抽奖后规则。未配置规则时返回放行动作；任一规则不放行时立即停止。
-     *
-     * @param factorEntity 包含用户、策略及奖品标识的抽奖因子
-     * @param logics       待执行的抽奖后规则模型列表；可为空
-     * @return 首个非放行规则动作；未配置规则或全部规则放行时返回放行动作
-     */
-    @Override
-    protected RuleActionEntity<RuleActionEntity.RaffleAfterEntity> doCheckRaffleAfterLogic(RaffleFactorEntity factorEntity, List<RuleModel> logics) {
-        if (CollectionUtils.isEmpty(logics)) {
-            return RuleActionEntity.<RuleActionEntity.RaffleAfterEntity>builder()
-                    .code(RuleLogicCheckTypeVO.ALLOW.getCode())
-                    .msg(RuleLogicCheckTypeVO.ALLOW.getInfo())
-                    .build();
-        }
-        Map<RuleModel, ILogicFilter<RuleActionEntity.RaffleAfterEntity>> logicFilterMap = defaultLogicFactory.openLogicFilter();
-        for (RuleModel ruleModel : logics) {
-            ILogicFilter<RuleActionEntity.RaffleAfterEntity> logicFilter = logicFilterMap.get(ruleModel);
-            RuleMatterEntity ruleMatterEntity = RuleMatterEntity.builder()
-                    .userId(factorEntity.userId())
-                    .strategyId(factorEntity.strategyId())
-                    .awardId(factorEntity.awardId())
-                    .ruleModel(ruleModel.getCode())
-                    .build();
-            RuleActionEntity<RuleActionEntity.RaffleAfterEntity> ruleAction = logicFilter.filter(ruleMatterEntity);
-            log.info("抽奖后规则过滤 userId={} awardId= {} ruleModel={} code={} info={}", factorEntity.userId(), factorEntity.awardId(), ruleModel, ruleAction.code(), ruleAction.msg());
-            if (!RuleLogicCheckTypeVO.ALLOW.getCode().equals(ruleAction.code())) {
-                return ruleAction;
-            }
-        }
-        return RuleActionEntity.<RuleActionEntity.RaffleAfterEntity>builder()
-                .code(RuleLogicCheckTypeVO.ALLOW.getCode())
-                .msg(RuleLogicCheckTypeVO.ALLOW.getInfo())
-                .build();
+        return defaultTreeFactory.openLogicTree(ruleTreeVO).process(userId, strategyId, awardId);
     }
 }

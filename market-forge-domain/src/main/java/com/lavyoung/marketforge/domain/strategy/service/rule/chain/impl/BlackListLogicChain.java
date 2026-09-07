@@ -2,6 +2,7 @@ package com.lavyoung.marketforge.domain.strategy.service.rule.chain.impl;
 
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.AbstractLogicChain;
+import com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
 import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import lombok.RequiredArgsConstructor;
@@ -33,13 +34,13 @@ public class BlackListLogicChain extends AbstractLogicChain {
      *
      * @param userId     参与抽奖的用户标识
      * @param strategyId 抽奖策略标识
-     * @return 命中黑名单时返回指定奖品标识，否则返回后继节点结果
+     * @return 命中黑名单时返回指定奖品及黑名单规则，否则返回后继节点结果
      * @throws IllegalArgumentException       黑名单奖品标识不是有效整数时抛出
      * @throws ArrayIndexOutOfBoundsException 黑名单配置不符合“奖品标识:用户列表”格式时抛出
      * @throws NullPointerException           未命中规则且未装配后继节点时抛出
      */
     @Override
-    public Long logic(String userId, Long strategyId) {
+    public DefaultChainFactory.StrategyAwardVO logic(String userId, Long strategyId) {
         log.info("抽奖责任链-黑名单处理开始 userId={} strategyId={} ruleModel={} ", userId, strategyId, ruleModel());
         String ruleValueStr = repository.queryStrategyRuleValue(strategyId, RuleModel.RULE_BLACKLIST.getCode());
         if (StringUtils.isBlank(ruleValueStr)) {
@@ -51,7 +52,7 @@ public class BlackListLogicChain extends AbstractLogicChain {
         String[] blackUserIds = splitRuleValue[1].split(Constants.SPLIT);
         for (String blackUserId : blackUserIds) {
             if (userId.equals(blackUserId)) {
-                return awardId;
+                return DefaultChainFactory.StrategyAwardVO.builder().awardId(awardId).ruleModel(ruleModel()).build();
             }
         }
         log.info("抽奖责任链-黑名单结束放行 userId={} strategyId={} ruleModel={} ", userId, strategyId, ruleModel());

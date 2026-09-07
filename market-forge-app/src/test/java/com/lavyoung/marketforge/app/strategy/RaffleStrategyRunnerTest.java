@@ -1,10 +1,10 @@
 package com.lavyoung.marketforge.app.strategy;
 
-import com.google.gson.Gson;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.*;
+import com.lavyoung.marketforge.domain.strategy.repository.IRuleTreeRepository;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.IRaffleStrategy;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
@@ -13,25 +13,22 @@ import com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.Defau
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.impl.BlackListLogicChain;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.impl.DefaultRuleChain;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.impl.WeightLogicChain;
-import com.lavyoung.marketforge.domain.strategy.service.rule.filter.factory.DefaultLogicFactory;
-import com.lavyoung.marketforge.domain.strategy.service.rule.filter.impl.RuleBlackListLogicFilter;
-import com.lavyoung.marketforge.domain.strategy.service.rule.filter.impl.RuleWeightLogicFilter;
+import com.lavyoung.marketforge.domain.strategy.service.rule.tree.ILogicTreeNode;
 import com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory.DefaultTreeFactory;
 import com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory.engine.IDecisionTreeEngine;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
-import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
@@ -42,7 +39,6 @@ import static org.mockito.Mockito.*;
  * @version 1.0.0
  * @date 2026/09/05
  */
-@Slf4j
 @ExtendWith(MockitoExtension.class)
 class RaffleStrategyRunnerTest {
 
@@ -50,10 +46,14 @@ class RaffleStrategyRunnerTest {
     private static final Long STRATEGY_ID = 100_001L;
     private static final Long DEFAULT_AWARD_ID = 100_011L;
     private static final Long BLACKLIST_AWARD_ID = 100_012L;
+    private static final Long LUCK_AWARD_ID = 100_013L;
     private static final String WEIGHT_KEY = "4000";
 
     @Mock
     private IStrategyRepository repository;
+
+    @Mock
+    private IRuleTreeRepository ruleTreeRepository;
 
     @Mock
     private IStrategyDispatch strategyDispatch;
@@ -62,19 +62,12 @@ class RaffleStrategyRunnerTest {
     private DefaultTreeFactory defaultTreeFactory;
 
     private IRaffleStrategy raffleStrategy;
-    private RuleWeightLogicFilter ruleWeightLogicFilter;
 
     /**
-     * Given 模拟外部端口，When 初始化真实责任链和过滤器，Then 使用固定用户分值执行每个场景。
+     * Given 模拟外部端口，When 初始化真实责任链，Then 使用固定用户分值执行每个场景。
      */
     @BeforeEach
     void setUp() {
-        RuleBlackListLogicFilter blackListLogicFilter = new RuleBlackListLogicFilter(repository);
-        ruleWeightLogicFilter = new RuleWeightLogicFilter(repository);
-        ruleWeightLogicFilter.userScore = 4_500L;
-        DefaultLogicFactory logicFactory = new DefaultLogicFactory(
-                List.of(blackListLogicFilter, ruleWeightLogicFilter)
-        );
         DefaultChainFactory chainFactory = new DefaultChainFactory(
                 Map.of(
                         RuleModel.RULE_BLACKLIST, new BlackListLogicChain(repository),
@@ -83,7 +76,13 @@ class RaffleStrategyRunnerTest {
                 ),
                 repository
         );
-        raffleStrategy = new DefaultRaffleStrategy(repository, chainFactory, logicFactory);
+        raffleStrategy = new DefaultRaffleStrategy(
+                repository,
+                ruleTreeRepository,
+                strategyDispatch,
+                chainFactory,
+                defaultTreeFactory
+        );
     }
 
     /**
@@ -151,78 +150,127 @@ class RaffleStrategyRunnerTest {
 
 
     /**
-     * rule_lock --左--> rule_luck_award
-     * --右--> rule_stock --右--> rule_luck_award
+     * Given 解锁节点放行且库存节点接管，When 执行完整规则树，Then 按配置依次访问三个节点并返回幸运奖结果。
      */
     @Test
-    @DisplayName("自己尝试根据模型信息创建数据库表，并从库中读取数据，完整模型的调用")
+    @DisplayName("规则树按节点结果完成流转并返回最终奖品")
     public void test_tree_rule() {
-        // 构建参数
-        RuleTreeNodeVO rule_lock = RuleTreeNodeVO.builder()
-                .treeId(100000001)
-                .ruleKey("rule_lock")
-                .ruleDesc("限定用户已完成N次抽奖后解锁")
-                .ruleValue("1")
-                .ruleTreeNodeLineVoList(new ArrayList<>() {{
-                    add(RuleTreeNodeLineVo.builder()
-                            .treeId(100000001)
-                            .ruleNodeFrom("rule_lock")
-                            .ruleNodeTo("rule_luck_award")
-                            .ruleLimitTypeVO(RuleLimitTypeVO.EQ)
-                            .ruleLimitValue(RuleLogicCheckTypeVO.TAKE_OVER)
-                            .build());
+        // Given
+        ILogicTreeNode lockNode = mock(ILogicTreeNode.class);
+        ILogicTreeNode stockNode = mock(ILogicTreeNode.class);
+        ILogicTreeNode luckAwardNode = mock(ILogicTreeNode.class);
+        when(lockNode.logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID))
+                .thenReturn(treeAction(RuleLogicCheckTypeVO.ALLOW, DEFAULT_AWARD_ID, RuleModel.LOCK, null));
+        when(stockNode.logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID))
+                .thenReturn(treeAction(RuleLogicCheckTypeVO.TAKE_OVER, DEFAULT_AWARD_ID, RuleModel.LOCK, null));
+        when(luckAwardNode.logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID))
+                .thenReturn(treeAction(RuleLogicCheckTypeVO.ALLOW, LUCK_AWARD_ID, RuleModel.LUCK_AWARD, "1/100"));
+        DefaultTreeFactory treeFactory = new DefaultTreeFactory(Map.of(
+                RuleModel.LOCK.getCode(), lockNode,
+                "rule_stock", stockNode,
+                RuleModel.LUCK_AWARD.getCode(), luckAwardNode
+        ));
 
-                    add(RuleTreeNodeLineVo.builder()
-                            .treeId(100000001)
-                            .ruleNodeFrom("rule_lock")
-                            .ruleNodeTo("rule_stock")
-                            .ruleLimitTypeVO(RuleLimitTypeVO.EQ)
-                            .ruleLimitValue(RuleLogicCheckTypeVO.ALLOW)
-                            .build());
-                }})
-                .build();
+        // When
+        IDecisionTreeEngine treeEngine = treeFactory.openLogicTree(ruleTree());
+        DefaultTreeFactory.StrategyAwardVO result = treeEngine.process(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID);
 
-        RuleTreeNodeVO rule_luck_award = RuleTreeNodeVO.builder()
-                .treeId(100000001)
-                .ruleKey("rule_luck_award")
-                .ruleDesc("限定用户已完成N次抽奖后解锁")
-                .ruleValue("1")
-                .ruleTreeNodeLineVoList(null)
-                .build();
-
-        RuleTreeNodeVO rule_stock = RuleTreeNodeVO.builder()
-                .treeId(100000001)
-                .ruleKey("rule_stock")
-                .ruleDesc("库存处理规则")
-                .ruleValue(null)
-                .ruleTreeNodeLineVoList(new ArrayList<RuleTreeNodeLineVo>() {{
-                    add(RuleTreeNodeLineVo.builder()
-                            .treeId(100000001)
-                            .ruleNodeFrom("rule_lock")
-                            .ruleNodeTo("rule_luck_award")
-                            .ruleLimitTypeVO(RuleLimitTypeVO.EQ)
-                            .ruleLimitValue(RuleLogicCheckTypeVO.TAKE_OVER)
-                            .build());
-                }})
-                .build();
-
-        RuleTreeVO ruleTreeVO = new RuleTreeVO(
-                100000001,
-                "决策树规则；增加dall-e-3画图模型",
-                "决策树规则；增加dall-e-3画图模型",
-                "rule_lock",
-                new HashMap<String, RuleTreeNodeVO>() {{
-                    put("rule_lock", rule_lock);
-                    put("rule_stock", rule_stock);
-                    put("rule_luck_award", rule_luck_award);
-                }}
+        // Then
+        assertAll(
+                () -> assertEquals(LUCK_AWARD_ID, result.awardId()),
+                () -> assertEquals(RuleModel.LUCK_AWARD, result.ruleModel()),
+                () -> assertEquals("1/100", result.awardRuleValue())
         );
+        InOrder executionOrder = inOrder(lockNode, stockNode, luckAwardNode);
+        executionOrder.verify(lockNode).logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID);
+        executionOrder.verify(stockNode).logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID);
+        executionOrder.verify(luckAwardNode).logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID);
+    }
 
-        IDecisionTreeEngine treeComposite = defaultTreeFactory.openLogicTree(ruleTreeVO);
+    /**
+     * 构建“解锁放行—库存接管—幸运奖兜底”的规则树。
+     *
+     * @return 用于验证节点流转顺序的规则树
+     */
+    private RuleTreeVO ruleTree() {
+        RuleTreeNodeVO lockNode = treeNode(
+                RuleModel.LOCK.getCode(),
+                List.of(
+                        treeLine(RuleModel.LOCK.getCode(), RuleModel.LUCK_AWARD.getCode(), RuleLogicCheckTypeVO.TAKE_OVER),
+                        treeLine(RuleModel.LOCK.getCode(), "rule_stock", RuleLogicCheckTypeVO.ALLOW)
+                )
+        );
+        RuleTreeNodeVO stockNode = treeNode(
+                "rule_stock",
+                List.of(treeLine("rule_stock", RuleModel.LUCK_AWARD.getCode(), RuleLogicCheckTypeVO.TAKE_OVER))
+        );
+        RuleTreeNodeVO luckAwardNode = treeNode(RuleModel.LUCK_AWARD.getCode(), List.of());
+        return new RuleTreeVO(
+                100_000_001,
+                "抽奖规则树",
+                "验证规则树节点流转",
+                RuleModel.LOCK.getCode(),
+                Map.of(
+                        RuleModel.LOCK.getCode(), lockNode,
+                        "rule_stock", stockNode,
+                        RuleModel.LUCK_AWARD.getCode(), luckAwardNode
+                )
+        );
+    }
 
-        DefaultTreeFactory.StrategyAwardData data = treeComposite.process("xiaofuge", 100001L, 100L);
-        log.info("测试结果：{}", new Gson().toJson(data));
+    /**
+     * 创建规则树节点。
+     *
+     * @param ruleKey 节点规则标识
+     * @param lines   节点的候选连线
+     * @return 规则树节点
+     */
+    private RuleTreeNodeVO treeNode(String ruleKey, List<RuleTreeNodeLineVo> lines) {
+        return RuleTreeNodeVO.builder()
+                .treeId(100_000_001)
+                .ruleKey(ruleKey)
+                .ruleDesc(ruleKey)
+                .ruleTreeNodeLineVoList(lines)
+                .build();
+    }
 
+    /**
+     * 创建使用相等条件匹配节点结果的连线。
+     *
+     * @param from      来源节点规则标识
+     * @param to        目标节点规则标识
+     * @param checkType 触发连线的节点结果
+     * @return 规则树节点连线
+     */
+    private RuleTreeNodeLineVo treeLine(String from, String to, RuleLogicCheckTypeVO checkType) {
+        return RuleTreeNodeLineVo.builder()
+                .treeId(100_000_001)
+                .ruleNodeFrom(from)
+                .ruleNodeTo(to)
+                .ruleLimitTypeVO(RuleLimitTypeVO.EQ)
+                .ruleLimitValue(checkType)
+                .build();
+    }
+
+    /**
+     * 创建规则树节点执行结果。
+     *
+     * @param checkType 节点判断结果
+     * @param awardId   奖品标识
+     * @param ruleModel 命中的规则模型
+     * @param ruleValue 奖品规则配置
+     * @return 节点执行结果
+     */
+    private DefaultTreeFactory.TreeActionEntity treeAction(RuleLogicCheckTypeVO checkType, Long awardId,
+                                                           RuleModel ruleModel, String ruleValue) {
+        return DefaultTreeFactory.TreeActionEntity.builder()
+                .ruleLogicCheckTypeVO(checkType)
+                .strategyAwardVO(DefaultTreeFactory.StrategyAwardVO.builder()
+                        .awardId(awardId)
+                        .ruleModel(ruleModel)
+                        .awardRuleValue(ruleValue)
+                        .build())
+                .build();
     }
 
 

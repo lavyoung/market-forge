@@ -1,5 +1,7 @@
 package com.lavyoung.marketforge.domain.strategy.service.rule.chain;
 
+import com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
+
 /**
  * 抽奖规则责任链节点。
  * <p>
@@ -16,7 +18,7 @@ public interface ILogicChain extends ILogicChainArmory {
      *
      * @param userId     参与抽奖的用户标识
      * @param strategyId 抽奖策略标识
-     * @return 当前节点或后继节点选中的奖品标识
+     * @return 当前节点或后继节点选中的奖品及命中规则模型
      */
-    Long logic(String userId, Long strategyId);
+    DefaultChainFactory.StrategyAwardVO logic(String userId, Long strategyId);
 }
