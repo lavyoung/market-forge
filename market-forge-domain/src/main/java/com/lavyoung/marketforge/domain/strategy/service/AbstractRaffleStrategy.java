@@ -5,7 +5,6 @@ import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.repository.IRuleTreeRepository;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
-import com.lavyoung.marketforge.domain.strategy.service.rule.chain.ILogicChain;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
 import com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory.DefaultTreeFactory;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
@@ -73,19 +72,17 @@ public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
         }
 
         // 2. 责任链抽奖模式 - 黑名单 - 权重 - 兜底
-        ILogicChain logicChain = defaultChainFactory.openLogicChain(strategyId);
-        // 3. 奖品id
-        DefaultChainFactory.StrategyAwardVO chainStrategyAwardVO = logicChain.logic(userId, strategyId);
-        log.info("抽奖策略计算-责任链 userUd={} strategyId={} awardId={} ruleModel={}", userId, strategyId, chainStrategyAwardVO.awardId(), chainStrategyAwardVO.ruleModel());
+        DefaultChainFactory.StrategyAwardVO chainStrategyAwardVO = this.raffleLogicChain(userId, strategyId);
+        log.info("抽奖策略计算-责任链 userId={} strategyId={} awardId={} ruleModel={}", userId, strategyId, chainStrategyAwardVO.awardId(), chainStrategyAwardVO.ruleModel());
         // 没到默认的策略 说明其他策略捕获处理 直接返回结果
         if (!Objects.equals(RuleModel.DEFAULT, chainStrategyAwardVO.ruleModel())) {
             return RaffleAwardEntity.builder()
                     .awardId(chainStrategyAwardVO.awardId())
                     .build();
         }
-        // 默认兜底处理 继续执行
+        // 3. 默认兜底处理  继续执行-类似构建“解锁放行—库存接管—幸运奖兜底”的规则树
         DefaultTreeFactory.StrategyAwardVO treeStrategyAwardVO = raffleLogicTree(userId, strategyId, chainStrategyAwardVO.awardId());
-        log.info("抽奖策略计算-规则树 userUd={} strategyId={} awardId={} ruleModel={} ruleValue={}", userId, strategyId, treeStrategyAwardVO.awardId(),
+        log.info("抽奖策略计算-规则树 userId={} strategyId={} awardId={} ruleModel={} ruleValue={}", userId, strategyId, treeStrategyAwardVO.awardId(),
                 treeStrategyAwardVO.ruleModel(), treeStrategyAwardVO.awardRuleValue());
         return RaffleAwardEntity.builder()
                 .awardId(treeStrategyAwardVO.awardId())
