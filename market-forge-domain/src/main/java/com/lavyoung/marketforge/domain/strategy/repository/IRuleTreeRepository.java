@@ -4,6 +4,7 @@ import com.lavyoung.marketforge.domain.strategy.model.vo.RuleTreeVO;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 规则树仓储端口。
@@ -20,7 +21,7 @@ public interface IRuleTreeRepository {
      * 查询与给定规则模型匹配的规则树。
      *
      * @param ruleModels 策略在抽奖执行阶段配置的规则模型列表
-     * @return 已组装的规则树视图；没有匹配配置时返回 {@code null}
+     * @return 已组装的规则树视图；没有匹配配置时返回空
      */
-    RuleTreeVO queryRuleTreeVOByTreeId(List<RuleModel> ruleModels);
+    Optional<RuleTreeVO> queryRuleTreeVOByTreeId(List<RuleModel> ruleModels);
 }

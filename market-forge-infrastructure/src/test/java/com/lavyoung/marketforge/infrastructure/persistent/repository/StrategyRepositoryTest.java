@@ -2,6 +2,7 @@ package com.lavyoung.marketforge.infrastructure.persistent.repository;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
+import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardStockKeyVO;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyAwardDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyRuleDao;
@@ -11,6 +12,7 @@ import com.lavyoung.marketforge.infrastructure.persistent.mapper.StrategyRuleMap
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyAwardPO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyRulePO;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
+import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,11 +20,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import java.time.Duration;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * 验证 {@link StrategyRepository} 对策略级规则值和奖品规则模型的查询转换行为。
@@ -32,6 +35,8 @@ class StrategyRepositoryTest {
 
     private static final Long STRATEGY_ID = 100_001L;
     private static final long AWARD_ID = 100_011L;
+    private static final String STOCK_KEY = "strategy_award_stock:100001_100011";
+    private static final String STOCK_LOCK_KEY = STOCK_KEY + ":lock";
 
     @Mock
     private IStrategyAwardDao strategyAwardDao;
@@ -121,5 +126,108 @@ class StrategyRepositoryTest {
 
         // Then
         assertNull(result);
+    }
+
+    /**
+     * Given Redis 库存充足，When 扣减奖品库存，Then 在分布式锁保护下完成原子扣减并释放锁。
+     */
+    @Test
+    void shouldSubtractAwardStockWithinDistributedLock() {
+        // Given
+        when(redisService.getAtomicLong(STOCK_KEY)).thenReturn(10L);
+
+        // When
+        boolean subtracted = repository.subtractAwardStock(STOCK_KEY, 2);
+
+        // Then
+        assertTrue(subtracted);
+        verify(redisService).lock(STOCK_LOCK_KEY);
+        verify(redisService).addAndGetAtomicLong(STOCK_KEY, -2L);
+        verify(redisService).unlock(STOCK_LOCK_KEY);
+    }
+
+    /**
+     * Given Redis 库存不足，When 尝试扣减奖品库存，Then 不修改计数器但仍释放分布式锁。
+     */
+    @Test
+    void shouldRejectInsufficientAwardStockAndReleaseLock() {
+        // Given
+        when(redisService.getAtomicLong(STOCK_KEY)).thenReturn(1L);
+
+        // When
+        boolean subtracted = repository.subtractAwardStock(STOCK_KEY, 2);
+
+        // Then
+        assertFalse(subtracted);
+        verify(redisService).lock(STOCK_LOCK_KEY);
+        verify(redisService, never()).addAndGetAtomicLong(STOCK_KEY, -2L);
+        verify(redisService).unlock(STOCK_LOCK_KEY);
+    }
+
+    /**
+     * Given 非法库存参数，When 尝试扣减库存，Then 在访问 Redis 前拒绝请求。
+     */
+    @Test
+    void shouldRejectInvalidAwardStockArguments() {
+        assertAll(
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> repository.subtractAwardStock(" ", 1)),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> repository.subtractAwardStock(STOCK_KEY, 0))
+        );
+        verify(redisService, never()).lock(STOCK_LOCK_KEY);
+    }
+
+    /**
+     * Given 一条库存扣减消息，When 发送库存消费队列，Then 延迟三秒投递到库存阻塞队列。
+     */
+    @Test
+    void shouldSendAwardStockMessageToDelayedQueue() {
+        // Given
+        StrategyAwardStockKeyVO message = new StrategyAwardStockKeyVO(STRATEGY_ID, AWARD_ID);
+
+        // When
+        repository.awardStockConsumeSendQueue(message);
+
+        // Then
+        verify(redisService).offerDelayed(
+                Constants.RedisKeys.STRATEGY_AWARD_STOCK_QUEUE,
+                message,
+                Duration.ofSeconds(3)
+        );
+    }
+
+    /**
+     * Given 已到期的库存扣减消息，When 获取队列元素，Then 非阻塞返回类型安全的消息。
+     */
+    @Test
+    void shouldPollAwardStockMessageFromDelayedQueue() {
+        // Given
+        StrategyAwardStockKeyVO expected = new StrategyAwardStockKeyVO(STRATEGY_ID, AWARD_ID);
+        when(redisService.pollDelayed(
+                Constants.RedisKeys.STRATEGY_AWARD_STOCK_QUEUE,
+                StrategyAwardStockKeyVO.class
+        )).thenReturn(Optional.of(expected));
+
+        // When
+        Optional<StrategyAwardStockKeyVO> result = repository.pollQueueValue();
+
+        // Then
+        assertEquals(Optional.of(expected), result);
+    }
+
+    /**
+     * Given 数据库库存充足，When 同步一条库存消息，Then 返回成功更新结果。
+     */
+    @Test
+    void shouldUpdateAwardStock() {
+        // Given
+        when(strategyAwardDao.decrementAwardCountSurplus(STRATEGY_ID, AWARD_ID)).thenReturn(1);
+
+        // When
+        boolean updated = repository.updateStrategyAwardStock(STRATEGY_ID, AWARD_ID);
+
+        // Then
+        assertTrue(updated);
     }
 }

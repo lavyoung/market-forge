@@ -6,6 +6,7 @@ import com.lavyoung.marketforge.domain.strategy.model.entity.RuleMatterEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleLogicCheckTypeVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.rule.filter.ILogicFilter;
+import com.lavyoung.marketforge.domain.strategy.service.rule.tree.impl.RuleLuckAwardLogicTreeNode;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,8 @@ import org.springframework.stereotype.Service;
  * 在抽奖执行阶段比较用户抽奖次数与奖品规则阈值；达到阈值时放行，
  * 未达到阈值时接管当前流程，以便后续使用兜底奖品。
  *
+ * @deprecated 幸运奖处理已迁移至规则树，请使用 {@link RuleLuckAwardLogicTreeNode}
+ *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
  * @date 2026/09/06
@@ -25,6 +28,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @LogicStrategy(logicModel = RuleModel.LUCK_AWARD)
+@Deprecated(since = "1.0.0", forRemoval = false)
 public class RuleLuckAwardLogicFilter implements ILogicFilter<RuleActionEntity.RaffleExecutingEntity> {
 
     /**

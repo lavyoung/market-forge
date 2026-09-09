@@ -40,6 +40,11 @@ public enum RuleModel {
     RULE_BLACKLIST("rule_blacklist", "before", 99),
 
     /**
+     * 奖品库存校验与扣减。
+     */
+    RULE_STOCK("rule_stock", "executing", 0),
+
+    /**
      * 默认抽奖处理，不作为可配置业务规则。
      */
     DEFAULT("default", "", -99),
@@ -96,6 +101,17 @@ public enum RuleModel {
     public static boolean isExecutingModel(String code) {
         RuleModel model = get(code);
         return model != null && "executing".equals(model.type);
+    }
+
+
+    /**
+     * 判断规则模型是否在抽奖执行阶段处理。
+     *
+     * @param ruleModel 规则模型
+     * @return 模型非空且执行阶段为 {@code executing} 时返回 {@code true}
+     */
+    public static boolean isExecutingModel(RuleModel ruleModel) {
+        return ruleModel != null && "executing".equals(ruleModel.type);
     }
 
     /**

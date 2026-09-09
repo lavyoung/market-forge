@@ -17,7 +17,7 @@
 
     <artifactId>market-forge-domain</artifactId>
 
-    <name>${artifactId}-${revision}</name>
+    <name>${project.artifactId}-${revision}</name>
 
     <dependencies>
 

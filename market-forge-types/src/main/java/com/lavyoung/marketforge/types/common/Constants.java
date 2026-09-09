@@ -58,5 +58,15 @@ public class Constants {
          * 策略概率查找表的缓存键前缀。
          */
         public static final String STRATEGY_RATE_TABLE_KEY = "strategy_rate_table_key:";
+
+        /**
+         * 策略奖品 Redis 库存计数器键前缀。
+         */
+        public static final String STRATEGY_AWARD_STOCK = "strategy_award_stock:";
+
+        /**
+         * 策略奖品库存异步同步队列键。
+         */
+        public static final String STRATEGY_AWARD_STOCK_QUEUE = "strategy_award_stock_queue";
     }
 }

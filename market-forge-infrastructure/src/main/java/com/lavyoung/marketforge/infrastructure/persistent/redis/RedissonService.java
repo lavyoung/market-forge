@@ -37,6 +37,205 @@ public class RedissonService implements IRedisService {
      * {@inheritDoc}
      */
     @Override
+    public long getAtomicLong(String key) {
+        return getAtomicLongCounter(key).get();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setAtomicLong(String key, long value) {
+        getAtomicLongCounter(key).set(value);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public long getAndSetAtomicLong(String key, long value) {
+        return getAtomicLongCounter(key).getAndSet(value);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean compareAndSetAtomicLong(String key, long expected, long update) {
+        return getAtomicLongCounter(key).compareAndSet(expected, update);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public long addAndGetAtomicLong(String key, long delta) {
+        return getAtomicLongCounter(key).addAndGet(delta);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public long incrementAndGetAtomicLong(String key) {
+        return getAtomicLongCounter(key).incrementAndGet();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public long decrementAndGetAtomicLong(String key) {
+        return getAtomicLongCounter(key).decrementAndGet();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void lock(String key) {
+        getLock(key).lock();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void lock(String key, Duration leaseTime) {
+        Duration validatedLeaseTime = validateTtl(leaseTime);
+        getLock(key).lock(validatedLeaseTime.toNanos(), TimeUnit.NANOSECONDS);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean tryLock(String key) {
+        return getLock(key).tryLock();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean tryLock(String key, Duration waitTime, Duration leaseTime) throws InterruptedException {
+        validateTimeout(waitTime);
+        Duration validatedLeaseTime = validateTtl(leaseTime);
+        return getLock(key).tryLock(
+                waitTime.toNanos(),
+                validatedLeaseTime.toNanos(),
+                TimeUnit.NANOSECONDS
+        );
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean unlock(String key) {
+        RLock lock = getLock(key);
+        if (!lock.isHeldByCurrentThread()) {
+            return false;
+        }
+        try {
+            lock.unlock();
+            return true;
+        } catch (IllegalMonitorStateException ignored) {
+            return false;
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isLocked(String key) {
+        return getLock(key).isLocked();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isHeldByCurrentThread(String key) {
+        return getLock(key).isHeldByCurrentThread();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <T> void offerDelayed(String queueKey, T value, Duration delay) {
+        T validatedValue = requireValue(value);
+        Duration validatedDelay = validateDelay(delay);
+        getDelayedQueue(queueKey).offer(
+                validatedValue,
+                validatedDelay.toNanos(),
+                TimeUnit.NANOSECONDS
+        );
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <T> Optional<T> pollDelayed(String queueKey, Class<T> valueType) {
+        return poll(queueKey, valueType);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <T> Optional<T> pollDelayed(String queueKey, Class<T> valueType, Duration timeout)
+            throws InterruptedException {
+        return poll(queueKey, valueType, timeout);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <T> T takeDelayed(String queueKey, Class<T> valueType) throws InterruptedException {
+        return take(queueKey, valueType);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <T> boolean removeDelayed(String queueKey, T value) {
+        return this.<T>getDelayedQueue(queueKey).remove(requireValue(value));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <T> boolean containsDelayed(String queueKey, T value) {
+        return this.<T>getDelayedQueue(queueKey).contains(requireValue(value));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int delayedQueueSize(String queueKey) {
+        return getDelayedQueue(queueKey).size();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void destroyDelayedQueue(String queueKey) {
+        getDelayedQueue(queueKey).destroy();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public <T> void setValue(String key, T value) {
         getBucket(key).set(requireValue(value));
     }
@@ -119,7 +318,7 @@ public class RedissonService implements IRedisService {
      */
     @Override
     public long increment(String key, long delta) {
-        return redissonClient.getAtomicLong(validateKey(key)).addAndGet(delta);
+        return addAndGetAtomicLong(key, delta);
     }
 
     /**
@@ -457,6 +656,37 @@ public class RedissonService implements IRedisService {
     }
 
     /**
+     * 获取以同名阻塞队列为投递目标的延时队列。
+     *
+     * @param queueKey 目标队列键
+     * @param <T>      元素类型
+     * @return Redisson 延时队列
+     */
+    private <T> RDelayedQueue<T> getDelayedQueue(String queueKey) {
+        return redissonClient.getDelayedQueue(getBlockingQueue(queueKey));
+    }
+
+    /**
+     * 获取指定键的原子长整型计数器。
+     *
+     * @param key 计数器键
+     * @return Redisson 原子长整型计数器
+     */
+    private RAtomicLong getAtomicLongCounter(String key) {
+        return redissonClient.getAtomicLong(validateKey(key));
+    }
+
+    /**
+     * 获取指定名称的分布式可重入锁。
+     *
+     * @param key 锁键
+     * @return Redisson 分布式可重入锁
+     */
+    private RLock getLock(String key) {
+        return redissonClient.getLock(validateKey(key));
+    }
+
+    /**
      * 获取指定键的值容器。
      *
      * @param key 缓存键
@@ -566,6 +796,21 @@ public class RedissonService implements IRedisService {
         if (timeout.isNegative()) {
             throw new IllegalArgumentException("timeout must not be negative");
         }
+    }
+
+    /**
+     * 校验延时投递时间。
+     *
+     * @param delay 延迟时间
+     * @return 校验通过的延迟时间
+     * @throws IllegalArgumentException 延迟时间为负数
+     */
+    private Duration validateDelay(Duration delay) {
+        Objects.requireNonNull(delay, "delay must not be null");
+        if (delay.isNegative()) {
+            throw new IllegalArgumentException("delay must not be negative");
+        }
+        return delay;
     }
 
     /**

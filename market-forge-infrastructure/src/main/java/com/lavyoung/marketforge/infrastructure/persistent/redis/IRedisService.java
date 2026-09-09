@@ -16,6 +16,210 @@ import java.util.*;
 public interface IRedisService {
 
     /**
+     * 获取原子长整型计数器的当前值。
+     *
+     * @param key 计数器键
+     * @return 当前值；键不存在时返回 {@code 0}
+     */
+    long getAtomicLong(String key);
+
+    /**
+     * 设置原子长整型计数器的值。
+     *
+     * @param key   计数器键
+     * @param value 新值
+     */
+    void setAtomicLong(String key, long value);
+
+    /**
+     * 设置原子长整型计数器并返回旧值。
+     *
+     * @param key   计数器键
+     * @param value 新值
+     * @return 设置前的值
+     */
+    long getAndSetAtomicLong(String key, long value);
+
+    /**
+     * 仅在当前值等于期望值时更新原子长整型计数器。
+     *
+     * @param key      计数器键
+     * @param expected 期望的当前值
+     * @param update   更新值
+     * @return 更新成功返回 {@code true}
+     */
+    boolean compareAndSetAtomicLong(String key, long expected, long update);
+
+    /**
+     * 对原子长整型计数器增加指定值。
+     *
+     * @param key   计数器键
+     * @param delta 增量，负数表示递减
+     * @return 操作后的值
+     */
+    long addAndGetAtomicLong(String key, long delta);
+
+    /**
+     * 将原子长整型计数器加一。
+     *
+     * @param key 计数器键
+     * @return 操作后的值
+     */
+    long incrementAndGetAtomicLong(String key);
+
+    /**
+     * 将原子长整型计数器减一。
+     *
+     * @param key 计数器键
+     * @return 操作后的值
+     */
+    long decrementAndGetAtomicLong(String key);
+
+    /**
+     * 获取分布式锁并启用 Redisson 看门狗自动续期。
+     *
+     * @param key 锁键
+     */
+    void lock(String key);
+
+    /**
+     * 获取具有固定租约的分布式锁。
+     *
+     * @param key       锁键
+     * @param leaseTime 锁租约，必须大于零
+     */
+    void lock(String key, Duration leaseTime);
+
+    /**
+     * 立即尝试获取分布式锁，获取成功后由 Redisson 看门狗自动续期。
+     *
+     * @param key 锁键
+     * @return 获取成功返回 {@code true}
+     */
+    boolean tryLock(String key);
+
+    /**
+     * 在指定等待时间内尝试获取具有固定租约的分布式锁。
+     *
+     * @param key       锁键
+     * @param waitTime  最长等待时间，允许为零
+     * @param leaseTime 锁租约，必须大于零
+     * @return 获取成功返回 {@code true}，等待超时返回 {@code false}
+     * @throws InterruptedException 等待锁期间当前线程被中断
+     */
+    boolean tryLock(String key, Duration waitTime, Duration leaseTime) throws InterruptedException;
+
+    /**
+     * 释放当前线程持有的分布式锁。
+     *
+     * @param key 锁键
+     * @return 成功释放返回 {@code true}；当前线程未持有该锁返回 {@code false}
+     */
+    boolean unlock(String key);
+
+    /**
+     * 判断分布式锁当前是否被任意线程或进程持有。
+     *
+     * @param key 锁键
+     * @return 已加锁返回 {@code true}
+     */
+    boolean isLocked(String key);
+
+    /**
+     * 判断分布式锁是否由当前线程持有。
+     *
+     * @param key 锁键
+     * @return 当前线程持有锁返回 {@code true}
+     */
+    boolean isHeldByCurrentThread(String key);
+
+    /**
+     * 将元素延迟投递到指定队列。
+     * <p>
+     * 延迟到期后，元素将进入同名阻塞队列，可通过 {@link #poll(String, Class)}、
+     * {@link #poll(String, Class, Duration)} 或 {@link #take(String, Class)} 消费。
+     *
+     * @param queueKey 目标队列键
+     * @param value    待投递元素
+     * @param delay    延迟时间，允许为零
+     * @param <T>      元素类型
+     * @throws IllegalArgumentException 队列键为空白或延迟时间为负数
+     * @throws NullPointerException     元素或延迟时间为空
+     */
+    <T> void offerDelayed(String queueKey, T value, Duration delay);
+
+    /**
+     * 立即获取并移除一个已经到期的延时消息。
+     *
+     * @param queueKey  目标队列键
+     * @param valueType 期望的消息类型
+     * @param <T>       消息类型
+     * @return 已到期消息；当前没有可消费消息时返回空
+     */
+    <T> Optional<T> pollDelayed(String queueKey, Class<T> valueType);
+
+    /**
+     * 在指定时间内等待、获取并移除一个已经到期的延时消息。
+     *
+     * @param queueKey  目标队列键
+     * @param valueType 期望的消息类型
+     * @param timeout   最长等待时间
+     * @param <T>       消息类型
+     * @return 已到期消息；等待超时返回空
+     * @throws InterruptedException 等待期间当前线程被中断
+     */
+    <T> Optional<T> pollDelayed(String queueKey, Class<T> valueType, Duration timeout)
+            throws InterruptedException;
+
+    /**
+     * 持续等待，直到获取并移除一个已经到期的延时消息。
+     *
+     * @param queueKey  目标队列键
+     * @param valueType 期望的消息类型
+     * @param <T>       消息类型
+     * @return 获取到的已到期消息
+     * @throws InterruptedException 等待期间当前线程被中断
+     */
+    <T> T takeDelayed(String queueKey, Class<T> valueType) throws InterruptedException;
+
+    /**
+     * 从延时队列移除一个尚未到期的指定元素。
+     *
+     * @param queueKey 目标队列键
+     * @param value    待移除元素
+     * @param <T>      元素类型
+     * @return 移除成功返回 {@code true}
+     */
+    <T> boolean removeDelayed(String queueKey, T value);
+
+    /**
+     * 判断延时队列是否包含尚未到期的指定元素。
+     *
+     * @param queueKey 目标队列键
+     * @param value    待检查元素
+     * @param <T>      元素类型
+     * @return 包含指定元素返回 {@code true}
+     */
+    <T> boolean containsDelayed(String queueKey, T value);
+
+    /**
+     * 获取延时队列中尚待投递的元素数量。
+     *
+     * @param queueKey 目标队列键
+     * @return 待投递元素数量
+     */
+    int delayedQueueSize(String queueKey);
+
+    /**
+     * 销毁延时队列调度器及其内部资源。
+     * <p>
+     * 此操作不会删除已经转移到目标阻塞队列中的元素。
+     *
+     * @param queueKey 目标队列键
+     */
+    void destroyDelayedQueue(String queueKey);
+
+    /**
      * Redis List 查询的闭区间。
      * <p>
      * 起止下标支持 Redis 的负数语义，例如 {@code (0, -1)} 表示读取全部元素。

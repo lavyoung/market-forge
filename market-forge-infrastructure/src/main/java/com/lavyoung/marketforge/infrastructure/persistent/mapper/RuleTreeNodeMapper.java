@@ -1,6 +1,9 @@
 package com.lavyoung.marketforge.infrastructure.persistent.mapper;
 
+import com.lavyoung.marketforge.domain.strategy.model.vo.RuleTreeNodeVO;
+import com.lavyoung.marketforge.infrastructure.persistent.po.RuleTreeNodePO;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
 import org.mapstruct.ReportingPolicy;
 
@@ -19,4 +22,12 @@ import org.mapstruct.ReportingPolicy;
 )
 public interface RuleTreeNodeMapper {
 
+    /**
+     * 将节点记录转换为尚未装配连线的领域值对象。
+     *
+     * @param treeNodePO 规则树节点持久化对象
+     * @return 规则树节点基础信息
+     */
+    @Mapping(target = "ruleTreeNodeLineVoList", ignore = true)
+    RuleTreeNodeVO toVO(RuleTreeNodePO treeNodePO);
 }

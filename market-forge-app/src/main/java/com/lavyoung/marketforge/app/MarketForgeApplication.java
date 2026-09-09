@@ -2,6 +2,7 @@ package com.lavyoung.marketforge.app;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * DDD Forge 生成项目的 Spring Boot 启动入口。
@@ -9,7 +10,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
  */
-@SpringBootApplication
+@EnableScheduling
+@SpringBootApplication(scanBasePackages = "com.lavyoung.marketforge")
 public class MarketForgeApplication {
 
     /**

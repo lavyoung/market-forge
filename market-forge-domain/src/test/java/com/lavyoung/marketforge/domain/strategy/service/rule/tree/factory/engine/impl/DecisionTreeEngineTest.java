@@ -36,7 +36,7 @@ class DecisionTreeEngineTest {
                 .awardId(AWARD_ID)
                 .ruleModel(RuleModel.DEFAULT)
                 .build();
-        when(rootNode.logic(USER_ID, STRATEGY_ID, AWARD_ID)).thenReturn(
+        when(rootNode.logic(USER_ID, STRATEGY_ID, AWARD_ID, null)).thenReturn(
                 DefaultTreeFactory.TreeActionEntity.builder()
                         .ruleLogicCheckTypeVO(RuleLogicCheckTypeVO.ALLOW)
                         .strategyAwardVO(expected)
@@ -61,7 +61,7 @@ class DecisionTreeEngineTest {
     void shouldRejectNodeResultWithoutMatchingLine() {
         // Given
         ILogicTreeNode rootNode = mock(ILogicTreeNode.class);
-        when(rootNode.logic(USER_ID, STRATEGY_ID, AWARD_ID)).thenReturn(
+        when(rootNode.logic(USER_ID, STRATEGY_ID, AWARD_ID, null)).thenReturn(
                 DefaultTreeFactory.TreeActionEntity.builder()
                         .ruleLogicCheckTypeVO(RuleLogicCheckTypeVO.ALLOW)
                         .build()

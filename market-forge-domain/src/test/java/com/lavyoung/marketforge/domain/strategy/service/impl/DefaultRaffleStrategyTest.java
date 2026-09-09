@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -138,7 +139,7 @@ class DefaultRaffleStrategyTest {
                 .awardRuleValue("1/100")
                 .build();
         when(repository.queryStrategyAwardRuleModels(STRATEGY_ID, AWARD_ID)).thenReturn(ruleModels);
-        when(ruleTreeRepository.queryRuleTreeVOByTreeId(List.of(RuleModel.LOCK))).thenReturn(ruleTree);
+        when(ruleTreeRepository.queryRuleTreeVOByTreeId(List.of(RuleModel.LOCK))).thenReturn(Optional.of(ruleTree));
         when(treeFactory.openLogicTree(ruleTree)).thenReturn(treeEngine);
         when(treeEngine.process(USER_ID, STRATEGY_ID, AWARD_ID)).thenReturn(treeAward);
 
@@ -162,7 +163,7 @@ class DefaultRaffleStrategyTest {
         stubChainAward(RuleModel.DEFAULT);
         StrategyAwardRuleModelVO ruleModels = new StrategyAwardRuleModelVO(RuleModel.LOCK.getCode());
         when(repository.queryStrategyAwardRuleModels(STRATEGY_ID, AWARD_ID)).thenReturn(ruleModels);
-        when(ruleTreeRepository.queryRuleTreeVOByTreeId(List.of(RuleModel.LOCK))).thenReturn(null);
+        when(ruleTreeRepository.queryRuleTreeVOByTreeId(List.of(RuleModel.LOCK))).thenReturn(Optional.empty());
 
         // When
         BusinessException exception = assertThrows(

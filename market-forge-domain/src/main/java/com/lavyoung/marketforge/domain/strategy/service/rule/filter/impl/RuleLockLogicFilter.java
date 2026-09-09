@@ -5,6 +5,7 @@ import com.lavyoung.marketforge.domain.strategy.model.entity.RuleActionEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RuleMatterEntity;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.rule.filter.ILogicFilter;
+import com.lavyoung.marketforge.domain.strategy.service.rule.tree.impl.RuleLockLogicTreeNode;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Component;
  * 用于在抽奖执行阶段依据用户抽奖次数判断已命中奖品是否解锁。
  * 当前类仅保留规则扩展骨架，尚未实现具体过滤逻辑。
  *
+ * @deprecated 次数锁处理已迁移至规则树，请使用 {@link RuleLockLogicTreeNode}
+ *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
  * @date 2026/09/06
@@ -24,6 +27,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @LogicStrategy(logicModel = RuleModel.LOCK)
+@Deprecated(since = "1.0.0", forRemoval = false)
 public class RuleLockLogicFilter implements ILogicFilter<RuleActionEntity.RaffleExecutingEntity> {
 
     /**

@@ -57,4 +57,5 @@ public interface IStrategyAwardDao extends BaseMapper<StrategyAwardPO> {
             @Param("strategyId") Long strategyId,
             @Param("awardId") Long awardId);
 
+
 }

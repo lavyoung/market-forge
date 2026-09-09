@@ -27,7 +27,7 @@ import java.util.Objects;
  */
 @Slf4j
 @AllArgsConstructor
-public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
+public abstract class AbstractRaffleStrategy implements IRaffleStrategy, IRaffleStock {
 
     /**
      * 抽奖策略仓储端口。
@@ -81,7 +81,7 @@ public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
                     .build();
         }
         // 3. 默认兜底处理  继续执行-类似构建“解锁放行—库存接管—幸运奖兜底”的规则树
-        DefaultTreeFactory.StrategyAwardVO treeStrategyAwardVO = raffleLogicTree(userId, strategyId, chainStrategyAwardVO.awardId());
+        DefaultTreeFactory.StrategyAwardVO treeStrategyAwardVO = this.raffleLogicTree(userId, strategyId, chainStrategyAwardVO.awardId());
         log.info("抽奖策略计算-规则树 userId={} strategyId={} awardId={} ruleModel={} ruleValue={}", userId, strategyId, treeStrategyAwardVO.awardId(),
                 treeStrategyAwardVO.ruleModel(), treeStrategyAwardVO.awardRuleValue());
         return RaffleAwardEntity.builder()

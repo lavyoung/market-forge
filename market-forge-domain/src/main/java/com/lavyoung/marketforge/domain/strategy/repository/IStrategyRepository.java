@@ -4,10 +4,12 @@ import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
+import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardStockKeyVO;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * 抽奖策略仓储端口。
@@ -27,6 +29,15 @@ public interface IStrategyRepository {
      * @return 策略奖品配置列表；不存在配置时返回空列表，不返回 {@code null}
      */
     List<StrategyAwardEntity> queryStrategyAwardList(Long strategyId);
+
+    /**
+     * 查询指定策略下的奖品配置。
+     *
+     * @param strategyId 策略标识
+     * @param awardId    奖品标识
+     * @return 对应奖品配置；不存在时返回空
+     */
+    Optional<StrategyAwardEntity> getStrategyAwardEntity(Long strategyId, Long awardId);
 
     /**
      * 保存装配完成的概率范围和奖品查找表。
@@ -107,4 +118,47 @@ public interface IStrategyRepository {
      * @return 策略奖品规则模型值对象；未找到奖品配置时返回 {@code null}
      */
     StrategyAwardRuleModelVO queryStrategyAwardRuleModels(Long strategyId, long awardId);
+
+
+    /**
+     * 初始化策略奖品的 Redis 库存。
+     *
+     * @param key   库存键
+     * @param stock 初始库存
+     */
+    void cacheStrategyAwardStock(String key, int stock);
+
+    /**
+     * 在分布式锁保护下扣减策略奖品库存。
+     *
+     * @param key   库存键
+     * @param stock 扣减数量，必须大于零
+     * @return 库存充足且扣减成功返回 {@code true}
+     * @throws IllegalArgumentException 库存键为空白或扣减数量无效
+     */
+    boolean subtractAwardStock(String key, int stock);
+
+    /**
+     * 将库存扣减消息延迟投递到消费队列。
+     *
+     * @param awardStockKeyVO 待更新库存的策略与奖品标识
+     * @throws NullPointerException 消息为空
+     */
+    void awardStockConsumeSendQueue(StrategyAwardStockKeyVO awardStockKeyVO);
+
+    /**
+     * 立即获取一条已经到期的库存扣减消息。
+     *
+     * @return 已到期消息；当前队列为空时返回空
+     */
+    Optional<StrategyAwardStockKeyVO> pollQueueValue();
+
+    /**
+     * 原子扣减数据库中的策略奖品剩余库存。
+     *
+     * @param strategyId 策略标识
+     * @param awardId    奖品标识
+     * @return 成功扣减返回 {@code true}，记录不存在或库存不足返回 {@code false}
+     */
+    boolean updateStrategyAwardStock(Long strategyId, Long awardId);
 }

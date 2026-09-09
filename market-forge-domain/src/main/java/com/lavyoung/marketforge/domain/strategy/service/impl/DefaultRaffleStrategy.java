@@ -2,6 +2,7 @@ package com.lavyoung.marketforge.domain.strategy.service.impl;
 
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleTreeVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
+import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardStockKeyVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IRuleTreeRepository;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.AbstractRaffleStrategy;
@@ -13,6 +14,8 @@ import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+
+import java.util.Optional;
 
 /**
  * 默认抽奖策略实现。
@@ -65,11 +68,27 @@ public class DefaultRaffleStrategy extends AbstractRaffleStrategy {
         if (strategyAwardRuleModelVO == null) {
             return DefaultTreeFactory.StrategyAwardVO.builder().awardId(awardId).build();
         }
-        RuleTreeVO ruleTreeVO = ruleTreeRepository.queryRuleTreeVOByTreeId(strategyAwardRuleModelVO.raffleExecutingRuleModelsList());
-        if (ruleTreeVO == null) {
-            log.error("存在抽奖策略 strategyId={} 配置的规则模型Key={} 未在库表中配置 rule_tree、rule_tree_node、tree_node_line 配置相应的规则树信息", strategyId, strategyAwardRuleModelVO.ruleModels());
-            throw new BusinessException(BusinessResponseCode.STRATEGY_NOT_ASSEMBLED);
-        }
+        RuleTreeVO ruleTreeVO = ruleTreeRepository.queryRuleTreeVOByTreeId(strategyAwardRuleModelVO.toModelList())
+                .orElseThrow(() -> {
+                    log.error("存在抽奖策略 strategyId={} 配置的规则模型Key={} 未在库表中配置完整规则树", strategyId,
+                            strategyAwardRuleModelVO.ruleModels());
+                    return new BusinessException(BusinessResponseCode.STRATEGY_NOT_ASSEMBLED);
+                });
         return defaultTreeFactory.openLogicTree(ruleTreeVO).process(userId, strategyId, awardId);
+    }
+
+    @Override
+    public Optional<StrategyAwardStockKeyVO> pollQueueValue() {
+        return repository.pollQueueValue();
+    }
+
+    @Override
+    public void requeueStockUpdate(StrategyAwardStockKeyVO message) {
+        repository.awardStockConsumeSendQueue(message);
+    }
+
+    @Override
+    public boolean updateStrategyAwardStock(Long strategyId, Long awardId) {
+        return repository.updateStrategyAwardStock(strategyId, awardId);
     }
 }

@@ -17,7 +17,7 @@
 
     <artifactId>market-forge-types</artifactId>
 
-    <name>${artifactId}-${revision}</name>
+    <name>${project.artifactId}-${revision}</name>
 
     <dependencies>
 
@@ -32,7 +32,6 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
 </project>

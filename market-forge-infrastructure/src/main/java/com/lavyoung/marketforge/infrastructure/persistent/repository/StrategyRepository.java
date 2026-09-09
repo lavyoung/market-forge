@@ -5,6 +5,7 @@ import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
+import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardStockKeyVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyAwardDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyDao;
@@ -21,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -38,6 +40,11 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class StrategyRepository implements IStrategyRepository {
+
+    /**
+     * 库存扣减消息进入消费队列前的延迟，用于合并短时间内的库存变更并削峰。
+     */
+    private static final Duration AWARD_STOCK_QUEUE_DELAY = Duration.ofSeconds(3);
 
     /**
      * 策略奖品数据访问对象。
@@ -87,6 +94,13 @@ public class StrategyRepository implements IStrategyRepository {
         String cacheKey = Constants.RedisKeys.STRATEGY_AWARD_KEY + strategyId;
         return redisService.getValueList(cacheKey, StrategyAwardEntity.class)
                 .orElseGet(() -> queryAndCacheStrategyAwards(strategyId, cacheKey));
+    }
+
+    @Override
+    public Optional<StrategyAwardEntity> getStrategyAwardEntity(Long strategyId, Long awardId) {
+        return Optional.ofNullable(strategyAwardDao.selectOne(Wrappers.lambdaQuery(StrategyAwardPO.class)
+                .eq(StrategyAwardPO::getStrategyId, strategyId)
+                .eq(StrategyAwardPO::getAwardId, awardId))).map(strategyAwardMapper::toEntity);
     }
 
     /**
@@ -208,6 +222,60 @@ public class StrategyRepository implements IStrategyRepository {
                 .eq(StrategyAwardPO::getStrategyId, strategyId)
                 .eq(StrategyAwardPO::getAwardId, awardId));
         return Optional.ofNullable(strategyRulePO).map(x -> StrategyAwardRuleModelVO.builder().ruleModels(x.getRuleModels()).build()).orElse(null);
+    }
+
+    @Override
+    public void cacheStrategyAwardStock(String key, int stock) {
+        redisService.setAtomicLong(key, stock);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws IllegalArgumentException 库存键为空白或扣减数量为空、非正数
+     */
+    @Override
+    public boolean subtractAwardStock(String key, int stock) {
+        if (key == null || key.isBlank()) {
+            throw new IllegalArgumentException("key must not be blank");
+        }
+        if (stock <= 0) {
+            throw new IllegalArgumentException("stock must be greater than zero");
+        }
+        String lockKey = key + Constants.COLON + "lock";
+        redisService.lock(lockKey);
+        try {
+            long currentStock = redisService.getAtomicLong(key);
+            if (currentStock < stock) {
+                return false;
+            }
+            redisService.addAndGetAtomicLong(key, -stock);
+            return true;
+        } finally {
+            redisService.unlock(lockKey);
+        }
+    }
+
+    @Override
+    public void awardStockConsumeSendQueue(StrategyAwardStockKeyVO awardStockKeyVO) {
+        redisService.offerDelayed(
+                Constants.RedisKeys.STRATEGY_AWARD_STOCK_QUEUE,
+                Objects.requireNonNull(awardStockKeyVO, "awardStockKeyVO must not be null"),
+                AWARD_STOCK_QUEUE_DELAY
+        );
+    }
+
+    @Override
+    public Optional<StrategyAwardStockKeyVO> pollQueueValue() {
+        return redisService.pollDelayed(
+                Constants.RedisKeys.STRATEGY_AWARD_STOCK_QUEUE,
+                StrategyAwardStockKeyVO.class
+        );
+    }
+
+    @Override
+    public boolean updateStrategyAwardStock(Long strategyId, Long awardId) {
+        return strategyAwardDao.decrementAwardCountSurplus(strategyId, awardId) == 1;
     }
 
     /**

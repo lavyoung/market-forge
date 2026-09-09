@@ -3,6 +3,10 @@ package com.lavyoung.marketforge.infrastructure.persistent.dao;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.lavyoung.marketforge.infrastructure.persistent.po.RuleTreeNodePO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+
+import java.util.List;
 
 /**
  * 规则树节点数据访问接口。
@@ -15,4 +19,19 @@ import org.apache.ibatis.annotations.Mapper;
  */
 @Mapper
 public interface IRuleTreeNodeDao extends BaseMapper<RuleTreeNodePO> {
+
+    /**
+     * 查询指定规则树的全部节点。
+     *
+     * @param treeId 规则树标识
+     * @return 节点列表；不存在节点时返回空列表
+     */
+    @Select("""
+            SELECT id, tree_id, rule_key, rule_desc, rule_value,
+                   create_time, update_time
+            FROM rule_tree_node
+            WHERE tree_id = #{treeId}
+            ORDER BY id
+            """)
+    List<RuleTreeNodePO> queryByTreeId(@Param("treeId") String treeId);
 }

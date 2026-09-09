@@ -89,6 +89,21 @@ class DefaultChainFactoryTest {
     }
 
     /**
+     * Given 策略引用未注册的规则节点，When 打开责任链，Then 抛出业务异常而不是空指针异常。
+     */
+    @Test
+    void shouldRejectUnregisteredRuleChain() {
+        // Given
+        IStrategyRepository repository = mock(IStrategyRepository.class);
+        when(repository.queryStrategyEntityByStrategyId(STRATEGY_ID))
+                .thenReturn(strategy(RuleModel.WEIGHT.getCode()));
+        DefaultChainFactory factory = new DefaultChainFactory(Map.of(), repository);
+
+        // When & Then
+        assertThrows(BusinessException.class, () -> factory.openLogicChain(STRATEGY_ID));
+    }
+
+    /**
      * 创建指定规则配置的策略实体。
      *
      * @param ruleModels 逗号分隔的规则模型编码

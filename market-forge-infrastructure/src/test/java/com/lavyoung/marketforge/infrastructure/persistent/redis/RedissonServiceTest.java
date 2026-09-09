@@ -15,8 +15,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * 验证 {@link RedissonService} 的 Redis 操作委托与参数边界。
@@ -32,6 +31,7 @@ class RedissonServiceTest {
     private static final String LIST_KEY = "list:test";
     private static final String SET_KEY = "set:test";
     private static final String QUEUE_KEY = "queue:test";
+    private static final String LOCK_KEY = "lock:test";
 
     @Mock
     private RedissonClient redissonClient;
@@ -56,6 +56,12 @@ class RedissonServiceTest {
 
     @Mock
     private RAtomicLong atomicLong;
+
+    @Mock
+    private RLock lock;
+
+    @Mock
+    private RDelayedQueue<Object> delayedQueue;
 
     private RedissonService redisService;
 
@@ -126,6 +132,170 @@ class RedissonServiceTest {
 
         assertEquals(2L, deleted);
         assertEquals(8L, current);
+    }
+
+    /**
+     * Given 原子长整型计数器，When 执行赋值、CAS 和增减操作，Then 委托给同一个 Redis 原子对象并返回结果。
+     */
+    @Test
+    void shouldOperateAtomicLong() {
+        // Given
+        when(redissonClient.getAtomicLong(CACHE_KEY)).thenReturn(atomicLong);
+        when(atomicLong.get()).thenReturn(10L);
+        when(atomicLong.getAndSet(20L)).thenReturn(10L);
+        when(atomicLong.compareAndSet(20L, 30L)).thenReturn(true);
+        when(atomicLong.addAndGet(-5L)).thenReturn(25L);
+        when(atomicLong.incrementAndGet()).thenReturn(26L);
+        when(atomicLong.decrementAndGet()).thenReturn(25L);
+
+        // When
+        long initial = redisService.getAtomicLong(CACHE_KEY);
+        redisService.setAtomicLong(CACHE_KEY, 20L);
+        long previous = redisService.getAndSetAtomicLong(CACHE_KEY, 20L);
+        boolean updated = redisService.compareAndSetAtomicLong(CACHE_KEY, 20L, 30L);
+        long added = redisService.addAndGetAtomicLong(CACHE_KEY, -5L);
+        long incremented = redisService.incrementAndGetAtomicLong(CACHE_KEY);
+        long decremented = redisService.decrementAndGetAtomicLong(CACHE_KEY);
+
+        // Then
+        assertAll(
+                () -> assertEquals(10L, initial),
+                () -> assertEquals(10L, previous),
+                () -> assertTrue(updated),
+                () -> assertEquals(25L, added),
+                () -> assertEquals(26L, incremented),
+                () -> assertEquals(25L, decremented)
+        );
+        verify(atomicLong).set(20L);
+    }
+
+    /**
+     * Given 可用分布式锁，When 使用看门狗、固定租约和限时尝试方式加锁，Then 正确委托并安全解锁。
+     *
+     * @throws InterruptedException 等待锁期间当前线程被中断
+     */
+    @Test
+    void shouldOperateDistributedLock() throws InterruptedException {
+        // Given
+        Duration leaseTime = Duration.ofSeconds(30);
+        Duration waitTime = Duration.ofSeconds(2);
+        when(redissonClient.getLock(LOCK_KEY)).thenReturn(lock);
+        when(lock.tryLock()).thenReturn(true);
+        when(lock.tryLock(waitTime.toNanos(), leaseTime.toNanos(), TimeUnit.NANOSECONDS)).thenReturn(true);
+        when(lock.isLocked()).thenReturn(true);
+        when(lock.isHeldByCurrentThread()).thenReturn(true);
+
+        // When
+        redisService.lock(LOCK_KEY);
+        redisService.lock(LOCK_KEY, leaseTime);
+        boolean acquiredImmediately = redisService.tryLock(LOCK_KEY);
+        boolean acquiredWithinWait = redisService.tryLock(LOCK_KEY, waitTime, leaseTime);
+        boolean locked = redisService.isLocked(LOCK_KEY);
+        boolean heldByCurrentThread = redisService.isHeldByCurrentThread(LOCK_KEY);
+        boolean unlocked = redisService.unlock(LOCK_KEY);
+
+        // Then
+        assertAll(
+                () -> assertTrue(acquiredImmediately),
+                () -> assertTrue(acquiredWithinWait),
+                () -> assertTrue(locked),
+                () -> assertTrue(heldByCurrentThread),
+                () -> assertTrue(unlocked)
+        );
+        verify(lock).lock();
+        verify(lock).lock(leaseTime.toNanos(), TimeUnit.NANOSECONDS);
+        verify(lock).unlock();
+    }
+
+    /**
+     * Given 当前线程未持有分布式锁，When 请求解锁，Then 返回失败且不调用底层解锁操作。
+     */
+    @Test
+    void shouldNotUnlockLockOwnedByAnotherThread() {
+        // Given
+        when(redissonClient.getLock(LOCK_KEY)).thenReturn(lock);
+        when(lock.isHeldByCurrentThread()).thenReturn(false);
+
+        // When
+        boolean unlocked = redisService.unlock(LOCK_KEY);
+
+        // Then
+        assertFalse(unlocked);
+        verify(lock, never()).unlock();
+    }
+
+    /**
+     * Given 锁在持有检查后租约到期，When 底层解锁报告所有权丢失，Then 返回失败而不向业务层泄漏客户端异常。
+     */
+    @Test
+    void shouldReturnFalseWhenLockLeaseExpiresBeforeUnlock() {
+        // Given
+        when(redissonClient.getLock(LOCK_KEY)).thenReturn(lock);
+        when(lock.isHeldByCurrentThread()).thenReturn(true);
+        doThrow(new IllegalMonitorStateException()).when(lock).unlock();
+
+        // When
+        boolean unlocked = redisService.unlock(LOCK_KEY);
+
+        // Then
+        assertFalse(unlocked);
+    }
+
+    /**
+     * Given 同名阻塞队列作为投递目标，When 操作延时队列，Then 正确完成投递、查询、移除和资源销毁。
+     */
+    @Test
+    void shouldOperateDelayedQueue() {
+        // Given
+        Duration delay = Duration.ofSeconds(5);
+        when(redissonClient.getBlockingQueue(QUEUE_KEY)).thenReturn(blockingQueue);
+        when(redissonClient.getDelayedQueue(blockingQueue)).thenReturn(delayedQueue);
+        when(delayedQueue.contains("job-1")).thenReturn(true);
+        when(delayedQueue.remove("job-1")).thenReturn(true);
+        when(delayedQueue.size()).thenReturn(1);
+
+        // When
+        redisService.offerDelayed(QUEUE_KEY, "job-1", delay);
+        boolean contained = redisService.containsDelayed(QUEUE_KEY, "job-1");
+        int size = redisService.delayedQueueSize(QUEUE_KEY);
+        boolean removed = redisService.removeDelayed(QUEUE_KEY, "job-1");
+        redisService.destroyDelayedQueue(QUEUE_KEY);
+
+        // Then
+        assertAll(
+                () -> assertTrue(contained),
+                () -> assertEquals(1, size),
+                () -> assertTrue(removed)
+        );
+        verify(delayedQueue).offer("job-1", delay.toNanos(), TimeUnit.NANOSECONDS);
+        verify(delayedQueue).destroy();
+    }
+
+    /**
+     * Given 延时消息已进入目标阻塞队列，When 立即、限时或持续等待获取，Then 返回对应的已到期消息。
+     *
+     * @throws InterruptedException 等待消息期间当前线程被中断
+     */
+    @Test
+    void shouldGetReadyDelayedValues() throws InterruptedException {
+        // Given
+        Duration timeout = Duration.ofSeconds(2);
+        when(redissonClient.getBlockingQueue(QUEUE_KEY)).thenReturn(blockingQueue);
+        when(blockingQueue.poll()).thenReturn("job-1");
+        when(blockingQueue.poll(timeout.toNanos(), TimeUnit.NANOSECONDS)).thenReturn("job-2");
+        when(blockingQueue.take()).thenReturn("job-3");
+
+        // When
+        Optional<String> immediate = redisService.pollDelayed(QUEUE_KEY, String.class);
+        Optional<String> waited = redisService.pollDelayed(QUEUE_KEY, String.class, timeout);
+        String taken = redisService.takeDelayed(QUEUE_KEY, String.class);
+
+        // Then
+        assertAll(
+                () -> assertEquals(Optional.of("job-1"), immediate),
+                () -> assertEquals(Optional.of("job-2"), waited),
+                () -> assertEquals("job-3", taken)
+        );
     }
 
     /**
@@ -235,6 +405,18 @@ class RedissonServiceTest {
                 () -> redisService.poll(QUEUE_KEY, String.class, Duration.ofSeconds(-1)));
         assertThrows(IllegalArgumentException.class,
                 () -> redisService.drain(QUEUE_KEY, 0, String.class));
+        assertThrows(IllegalArgumentException.class,
+                () -> redisService.lock(LOCK_KEY, Duration.ZERO));
+        assertThrows(IllegalArgumentException.class,
+                () -> redisService.tryLock(LOCK_KEY, Duration.ofSeconds(-1), Duration.ofSeconds(1)));
+        assertThrows(IllegalArgumentException.class,
+                () -> redisService.tryLock(LOCK_KEY, Duration.ZERO, Duration.ZERO));
+        assertThrows(IllegalArgumentException.class,
+                () -> redisService.offerDelayed(QUEUE_KEY, "job-1", Duration.ofSeconds(-1)));
+        assertThrows(NullPointerException.class,
+                () -> redisService.offerDelayed(QUEUE_KEY, null, Duration.ofSeconds(1)));
+        assertThrows(NullPointerException.class,
+                () -> redisService.offerDelayed(QUEUE_KEY, "job-1", null));
     }
 
 }

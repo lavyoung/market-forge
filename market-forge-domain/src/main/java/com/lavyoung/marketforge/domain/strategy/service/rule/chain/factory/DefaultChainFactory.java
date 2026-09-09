@@ -45,8 +45,7 @@ public class DefaultChainFactory {
      *
      * @param strategyId 策略标识
      * @return 已装配责任链的头节点；策略无规则时返回默认抽奖节点
-     * @throws BusinessException    策略不存在时抛出
-     * @throws NullPointerException 规则节点或默认节点缺失时抛出
+     * @throws BusinessException 策略不存在或配置的责任链节点未注册时抛出
      */
     public ILogicChain openLogicChain(Long strategyId) {
         StrategyEntity strategyEntity = repository.queryStrategyEntityByStrategyId(strategyId);
@@ -55,18 +54,35 @@ public class DefaultChainFactory {
         }
         List<RuleModel> ruleModes = new ArrayList<>(strategyEntity.toRuleModes());
         if (CollectionUtils.isEmpty(ruleModes)) {
-            return logicChainMap.get(RuleModel.DEFAULT);
+            return requireChain(RuleModel.DEFAULT);
         }
-        // 排序
         ruleModes.sort(Comparator.comparingInt(RuleModel::getOrder).reversed());
-        ILogicChain logicChain = logicChainMap.get(ruleModes.get(0));
+        ILogicChain logicChain = requireChain(ruleModes.get(0));
         ILogicChain currentChain = logicChain;
         for (int i = 1; i < ruleModes.size(); i++) {
-            ILogicChain chain = logicChainMap.get(ruleModes.get(i));
+            ILogicChain chain = requireChain(ruleModes.get(i));
             currentChain = currentChain.appendNex(chain);
         }
-        currentChain.appendNex(logicChainMap.get(RuleModel.DEFAULT));
+        currentChain.appendNex(requireChain(RuleModel.DEFAULT));
         return logicChain;
+    }
+
+    /**
+     * 获取已注册的责任链节点。
+     *
+     * @param ruleModel 规则模型
+     * @return 对应责任链节点
+     * @throws BusinessException 节点未注册时抛出
+     */
+    private ILogicChain requireChain(RuleModel ruleModel) {
+        ILogicChain chain = logicChainMap.get(ruleModel);
+        if (chain == null) {
+            throw new BusinessException(
+                    BusinessResponseCode.STRATEGY_RULE_NOT_FOUND,
+                    "未注册抽奖责任链节点: " + ruleModel.getCode()
+            );
+        }
+        return chain;
     }
 
 

@@ -159,11 +159,11 @@ class RaffleStrategyRunnerTest {
         ILogicTreeNode lockNode = mock(ILogicTreeNode.class);
         ILogicTreeNode stockNode = mock(ILogicTreeNode.class);
         ILogicTreeNode luckAwardNode = mock(ILogicTreeNode.class);
-        when(lockNode.logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID))
+        when(lockNode.logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID, null))
                 .thenReturn(treeAction(RuleLogicCheckTypeVO.ALLOW, DEFAULT_AWARD_ID, RuleModel.LOCK, null));
-        when(stockNode.logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID))
+        when(stockNode.logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID, null))
                 .thenReturn(treeAction(RuleLogicCheckTypeVO.TAKE_OVER, DEFAULT_AWARD_ID, RuleModel.LOCK, null));
-        when(luckAwardNode.logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID))
+        when(luckAwardNode.logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID, null))
                 .thenReturn(treeAction(RuleLogicCheckTypeVO.ALLOW, LUCK_AWARD_ID, RuleModel.LUCK_AWARD, "1/100"));
         DefaultTreeFactory treeFactory = new DefaultTreeFactory(Map.of(
                 RuleModel.LOCK.getCode(), lockNode,
@@ -182,9 +182,9 @@ class RaffleStrategyRunnerTest {
                 () -> assertEquals("1/100", result.awardRuleValue())
         );
         InOrder executionOrder = inOrder(lockNode, stockNode, luckAwardNode);
-        executionOrder.verify(lockNode).logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID);
-        executionOrder.verify(stockNode).logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID);
-        executionOrder.verify(luckAwardNode).logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID);
+        executionOrder.verify(lockNode).logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID, null);
+        executionOrder.verify(stockNode).logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID, null);
+        executionOrder.verify(luckAwardNode).logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID, null);
     }
 
     /**

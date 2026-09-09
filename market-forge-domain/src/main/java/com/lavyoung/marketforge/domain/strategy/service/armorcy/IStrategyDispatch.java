@@ -30,4 +30,12 @@ public interface IStrategyDispatch {
      */
     long getRandomAwardIdAndWeight(Long strategyId, String ruleWeightValue);
 
+    /**
+     * 原子扣减指定策略奖品的一份 Redis 库存。
+     *
+     * @param strategyId 策略标识
+     * @param awardId    奖品标识
+     * @return 库存充足并扣减成功返回 {@code true}
+     */
+    boolean subtractAwardStock(Long strategyId, Long awardId);
 }

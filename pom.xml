@@ -21,7 +21,7 @@
 
     <packaging>pom</packaging>
 
-    <name>${artifactId}-${revision}</name>
+    <name>${project.artifactId}-${revision}</name>
     <description>DDD Forge generated project</description>
     <url>https://github.com/lavyoung/market-forge</url>
 
