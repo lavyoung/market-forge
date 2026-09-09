@@ -4,11 +4,15 @@ import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.CommonResponseCode;
 import com.lavyoung.marketforge.types.model.Response;
 import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
 /**
  * 将应用异常转换为统一 HTTP 响应。
@@ -17,6 +21,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * @version 1.0.0-SNAPSHOT
  */
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     /**
@@ -26,13 +31,11 @@ public class GlobalExceptionHandler {
      * @return 包含业务错误码和错误信息的失败响应
      */
     @ExceptionHandler(BusinessException.class)
-    public Response<Void> handleBusinessException(
+    public ResponseEntity<Response<Void>> handleBusinessException(
             BusinessException exception) {
 
-        return Response.fail(
-                exception.getResponseCode(),
-                exception.getMessage()
-        );
+        return ResponseEntity.unprocessableEntity().body(Response.fail(
+                exception.getResponseCode(), exception.getMessage()));
     }
 
     /**
@@ -42,7 +45,7 @@ public class GlobalExceptionHandler {
      * @return 参数校验失败响应
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public Response<Void> handleMethodArgumentNotValidException(
+    public ResponseEntity<Response<Void>> handleMethodArgumentNotValidException(
             MethodArgumentNotValidException exception) {
 
         String message = exception
@@ -53,10 +56,7 @@ public class GlobalExceptionHandler {
                 .map(DefaultMessageSourceResolvable::getDefaultMessage)
                 .orElse("Parameter validation failed");
 
-        return Response.fail(
-                CommonResponseCode.PARAM_INVALID,
-                message
-        );
+        return ResponseEntity.badRequest().body(Response.fail(CommonResponseCode.PARAM_INVALID, message));
     }
 
     /**
@@ -66,13 +66,24 @@ public class GlobalExceptionHandler {
      * @return 参数约束校验失败响应
      */
     @ExceptionHandler(ConstraintViolationException.class)
-    public Response<Void> handleConstraintViolationException(
+    public ResponseEntity<Response<Void>> handleConstraintViolationException(
             ConstraintViolationException exception) {
 
-        return Response.fail(
-                CommonResponseCode.PARAM_INVALID,
-                exception.getMessage()
-        );
+        return ResponseEntity.badRequest().body(Response.fail(
+                CommonResponseCode.PARAM_INVALID, exception.getMessage()));
+    }
+
+    /**
+     * 处理 Spring MVC 方法参数或返回值约束校验失败。
+     *
+     * @param exception 方法级校验异常
+     * @return HTTP 400 参数校验失败响应
+     */
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<Response<Void>> handleHandlerMethodValidationException(
+            HandlerMethodValidationException exception) {
+        return ResponseEntity.badRequest().body(Response.fail(
+                CommonResponseCode.PARAM_INVALID, "Parameter validation failed"));
     }
 
     /**
@@ -82,13 +93,11 @@ public class GlobalExceptionHandler {
      * @return 请求体格式错误响应
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public Response<Void> handleHttpMessageNotReadableException(
+    public ResponseEntity<Response<Void>> handleHttpMessageNotReadableException(
             HttpMessageNotReadableException exception) {
 
-        return Response.fail(
-                CommonResponseCode.REQUEST_BODY_INVALID,
-                "Request body is invalid"
-        );
+        return ResponseEntity.badRequest().body(Response.fail(
+                CommonResponseCode.REQUEST_BODY_INVALID, "Request body is invalid"));
     }
 
     /**
@@ -98,13 +107,12 @@ public class GlobalExceptionHandler {
      * @return 隐藏内部细节的系统错误响应
      */
     @ExceptionHandler(Exception.class)
-    public Response<Void> handleException(
+    public ResponseEntity<Response<Void>> handleException(
             Exception exception) {
 
-        return Response.fail(
-                CommonResponseCode.SYSTEM_ERROR,
-                "System error"
-        );
+        log.error("未处理的系统异常", exception);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Response.fail(
+                CommonResponseCode.SYSTEM_ERROR, "System error"));
     }
 
 }

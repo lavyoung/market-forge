@@ -6,6 +6,7 @@ module market.forge.domain {
     exports com.lavyoung.marketforge.domain.strategy.model.entity;
     exports com.lavyoung.marketforge.domain.strategy.model.vo;
     exports com.lavyoung.marketforge.domain.strategy.service;
+    exports com.lavyoung.marketforge.domain.strategy.service.armorcy;
     requires spring.context;
     requires org.slf4j;
     requires static lombok;

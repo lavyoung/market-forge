@@ -8,3 +8,7 @@ spring:
 
 server:
   port: 8080
+
+logging:
+  level:
+    com.lavyoung.marketforge: debug

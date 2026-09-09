@@ -4,12 +4,12 @@ import com.lavyoung.marketforge.domain.strategy.model.vo.RuleTreeNodeLineVo;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleTreeNodeVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleTreeVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IRuleTreeRepository;
+import com.lavyoung.marketforge.infrastructure.persistent.assembler.RuleTreeAssembler;
+import com.lavyoung.marketforge.infrastructure.persistent.assembler.RuleTreeNodeAssembler;
+import com.lavyoung.marketforge.infrastructure.persistent.assembler.RuleTreeNodeLineAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IRuleTreeDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IRuleTreeNodeDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IRuleTreeNodeLineDao;
-import com.lavyoung.marketforge.infrastructure.persistent.mapper.RuleTreeMapper;
-import com.lavyoung.marketforge.infrastructure.persistent.mapper.RuleTreeNodeLineMapper;
-import com.lavyoung.marketforge.infrastructure.persistent.mapper.RuleTreeNodeMapper;
 import com.lavyoung.marketforge.infrastructure.persistent.po.RuleTreeNodeLinePO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.RuleTreeNodePO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.RuleTreePO;
@@ -56,17 +56,17 @@ public class RuleTreeRepository implements IRuleTreeRepository {
     /**
      * 规则树主表转换器。
      */
-    private final RuleTreeMapper ruleTreeMapper;
+    private final RuleTreeAssembler ruleTreeAssembler;
 
     /**
      * 规则树节点转换器。
      */
-    private final RuleTreeNodeMapper ruleTreeNodeMapper;
+    private final RuleTreeNodeAssembler ruleTreeNodeAssembler;
 
     /**
      * 规则树节点连线转换器。
      */
-    private final RuleTreeNodeLineMapper ruleTreeNodeLineMapper;
+    private final RuleTreeNodeLineAssembler ruleTreeNodeLineAssembler;
 
     /**
      * {@inheritDoc}
@@ -91,12 +91,12 @@ public class RuleTreeRepository implements IRuleTreeRepository {
      * @throws IllegalStateException 节点标识重复时抛出
      */
     private RuleTreeVO assembleRuleTree(RuleTreePO treePO) {
-        RuleTreeVO tree = ruleTreeMapper.toVO(treePO);
+        RuleTreeVO tree = ruleTreeAssembler.toVO(treePO);
         List<RuleTreeNodePO> nodePOList = ruleTreeNodeDao.queryByTreeId(treePO.getTreeId());
         List<RuleTreeNodeLinePO> linePOList = ruleTreeNodeLineDao.queryByTreeId(treePO.getTreeId());
 
         Map<String, List<RuleTreeNodeLineVo>> linesBySource = linePOList.stream()
-                .map(ruleTreeNodeLineMapper::toVO)
+                .map(ruleTreeNodeLineAssembler::toVO)
                 .collect(Collectors.groupingBy(RuleTreeNodeLineVo::ruleNodeFrom));
         Map<String, RuleTreeNodeVO> nodesByRuleKey = nodePOList.stream()
                 .map(node -> assembleNode(node, linesBySource))
@@ -121,7 +121,7 @@ public class RuleTreeRepository implements IRuleTreeRepository {
     private RuleTreeNodeVO assembleNode(
             RuleTreeNodePO nodePO,
             Map<String, List<RuleTreeNodeLineVo>> linesBySource) {
-        RuleTreeNodeVO node = ruleTreeNodeMapper.toVO(nodePO);
+        RuleTreeNodeVO node = ruleTreeNodeAssembler.toVO(nodePO);
         return new RuleTreeNodeVO(
                 node.treeId(),
                 node.ruleKey(),

@@ -1,11 +1,14 @@
 package com.lavyoung.marketforge.domain.strategy.service.impl;
 
+import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleTreeVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardStockKeyVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IRuleTreeRepository;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.AbstractRaffleStrategy;
+import com.lavyoung.marketforge.domain.strategy.service.IRaffleAward;
+import com.lavyoung.marketforge.domain.strategy.service.IRaffleStock;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.ILogicChain;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
@@ -15,6 +18,7 @@ import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -28,7 +32,7 @@ import java.util.Optional;
  */
 @Slf4j
 @Component
-public class DefaultRaffleStrategy extends AbstractRaffleStrategy {
+public class DefaultRaffleStrategy extends AbstractRaffleStrategy implements IRaffleStock, IRaffleAward {
 
     /**
      * 创建默认抽奖策略。
@@ -90,5 +94,10 @@ public class DefaultRaffleStrategy extends AbstractRaffleStrategy {
     @Override
     public boolean updateStrategyAwardStock(Long strategyId, Long awardId) {
         return repository.updateStrategyAwardStock(strategyId, awardId);
+    }
+
+    @Override
+    public List<StrategyAwardEntity> queryRaffleStrategyAwardList(Long strategyId) {
+        return repository.queryStrategyAwardList(strategyId);
     }
 }

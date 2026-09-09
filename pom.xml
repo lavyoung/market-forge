@@ -47,6 +47,7 @@
         <module>market-forge-types</module>
         <module>market-forge-api</module>
         <module>market-forge-domain</module>
+        <module>market-forge-application</module>
         <module>market-forge-infrastructure</module>
         <module>market-forge-trigger</module>
         <module>market-forge-app</module>
@@ -165,6 +166,12 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>market-forge-domain</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>market-forge-application</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

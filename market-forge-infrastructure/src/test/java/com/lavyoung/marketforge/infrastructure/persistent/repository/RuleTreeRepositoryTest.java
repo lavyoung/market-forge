@@ -1,12 +1,12 @@
 package com.lavyoung.marketforge.infrastructure.persistent.repository;
 
 import com.lavyoung.marketforge.domain.strategy.model.vo.*;
+import com.lavyoung.marketforge.infrastructure.persistent.assembler.RuleTreeAssembler;
+import com.lavyoung.marketforge.infrastructure.persistent.assembler.RuleTreeNodeAssembler;
+import com.lavyoung.marketforge.infrastructure.persistent.assembler.RuleTreeNodeLineAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IRuleTreeDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IRuleTreeNodeDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IRuleTreeNodeLineDao;
-import com.lavyoung.marketforge.infrastructure.persistent.mapper.RuleTreeMapper;
-import com.lavyoung.marketforge.infrastructure.persistent.mapper.RuleTreeNodeLineMapper;
-import com.lavyoung.marketforge.infrastructure.persistent.mapper.RuleTreeNodeMapper;
 import com.lavyoung.marketforge.infrastructure.persistent.po.RuleTreeNodeLinePO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.RuleTreeNodePO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.RuleTreePO;
@@ -40,11 +40,11 @@ class RuleTreeRepositoryTest {
     @Mock
     private IRuleTreeNodeLineDao lineDao;
     @Mock
-    private RuleTreeMapper treeMapper;
+    private RuleTreeAssembler treeAssembler;
     @Mock
-    private RuleTreeNodeMapper nodeMapper;
+    private RuleTreeNodeAssembler nodeAssembler;
     @Mock
-    private RuleTreeNodeLineMapper lineMapper;
+    private RuleTreeNodeLineAssembler lineAssembler;
 
     private RuleTreeRepository repository;
 
@@ -53,7 +53,8 @@ class RuleTreeRepositoryTest {
      */
     @BeforeEach
     void setUp() {
-        repository = new RuleTreeRepository(treeDao, nodeDao, lineDao, treeMapper, nodeMapper, lineMapper);
+        repository = new RuleTreeRepository(
+                treeDao, nodeDao, lineDao, treeAssembler, nodeAssembler, lineAssembler);
     }
 
     /**
@@ -66,7 +67,7 @@ class RuleTreeRepositoryTest {
 
         // Then
         assertTrue(result.isEmpty());
-        verifyNoInteractions(treeDao, nodeDao, lineDao, treeMapper, nodeMapper, lineMapper);
+        verifyNoInteractions(treeDao, nodeDao, lineDao, treeAssembler, nodeAssembler, lineAssembler);
     }
 
     /**
@@ -85,11 +86,11 @@ class RuleTreeRepositoryTest {
         when(treeDao.queryByRootRuleKey(RuleModel.LOCK.getCode())).thenReturn(Optional.of(treePO));
         when(nodeDao.queryByTreeId(TREE_ID)).thenReturn(List.of(lockPO, stockPO));
         when(lineDao.queryByTreeId(TREE_ID)).thenReturn(List.of(linePO));
-        when(treeMapper.toVO(treePO)).thenReturn(new RuleTreeVO(
+        when(treeAssembler.toVO(treePO)).thenReturn(new RuleTreeVO(
                 Integer.valueOf(TREE_ID), "测试规则树", "测试规则树", RuleModel.LOCK.getCode(), Map.of()));
-        when(nodeMapper.toVO(lockPO)).thenReturn(nodeVO(RuleModel.LOCK.getCode()));
-        when(nodeMapper.toVO(stockPO)).thenReturn(nodeVO(RuleModel.RULE_STOCK.getCode()));
-        when(lineMapper.toVO(linePO)).thenReturn(lineVO);
+        when(nodeAssembler.toVO(lockPO)).thenReturn(nodeVO(RuleModel.LOCK.getCode()));
+        when(nodeAssembler.toVO(stockPO)).thenReturn(nodeVO(RuleModel.RULE_STOCK.getCode()));
+        when(lineAssembler.toVO(linePO)).thenReturn(lineVO);
 
         // When
         RuleTreeVO result = repository.queryRuleTreeVOByTreeId(List.of(RuleModel.LOCK)).orElseThrow();

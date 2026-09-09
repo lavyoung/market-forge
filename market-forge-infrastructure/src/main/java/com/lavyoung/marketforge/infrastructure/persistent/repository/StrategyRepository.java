@@ -7,12 +7,12 @@ import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardStockKeyVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
+import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyAssembler;
+import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyAwardAssembler;
+import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyRuleAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyAwardDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyRuleDao;
-import com.lavyoung.marketforge.infrastructure.persistent.mapper.StrategyAwardMapper;
-import com.lavyoung.marketforge.infrastructure.persistent.mapper.StrategyMapper;
-import com.lavyoung.marketforge.infrastructure.persistent.mapper.StrategyRuleMapper;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyAwardPO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyRulePO;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
@@ -69,17 +69,17 @@ public class StrategyRepository implements IStrategyRepository {
     /**
      * 策略奖品持久化对象转换器。
      */
-    private final StrategyAwardMapper strategyAwardMapper;
+    private final StrategyAwardAssembler strategyAwardAssembler;
 
     /**
      * 策略持久化对象转换器。
      */
-    private final StrategyMapper strategyMapper;
+    private final StrategyAssembler strategyAssembler;
 
     /**
      * 策略规则持久化对象转换器。
      */
-    private final StrategyRuleMapper strategyRuleMapper;
+    private final StrategyRuleAssembler strategyRuleAssembler;
 
     /**
      * {@inheritDoc}
@@ -100,7 +100,7 @@ public class StrategyRepository implements IStrategyRepository {
     public Optional<StrategyAwardEntity> getStrategyAwardEntity(Long strategyId, Long awardId) {
         return Optional.ofNullable(strategyAwardDao.selectOne(Wrappers.lambdaQuery(StrategyAwardPO.class)
                 .eq(StrategyAwardPO::getStrategyId, strategyId)
-                .eq(StrategyAwardPO::getAwardId, awardId))).map(strategyAwardMapper::toEntity);
+                .eq(StrategyAwardPO::getAwardId, awardId))).map(strategyAwardAssembler::toEntity);
     }
 
     /**
@@ -154,7 +154,7 @@ public class StrategyRepository implements IStrategyRepository {
         // 缓存key
         String cacheKey = Constants.RedisKeys.STRATEGY_KEY + strategyId;
         return redisService.getValue(cacheKey, StrategyEntity.class)
-                .orElseGet(() -> strategyMapper.toEntity(strategyDao.queryStrategyByStrategyId(strategyId).orElse(null)));
+                .orElseGet(() -> strategyAssembler.toEntity(strategyDao.queryStrategyByStrategyId(strategyId).orElse(null)));
     }
 
     /**
@@ -171,7 +171,7 @@ public class StrategyRepository implements IStrategyRepository {
         return Optional.ofNullable(strategyRuleDao.selectOne(Wrappers.lambdaQuery(StrategyRulePO.class)
                 .eq(StrategyRulePO::getStrategyId, strategyId)
                 .eq(StrategyRulePO::getRuleModel, ruleModel)
-        )).stream().map(strategyRuleMapper::toEntity).findFirst().orElse(null);
+        )).stream().map(strategyRuleAssembler::toEntity).findFirst().orElse(null);
     }
 
     /**
@@ -288,7 +288,7 @@ public class StrategyRepository implements IStrategyRepository {
     private List<StrategyAwardEntity> queryAndCacheStrategyAwards(
             Long strategyId,
             String cacheKey) {
-        List<StrategyAwardEntity> strategyAwards = strategyAwardMapper.toEntities(
+        List<StrategyAwardEntity> strategyAwards = strategyAwardAssembler.toEntities(
                 strategyAwardDao.queryStrategyAwardList(strategyId)
         );
         redisService.setValue(cacheKey, strategyAwards);

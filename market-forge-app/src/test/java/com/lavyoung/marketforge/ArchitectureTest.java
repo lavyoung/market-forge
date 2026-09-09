@@ -47,7 +47,7 @@ public class ArchitectureTest {
                     .resideInAPackage("..domain..")
                     .should()
                     .dependOnClassesThat()
-                    .resideInAPackage("..application..");
+                    .resideInAPackage("..app..");
 
     /** 基础设施层不得依赖触发器层。 */
     @ArchTest
@@ -58,5 +58,41 @@ public class ArchitectureTest {
                     .should()
                     .dependOnClassesThat()
                     .resideInAPackage("..trigger..");
+
+    /**
+     * 入站适配器不得绕过应用层直接依赖领域层。
+     */
+    @ArchTest
+    static final ArchRule triggerShouldNotDependOnDomain =
+            noClasses()
+                    .that()
+                    .resideInAPackage("..trigger..")
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAPackage("..domain..");
+
+    /**
+     * 应用层不得依赖入站适配器或基础设施实现。
+     */
+    @ArchTest
+    static final ArchRule applicationShouldNotDependOnOuterAdapters =
+            noClasses()
+                    .that()
+                    .resideInAPackage("..application..")
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAnyPackage("..trigger..", "..infrastructure..", "..app..");
+
+    /**
+     * API 契约不得反向依赖领域或技术实现模块。
+     */
+    @ArchTest
+    static final ArchRule apiShouldNotDependOnImplementationModules =
+            noClasses()
+                    .that()
+                    .resideInAPackage("..api..")
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAnyPackage("..domain..", "..infrastructure..", "..trigger..", "..app..");
 
 }

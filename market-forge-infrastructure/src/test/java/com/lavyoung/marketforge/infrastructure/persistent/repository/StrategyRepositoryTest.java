@@ -3,12 +3,12 @@ package com.lavyoung.marketforge.infrastructure.persistent.repository;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardStockKeyVO;
+import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyAssembler;
+import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyAwardAssembler;
+import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyRuleAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyAwardDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyRuleDao;
-import com.lavyoung.marketforge.infrastructure.persistent.mapper.StrategyAwardMapper;
-import com.lavyoung.marketforge.infrastructure.persistent.mapper.StrategyMapper;
-import com.lavyoung.marketforge.infrastructure.persistent.mapper.StrategyRuleMapper;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyAwardPO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyRulePO;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
@@ -51,13 +51,13 @@ class StrategyRepositoryTest {
     private IRedisService redisService;
 
     @Mock
-    private StrategyAwardMapper strategyAwardMapper;
+    private StrategyAwardAssembler strategyAwardAssembler;
 
     @Mock
-    private StrategyMapper strategyMapper;
+    private StrategyAssembler strategyAssembler;
 
     @Mock
-    private StrategyRuleMapper strategyRuleMapper;
+    private StrategyRuleAssembler strategyRuleAssembler;
 
     private StrategyRepository repository;
 
@@ -71,9 +71,9 @@ class StrategyRepositoryTest {
                 strategyDao,
                 strategyRuleDao,
                 redisService,
-                strategyAwardMapper,
-                strategyMapper,
-                strategyRuleMapper
+                strategyAwardAssembler,
+                strategyAssembler,
+                strategyRuleAssembler
         );
     }
 

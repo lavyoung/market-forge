@@ -17,7 +17,9 @@ server:
 
 
 
-
+logging:
+  level:
+    com.lavyoung.marketforge: debug
 
 mybatis:
   mapper-locations:

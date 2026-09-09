@@ -27,7 +27,7 @@ import java.util.Objects;
  */
 @Slf4j
 @AllArgsConstructor
-public abstract class AbstractRaffleStrategy implements IRaffleStrategy, IRaffleStock {
+public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
 
     /**
      * 抽奖策略仓储端口。
