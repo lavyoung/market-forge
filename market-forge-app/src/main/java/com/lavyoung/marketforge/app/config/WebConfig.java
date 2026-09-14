@@ -2,6 +2,7 @@ package com.lavyoung.marketforge.app.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.HandlerTypePredicate;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -35,5 +36,11 @@ public class WebConfig implements WebMvcConfigurer {
                 API_PATH_PREFIX,
                 HandlerTypePredicate.forBasePackage(TRIGGER_CONTROLLER_PACKAGE)
         );
+    }
+
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("*")
+                .allowedOrigins("*");
     }
 }

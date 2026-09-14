@@ -10,7 +10,6 @@ import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
 import java.util.*;
@@ -25,7 +24,6 @@ import java.util.*;
  * @date 2026/09/06
  */
 @Slf4j
-@Component
 @RequiredArgsConstructor
 public class DecisionTreeEngine implements IDecisionTreeEngine {
 

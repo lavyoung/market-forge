@@ -1,5 +1,6 @@
 package com.lavyoung.marketforge.app;
 
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -11,7 +12,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * @version 1.0.0-SNAPSHOT
  */
 @EnableScheduling
-@SpringBootApplication(scanBasePackages = "com.lavyoung.marketforge")
+@MapperScan("com.lavyoung.marketforge.infrastructure.persistent.dao")
+@SpringBootApplication(
+        scanBasePackages = "com.lavyoung.marketforge"
+)
 public class MarketForgeApplication {
 
     /**

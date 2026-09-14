@@ -17,7 +17,7 @@ import org.springframework.context.annotation.Configuration;
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
  */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(RedisConfigProperties.class)
 public class RedisConfig {
 

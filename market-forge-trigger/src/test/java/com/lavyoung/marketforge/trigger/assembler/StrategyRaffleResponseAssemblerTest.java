@@ -13,10 +13,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * 验证策略抽奖接口层装配器的双向边界模型转换。
  */
-class StrategyRaffleAssemblerTest {
+class StrategyRaffleResponseAssemblerTest {
 
-    private static final StrategyRaffleAssembler ASSEMBLER =
-            Mappers.getMapper(StrategyRaffleAssembler.class);
+    private static final StrategyRaffleResponseAssembler ASSEMBLER =
+            Mappers.getMapper(StrategyRaffleResponseAssembler.class);
 
     /**
      * Given 完整的 API 请求，When 转换为命令，Then 所有应用层入参保持一致。

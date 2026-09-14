@@ -19,4 +19,11 @@ module market.forge.infrastructure {
     requires spring.context;
     requires mybatis.plus.core;
     requires mybatis.plus.annotation;
+
+    opens com.lavyoung.marketforge.infrastructure.persistent.assembler;
+    opens com.lavyoung.marketforge.infrastructure.persistent.dao;
+    opens com.lavyoung.marketforge.infrastructure.persistent.handler;
+    opens com.lavyoung.marketforge.infrastructure.persistent.po;
+    opens com.lavyoung.marketforge.infrastructure.persistent.redis;
+    opens com.lavyoung.marketforge.infrastructure.persistent.repository;
 }

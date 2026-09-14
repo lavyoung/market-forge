@@ -8,8 +8,8 @@ import com.lavyoung.marketforge.application.strategy.model.RaffleCommand;
 import com.lavyoung.marketforge.application.strategy.model.RaffleResult;
 import com.lavyoung.marketforge.application.strategy.model.StrategyAwardResult;
 import com.lavyoung.marketforge.application.strategy.service.IStrategyRaffleService;
-import com.lavyoung.marketforge.trigger.assembler.StrategyAwardAssembler;
-import com.lavyoung.marketforge.trigger.assembler.StrategyRaffleAssembler;
+import com.lavyoung.marketforge.trigger.assembler.StrategyAwardResponseAssembler;
+import com.lavyoung.marketforge.trigger.assembler.StrategyRaffleResponseAssembler;
 import com.lavyoung.marketforge.trigger.exception.GlobalExceptionHandler;
 import com.lavyoung.marketforge.types.model.CommonResponseCode;
 import com.lavyoung.marketforge.types.model.Response;
@@ -38,10 +38,10 @@ class StrategyRaffleControllerTest {
     private static final String USER_ID = "user-001";
     private static final Long STRATEGY_ID = 100_001L;
     private static final Long AWARD_ID = 100_011L;
-    private static final StrategyRaffleAssembler STRATEGY_RAFFLE_ASSEMBLER =
-            Mappers.getMapper(StrategyRaffleAssembler.class);
-    private static final StrategyAwardAssembler STRATEGY_AWARD_ASSEMBLER =
-            Mappers.getMapper(StrategyAwardAssembler.class);
+    private static final StrategyRaffleResponseAssembler STRATEGY_RAFFLE_ASSEMBLER =
+            Mappers.getMapper(StrategyRaffleResponseAssembler.class);
+    private static final StrategyAwardResponseAssembler STRATEGY_AWARD_ASSEMBLER =
+            Mappers.getMapper(StrategyAwardResponseAssembler.class);
 
     /**
      * Given 合法 API 请求及固定应用结果，When 执行用例，Then 返回隔离后的 API 响应。

@@ -14,5 +14,11 @@
     requires spring.context;
     requires spring.web;
     requires spring.webmvc;
+    requires org.mybatis.spring;
     requires market.forge.api;
+    requires market.forge.infrastructure;
+    requires market.forge.trigger;
+
+    opens com.lavyoung.marketforge.app;
+    opens com.lavyoung.marketforge.app.config;
 }

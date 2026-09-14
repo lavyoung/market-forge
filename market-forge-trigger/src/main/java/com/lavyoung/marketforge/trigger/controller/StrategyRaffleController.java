@@ -7,8 +7,8 @@ import com.lavyoung.marketforge.api.strategy.response.StrategyRaffleResponse;
 import com.lavyoung.marketforge.application.strategy.model.RaffleCommand;
 import com.lavyoung.marketforge.application.strategy.model.RaffleResult;
 import com.lavyoung.marketforge.application.strategy.service.IStrategyRaffleService;
-import com.lavyoung.marketforge.trigger.assembler.StrategyAwardAssembler;
-import com.lavyoung.marketforge.trigger.assembler.StrategyRaffleAssembler;
+import com.lavyoung.marketforge.trigger.assembler.StrategyAwardResponseAssembler;
+import com.lavyoung.marketforge.trigger.assembler.StrategyRaffleResponseAssembler;
 import com.lavyoung.marketforge.types.model.Response;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,15 +30,15 @@ import java.util.Objects;
 public class StrategyRaffleController implements IStrategyRaffleApi {
 
     private final IStrategyRaffleService strategyRaffleService;
-    private final StrategyRaffleAssembler strategyRaffleAssembler;
-    private final StrategyAwardAssembler strategyAwardAssembler;
+    private final StrategyRaffleResponseAssembler strategyRaffleResponseAssembler;
+    private final StrategyAwardResponseAssembler strategyAwardResponseAssembler;
 
     @Override
     public Response<StrategyRaffleResponse> raffle(StrategyRaffleRequest request) {
         StrategyRaffleRequest validRequest = Objects.requireNonNull(request, "request must not be null");
-        RaffleCommand command = strategyRaffleAssembler.toCommand(validRequest);
+        RaffleCommand command = strategyRaffleResponseAssembler.toCommand(validRequest);
         RaffleResult result = strategyRaffleService.raffle(command);
-        return Response.success(strategyRaffleAssembler.toResponse(result));
+        return Response.success(strategyRaffleResponseAssembler.toResponse(result));
     }
 
     @Override
@@ -49,7 +49,7 @@ public class StrategyRaffleController implements IStrategyRaffleApi {
 
     @Override
     public Response<List<StrategyAwardResponse>> queryStrategyAwardList(Long strategyId) {
-        return Response.success(strategyAwardAssembler.toResponses(
+        return Response.success(strategyAwardResponseAssembler.toResponses(
                 strategyRaffleService.queryRaffleStrategyAwardList(strategyId)));
     }
 

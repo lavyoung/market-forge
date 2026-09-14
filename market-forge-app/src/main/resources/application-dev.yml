@@ -1,25 +1,55 @@
+server:
+  port: 23001
+
 spring:
-
-  datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://192.168.3.127:3306/market-forge?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: dev
-    password: Fssm76GKB
-
+  application:
+    name: market-forge-dev
+  #  datasource:
+  #    driver-class-name: com.mysql.cj.jdbc.Driver
+  #    url: jdbc:mysql://192.168.3.127:3306/market-forge?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+  #    username: dev
+  #    password: Fssm76GKB
   data:
     redis:
       host: 192.168.3.127
       password: sYogkA6cjqyZBwuI+5bE7AFTWKtVvBQs
       port: 6379
 
-server:
-  port: 23001
+lavshard:
+  integration:
+    default-data-source: ds1
+    managed-mapper-packages:
+      - com.lavyoung.marketforge.infrastructure.persistent.dao
+  data-sources:
+    ds1:
+      managed:
+        url: jdbc:mysql://192.168.3.127:3306/market-forge-001?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+        username: dev
+        password: Fssm76GKB
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        maximum-pool-size: 50
+        minimum-idle: 20
+        connection-timeout: 30000
+    ds2:
+      managed:
+        url: jdbc:mysql://192.168.3.127:3306/market-forge-002?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+        username: dev
+        password: Fssm76GKB
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        maximum-pool-size: 50
+        minimum-idle: 20
+        connection-timeout: 30000
 
 
 
 logging:
   level:
     com.lavyoung.marketforge: debug
+
+management:
+  health:
+    db:
+      enabled: false
 
 mybatis:
   mapper-locations:

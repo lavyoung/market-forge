@@ -21,7 +21,7 @@ import java.util.List;
         componentModel = MappingConstants.ComponentModel.SPRING,
         unmappedTargetPolicy = ReportingPolicy.ERROR
 )
-public interface StrategyAwardAssembler {
+public interface StrategyAwardResponseAssembler {
 
     /**
      * 将单个应用层奖品结果转换为 API 奖品响应。

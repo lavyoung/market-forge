@@ -14,10 +14,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * 验证策略奖品应用层结果到 API 响应的批量转换行为。
  */
-class StrategyAwardAssemblerTest {
+class StrategyAwardResponseAssemblerTest {
 
-    private static final StrategyAwardAssembler ASSEMBLER =
-            Mappers.getMapper(StrategyAwardAssembler.class);
+    private static final StrategyAwardResponseAssembler ASSEMBLER =
+            Mappers.getMapper(StrategyAwardResponseAssembler.class);
 
     /**
      * Given 完整应用层奖品列表，When 批量转换，Then API 所需字段全部保留。

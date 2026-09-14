@@ -22,7 +22,7 @@ import org.mapstruct.ReportingPolicy;
         componentModel = MappingConstants.ComponentModel.SPRING,
         unmappedTargetPolicy = ReportingPolicy.ERROR
 )
-public interface StrategyRaffleAssembler {
+public interface StrategyRaffleResponseAssembler {
 
     /**
      * 将抽奖 API 请求转换为应用层命令。

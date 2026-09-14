@@ -14,4 +14,13 @@ module market.forge.domain {
     requires org.apache.commons.lang3;
     requires market.forge.types;
     requires jakarta.annotation;
+
+    opens com.lavyoung.marketforge.domain.strategy.service.impl;
+    opens com.lavyoung.marketforge.domain.strategy.service.armorcy.impl;
+    opens com.lavyoung.marketforge.domain.strategy.service.rule.filter.factory;
+    opens com.lavyoung.marketforge.domain.strategy.service.rule.filter.impl;
+    opens com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory;
+    opens com.lavyoung.marketforge.domain.strategy.service.rule.chain.impl;
+    opens com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory;
+    opens com.lavyoung.marketforge.domain.strategy.service.rule.tree.impl;
 }
