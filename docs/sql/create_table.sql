@@ -31,16 +31,16 @@ create table strategy_award
     strategy_id         int                                      not null comment '抽奖策略id',
     award_id            int                                      not null comment '奖品ID',
     award_title         varchar(128)                             not null comment '奖品标题',
-    award_subtitle      varchar(128) null comment '奖品副标题',
+    award_subtitle varchar(128) null comment '奖品副标题',
     award_count         int            default 0                 not null comment '奖品库存总量',
     award_count_surplus int            default 0                 not null comment '奖品库存剩余量',
     award_rate          decimal(10, 5) default 0.00000           not null comment '奖品中奖概率',
-    rule_models         varchar(32) null comment '规则模型',
+    rule_models    varchar(32)  null comment '规则模型',
     sort                int                                      not null comment '奖品顺序',
     create_time         datetime       default (now())           not null comment '创建时间',
     update_time         datetime       default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
-    index               idx_strategy_award (strategy_id, award_id),
-    index               idx_strategy_sort (strategy_id, sort)
+    index idx_strategy_award (strategy_id, award_id),
+    index idx_strategy_sort (strategy_id, sort)
 ) comment '抽奖详情表';
 
 create table strategy_rule
@@ -63,11 +63,11 @@ create table rule_tree
 (
     id                 int auto_increment comment '自增ID' primary key,
     tree_id            varchar(128)                       not null comment '规则树ID',
-    tree_desc          varchar(512) null comment '规则树描述',
+    tree_desc   varchar(512)             null comment '规则树描述',
     tree_node_rule_key varchar(64)                        not null comment '规则树描述',
     create_time        datetime default CURRENT_TIMESTAMP not null comment '创建时间',
-    update_time        datetime default (now())           not null on update CURRENT_TIMESTAMP comment '更新时间',
-) comment '规则树'
+    update_time datetime default (now()) not null on update CURRENT_TIMESTAMP comment '更新时间'
+) comment '规则树';
 
 
 create table rule_tree_node
@@ -75,11 +75,11 @@ create table rule_tree_node
     id          int auto_increment comment '自增ID' primary key,
     tree_id     varchar(128)                       not null comment '规则树ID',
     rule_key    varchar(64)                        not null comment '规则key',
-    rule_desc   varchar(512) null comment '规则描述',
+    rule_desc   varchar(512)             null comment '规则描述',
     rule_value  varchar(128)                       not null comment '规则值',
     create_time datetime default CURRENT_TIMESTAMP not null comment '创建时间',
-    update_time datetime default (now())           not null on update CURRENT_TIMESTAMP comment '更新时间',
-) comment '规则树节点'
+    update_time datetime default (now()) not null on update CURRENT_TIMESTAMP comment '更新时间'
+) comment '规则树节点';
 
 create table rule_tree_node_line
 (
@@ -87,11 +87,11 @@ create table rule_tree_node_line
     tree_id          varchar(128)                       not null comment '规则树ID',
     rule_node_from   varchar(64)                        not null comment '节点FROM',
     rule_node_to     varchar(64)                        not null comment '节点TO',
-    rule_limit_type  varchar(512) null comment '链接符号',
+    rule_limit_type varchar(512)             null comment '链接符号',
     rule_limit_value varchar(128)                       not null comment '目标值',
     create_time      datetime default CURRENT_TIMESTAMP not null comment '创建时间',
-    update_time      datetime default (now())           not null on update CURRENT_TIMESTAMP comment '更新时间',
-) comment '规则树节点连线规则'
+    update_time     datetime default (now()) not null on update CURRENT_TIMESTAMP comment '更新时间'
+) comment '规则树节点连线规则';
 
 CREATE TABLE `raffle_activity`
 (

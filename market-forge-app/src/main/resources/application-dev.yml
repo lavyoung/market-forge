@@ -4,54 +4,98 @@ server:
 spring:
   application:
     name: market-forge-dev
-  #  datasource:
-  #    driver-class-name: com.mysql.cj.jdbc.Driver
-  #    url: jdbc:mysql://192.168.3.127:3306/market-forge?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-  #    username: dev
-  #    password: Fssm76GKB
+
   data:
     redis:
-      host: 192.168.3.127
-      password: sYogkA6cjqyZBwuI+5bE7AFTWKtVvBQs
-      port: 6379
+      host: ${MARKET_FORGE_REDIS_HOST:192.168.3.127}
+      port: ${MARKET_FORGE_REDIS_PORT:6379}
+      password: ${MARKET_FORGE_REDIS_PASSWORD:sYogkA6cjqyZBwuI+5bE7AFTWKtVvBQs}
 
 lavshard:
+  enabled: true
+
   integration:
+    # 普通表固定访问 market-forge-001
     default-data-source: ds1
+
+    # 只有这些 Mapper namespace 才交给 LavShard 管理
     managed-mapper-packages:
       - com.lavyoung.marketforge.infrastructure.persistent.dao
+
+    # 配置类、规则类和活动定义类表，不按照用户分片
+    ordinary-tables:
+      - award
+      - strategy
+      - strategy_award
+      - strategy_rule
+      - rule_tree
+      - rule_tree_node
+      - rule_tree_node_line
+      - raffle_activity
+      - raffle_activity_count
+
   data-sources:
     ds1:
       managed:
-        url: jdbc:mysql://192.168.3.127:3306/market-forge-001?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-        username: dev
-        password: Fssm76GKB
+        url: jdbc:mysql://${MARKET_FORGE_DB_HOST:192.168.3.127}:3306/market-forge-001?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+        username: ${MARKET_FORGE_DB_USERNAME:dev}
+        password: ${MARKET_FORGE_DB_PASSWORD:Fssm76GKB}
         driver-class-name: com.mysql.cj.jdbc.Driver
         maximum-pool-size: 50
         minimum-idle: 20
         connection-timeout: 30000
+
     ds2:
       managed:
-        url: jdbc:mysql://192.168.3.127:3306/market-forge-002?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-        username: dev
-        password: Fssm76GKB
+        url: jdbc:mysql://${MARKET_FORGE_DB_HOST:192.168.3.127}:3306/market-forge-002?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+        username: ${MARKET_FORGE_DB_USERNAME:dev}
+        password: ${MARKET_FORGE_DB_PASSWORD:Fssm76GKB}
         driver-class-name: com.mysql.cj.jdbc.Driver
         maximum-pool-size: 50
         minimum-idle: 20
         connection-timeout: 30000
 
+  defaults:
+    layout: database-only
 
+  layouts:
+    database-only:
+      # 属于持久化路由契约，数据产生后不要随意修改
+      version: market-forge-database-v1
+
+      # 顺序也是路由契约的一部分
+      data-source-ids:
+        - ds1
+        - ds2
+
+      # 每个数据库中只有一张同名物理表
+      tables-per-data-source: 1
+
+      # 这是逻辑桶数量，不代表创建 1024 张表
+      bucket-count: 1024
+
+      # 纯分库，不改写表名
+      table-suffix:
+        enabled: false
+
+  tables:
+    # 以下三张表统一按照 user_id 路由。
+    # 同一个用户的账户、流水和订单将进入同一个数据库。
+    raffle_activity_order:
+      sharding-column: user_id
+
+    raffle_activity_account:
+      sharding-column: user_id
+
+    raffle_activity_account_flow:
+      sharding-column: user_id
 
 logging:
   level:
     com.lavyoung.marketforge: debug
+    io.github.lavyoung.lavshard: debug
 
-management:
-  health:
-    db:
-      enabled: false
-
-mybatis:
+mybatis-plus:
+  config-location: classpath:mybatis/config/mybatis-config.xml
   mapper-locations:
-    - classpath*:mybatis/mapper/*.xml
-#  config-location: classpath*:mybatis/config/mybatis-conifg.xml
+    - classpath*:/mybatis/mapper/*.xml
