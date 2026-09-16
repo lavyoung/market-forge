@@ -47,7 +47,7 @@ class StrategyArmoryDispatchTest {
     @Test
     void shouldGetRandomAwardIdFromWeightedStrategy() {
         // Given
-        when(repository.getRateRange(STRATEGY_ID)).thenReturn(RATE_RANGE);
+        when(repository.getRateRange(EXPECTED_ASSEMBLE_KEY)).thenReturn(RATE_RANGE);
         when(repository.getStrategyAwardAssemble(eq(EXPECTED_ASSEMBLE_KEY), anyInt()))
                 .thenReturn(EXPECTED_AWARD_ID);
 
@@ -66,6 +66,7 @@ class StrategyArmoryDispatchTest {
         assertEquals(EXPECTED_AWARD_ID, awardId);
         assertTrue(rateKeyCaptor.getValue() >= 0);
         assertTrue(rateKeyCaptor.getValue() < RATE_RANGE);
+        verify(repository).getRateRange(EXPECTED_ASSEMBLE_KEY);
     }
 
     /**
@@ -74,7 +75,7 @@ class StrategyArmoryDispatchTest {
     @Test
     void shouldRejectWeightedDrawWhenStrategyIsNotAssembled() {
         // Given
-        when(repository.getRateRange(STRATEGY_ID)).thenReturn(0);
+        when(repository.getRateRange(EXPECTED_ASSEMBLE_KEY)).thenReturn(0);
 
         // When
         assertThrows(

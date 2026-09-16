@@ -121,12 +121,12 @@ public class StrategyRepository implements IStrategyRepository {
     /**
      * {@inheritDoc}
      *
-     * @param strategyId 策略标识
+     * @param key 策略装配键
      * @return 随机数范围；策略尚未装配时返回 {@code 0}
      */
     @Override
-    public int getRateRange(Long strategyId) {
-        return redisService.getValue(Constants.RedisKeys.STRATEGY_RATE_RANGE_KEY + strategyId, Integer.class).orElse(0);
+    public int getRateRange(String key) {
+        return redisService.getValue(Constants.RedisKeys.STRATEGY_RATE_RANGE_KEY + key, Integer.class).orElse(0);
     }
 
     /**

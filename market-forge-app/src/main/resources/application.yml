@@ -9,8 +9,20 @@ spring:
 server:
   port: 8080
 
-mybatis:
-  config-location: classpath:mybatis/config/mybatis-config.xml
+
+mybatis-plus:
+  mapper-locations:
+    - classpath*:/mybatis/mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    use-generated-keys: true
+    jdbc-type-for-null: "NULL"
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
 
 logging:
   level:

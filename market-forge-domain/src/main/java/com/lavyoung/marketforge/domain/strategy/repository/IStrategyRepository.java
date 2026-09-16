@@ -52,12 +52,14 @@ public interface IStrategyRepository {
     void storeStrategyAwardSearchTables(String key, Integer rateRange, Map<Integer, Long> shuffleStrategyAwardSearchTables);
 
     /**
-     * 获取指定策略装配后的随机取值范围。
+     * 获取指定策略装配键对应的随机取值范围。
+     * <p>
+     * 装配键既可以是普通策略标识，也可以是“策略标识_权重档位”。
      *
-     * @param strategyId 策略标识
+     * @param key 策略装配键
      * @return 查找表的有效下标数量；策略尚未装配时返回 {@code 0}
      */
-    int getRateRange(Long strategyId);
+    int getRateRange(String key);
 
     /**
      * 从指定策略装配键对应的概率查找表中获取奖品标识。

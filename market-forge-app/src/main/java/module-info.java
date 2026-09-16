@@ -15,6 +15,9 @@
     requires spring.web;
     requires spring.webmvc;
     requires org.mybatis.spring;
+    requires org.springdoc.openapi.ui;
+    requires io.swagger.v3.oas.annotations;
+
     requires market.forge.api;
     requires market.forge.infrastructure;
     requires market.forge.trigger;

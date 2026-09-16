@@ -90,12 +90,21 @@ lavshard:
     raffle_activity_account_flow:
       sharding-column: user_id
 
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    try-it-out-enabled: true
+  packages-to-scan:
+    - com.lavyoung.marketforge.trigger.controller
+
 logging:
   level:
     com.lavyoung.marketforge: debug
     io.github.lavyoung.lavshard: debug
-
-mybatis-plus:
-  config-location: classpath:mybatis/config/mybatis-config.xml
-  mapper-locations:
-    - classpath*:/mybatis/mapper/*.xml

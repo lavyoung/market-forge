@@ -161,7 +161,11 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
      */
     @Override
     public long getRandomAwardId(Long strategyId) {
-        return repository.getStrategyAwardAssemble(String.valueOf(strategyId), new SecureRandom().nextInt(repository.getRateRange(strategyId)));
+        String assembleKey = String.valueOf(strategyId);
+        return repository.getStrategyAwardAssemble(
+                assembleKey,
+                new SecureRandom().nextInt(repository.getRateRange(assembleKey))
+        );
     }
 
     /**
@@ -176,7 +180,11 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
      */
     @Override
     public long getRandomAwardIdAndWeight(Long strategyId, String ruleWeightValue) {
-        return repository.getStrategyAwardAssemble(strategyId + Constants.UNDERLINE + ruleWeightValue, new SecureRandom().nextInt(repository.getRateRange(strategyId)));
+        String assembleKey = strategyId + Constants.UNDERLINE + ruleWeightValue;
+        return repository.getStrategyAwardAssemble(
+                assembleKey,
+                new SecureRandom().nextInt(repository.getRateRange(assembleKey))
+        );
     }
 
     @Override

@@ -1,0 +1,237 @@
+.page {
+    min-height: 100vh;
+    padding: 56px 20px;
+    color: #201d2c;
+    background: radial-gradient(circle at 15% 10%, #ffe3cb, transparent 32rem),
+    radial-gradient(circle at 90% 20%, #e1ddff, transparent 30rem),
+    #f6f4f0;
+}
+
+.container {
+    width: min(760px, 100%);
+    margin-inline: auto;
+}
+
+.header {
+    margin-bottom: 28px;
+}
+
+.kicker {
+    color: #716a89;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+}
+
+.header h1 {
+    margin: 12px 0;
+    font-size: clamp(36px, 7vw, 56px);
+    letter-spacing: -0.04em;
+}
+
+.header p {
+    margin-bottom: 12px;
+    color: #716b80;
+    line-height: 1.7;
+}
+
+.header small {
+    color: #817a90;
+}
+
+.card {
+    padding: 24px;
+    border: 1px solid #ffffff;
+    border-radius: 24px;
+    background: #ffffffc9;
+    box-shadow: 0 20px 60px #3f315c15;
+}
+
+.cardHeading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.cardHeading h2 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.cardHeading span {
+    color: #7a728b;
+    font-size: 13px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.prize {
+    display: flex;
+    min-height: 148px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px 10px;
+    text-align: center;
+    border: 2px solid transparent;
+    border-radius: 16px;
+    background: #f5f3fa;
+    transition: border-color 0.15s,
+    background-color 0.15s,
+    transform 0.15s;
+}
+
+.prizeIcon {
+    font-size: 30px;
+}
+
+.prize strong {
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.prize small {
+    color: #8b8499;
+    font-size: 10px;
+    overflow-wrap: anywhere;
+}
+
+.active {
+    border-color: #6859ea;
+    background: #ece8ff;
+    box-shadow: 0 0 0 3px #6859ea1c;
+    transform: translateY(-2px);
+}
+
+.drawButton {
+    width: 100%;
+    margin-top: 24px;
+    padding: 16px 20px;
+    color: #ffffff;
+    font: inherit;
+    font-weight: 700;
+    border: 0;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #7869f5, #5545c9);
+    cursor: pointer;
+}
+
+.drawButton:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.drawButton:focus-visible,
+.secondaryButton:focus-visible {
+    outline: 3px solid #302475;
+    outline-offset: 4px;
+}
+
+.notice {
+    margin: 14px 0 0;
+    color: #81798f;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.error {
+    margin-top: 20px;
+    padding: 16px;
+    color: #9c3131;
+    border: 1px solid #e9bebe;
+    border-radius: 12px;
+    background: #fff2f2;
+    line-height: 1.7;
+}
+
+.error p {
+    margin: 0 0 12px;
+}
+
+.secondaryButton {
+    padding: 8px 12px;
+    color: #473c70;
+    font: inherit;
+    border: 1px solid #cbc3df;
+    border-radius: 8px;
+    background: #ffffff;
+    cursor: pointer;
+}
+
+.result:empty {
+    display: none;
+}
+
+.result {
+    margin-top: 24px;
+    padding: 24px;
+    border: 1px solid #d8d1f1;
+    border-radius: 20px;
+    background: #ffffffc9;
+}
+
+.result h2 {
+    margin: 0 0 16px;
+    font-size: 18px;
+}
+
+.result strong {
+    color: #6350cb;
+    font-size: 26px;
+}
+
+.result p {
+    color: #756c87;
+    line-height: 1.7;
+}
+
+.result small {
+    color: #81798f;
+}
+
+@media (max-width: 520px) {
+    .page {
+        padding: 32px 14px;
+    }
+
+    .card {
+        padding: 16px;
+    }
+
+    .grid {
+        gap: 8px;
+    }
+
+    .prize {
+        min-height: 120px;
+        padding: 12px 6px;
+    }
+
+    .prize strong {
+        font-size: 12px;
+    }
+
+    .prize small {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .prize {
+        transition: none;
+    }
+
+    .active {
+        transform: none;
+    }
+}

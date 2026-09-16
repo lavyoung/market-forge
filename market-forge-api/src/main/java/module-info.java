@@ -11,6 +11,7 @@ module market.forge.api {
     requires transitive jakarta.validation;
     requires transitive market.forge.types;
     requires transitive spring.web;
+    requires io.swagger.v3.oas.annotations;
 
     exports com.lavyoung.marketforge.api.strategy.request;
     exports com.lavyoung.marketforge.api.strategy.response;

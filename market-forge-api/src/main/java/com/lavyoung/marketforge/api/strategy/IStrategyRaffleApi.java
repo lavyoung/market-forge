@@ -4,6 +4,10 @@ import com.lavyoung.marketforge.api.strategy.request.StrategyRaffleRequest;
 import com.lavyoung.marketforge.api.strategy.response.StrategyAwardResponse;
 import com.lavyoung.marketforge.api.strategy.response.StrategyRaffleResponse;
 import com.lavyoung.marketforge.types.model.Response;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -20,10 +24,8 @@ import java.util.List;
  * @version 1.0.0
  * @date 2026/09/09
  */
-@RequestMapping(
-        path = IStrategyRaffleApi.BASE_PATH,
-        produces = MediaType.APPLICATION_JSON_VALUE
-)
+@Tag(name = "策略抽奖", description = "提供策略装配、奖品查询和抽奖能力")
+@RequestMapping(path = IStrategyRaffleApi.BASE_PATH, produces = MediaType.APPLICATION_JSON_VALUE)
 public interface IStrategyRaffleApi {
 
     /**
@@ -38,6 +40,11 @@ public interface IStrategyRaffleApi {
      * @return 包含本次抽奖结果的统一响应
      * @throws com.lavyoung.marketforge.types.exception.BusinessException 请求不满足业务规则时抛出
      */
+    @Operation(operationId = "raffle", summary = "执行策略抽奖", description = """
+            根据用户标识与策略标识执行一次真实抽奖。
+            抽奖结果由服务端责任链和规则树共同决定。
+            """)
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "抽奖成功"), @ApiResponse(responseCode = "400", description = "请求体缺失、格式错误或字段校验失败"), @ApiResponse(responseCode = "422", description = "未满足抽奖业务规则"), @ApiResponse(responseCode = "500", description = "系统内部错误")})
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     Response<StrategyRaffleResponse> raffle(@Valid @RequestBody StrategyRaffleRequest request);
 
@@ -47,6 +54,8 @@ public interface IStrategyRaffleApi {
      * @param strategyId 策略id
      * @return void
      */
+    @Operation(operationId = "strategyArmory", summary = "装配抽奖策略", description = "将策略概率、权重和库存数据装配到 Redis。")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "策略装配成功"), @ApiResponse(responseCode = "400", description = "策略标识不合法"), @ApiResponse(responseCode = "422", description = "策略配置不完整或无法装配"), @ApiResponse(responseCode = "500", description = "系统内部错误")})
     @PutMapping("/strategy/armory")
     Response<Void> strategyArmory(@RequestParam(value = "strategyId") Long strategyId);
 
@@ -56,6 +65,8 @@ public interface IStrategyRaffleApi {
      * @param strategyId 策略id
      * @return 奖品
      */
+    @Operation(operationId = "queryStrategyAwardList", summary = "查询策略奖品列表", description = "查询指定抽奖策略配置的全部奖品及库存、概率和展示顺序。")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "查询成功"), @ApiResponse(responseCode = "400", description = "策略标识不合法"), @ApiResponse(responseCode = "500", description = "系统内部错误")})
     @GetMapping("/strategy/awardList")
     Response<List<StrategyAwardResponse>> queryStrategyAwardList(@RequestParam(value = "strategyId") Long strategyId);
 }
