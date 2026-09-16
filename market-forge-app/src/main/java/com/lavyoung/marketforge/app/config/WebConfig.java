@@ -1,8 +1,11 @@
 package com.lavyoung.marketforge.app.config;
 
+import com.lavyoung.marketforge.app.interceptor.TraceIdResponseInterceptor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.HandlerTypePredicate;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -15,8 +18,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * @version 1.0.0
  * @date 2026/09/09
  */
+@RequiredArgsConstructor
 @Configuration(proxyBeanMethods = false)
 public class WebConfig implements WebMvcConfigurer {
+
+    private final TraceIdResponseInterceptor traceIdResponseInterceptor;
 
     /**
      * REST API 的统一版本前缀。
@@ -42,5 +48,11 @@ public class WebConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("*")
                 .allowedOrigins("*");
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(traceIdResponseInterceptor)
+                .addPathPatterns("/api/**");
     }
 }

@@ -8,7 +8,7 @@
 
     <property name="LOG_PATH" value="${LOG_PATH:-logs}"/>
     <property name="LOG_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [${APPLICATION_NAME}] [%thread] [traceId=%X{traceId:-N/A}] %logger{48} - %msg%n%ex"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [${APPLICATION_NAME}] [%thread] [traceId=%X{traceId:-N/A}] [spanId=%X{spanId:-N/A}] %logger{48} - %msg%n%ex"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>

@@ -78,7 +78,7 @@ async function unwrap(response: Response): Promise<unknown> {
  * 加载策略奖品。
  */
 export async function getStrategyAwards(strategyId: number, signal?: AbortSignal): Promise<StrategyAward[]> {
-    const response = await fetch(`/api/raffle/strategy/awardList?strategyId=${strategyId}`, {
+    const response = await fetch(`/api/raffles/awards?strategyId=${strategyId}`, {
         cache: "no-cache",
         signal,
     });

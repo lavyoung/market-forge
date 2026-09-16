@@ -31,7 +31,7 @@ export async function forwardMarketForge(path: string, init: RequestInit = {}): 
     }
 
     const headers = new Headers(init?.headers);
-    headers.set("Accept", "application/josn");
+    headers.set("Accept", "application/json");
 
     if (init.body != null) {
         headers.set("Content-Type", "application/json");

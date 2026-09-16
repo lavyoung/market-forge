@@ -104,6 +104,15 @@ springdoc:
   packages-to-scan:
     - com.lavyoung.marketforge.trigger.controller
 
+management:
+  tracing:
+    enabled: true
+    sampling:
+      probability: 1.0
+    propagation:
+      type:
+        - w3c
+
 logging:
   level:
     com.lavyoung.marketforge: debug

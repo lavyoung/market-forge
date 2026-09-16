@@ -21,6 +21,8 @@
     requires market.forge.api;
     requires market.forge.infrastructure;
     requires market.forge.trigger;
+    requires micrometer.tracing;
+    requires org.apache.tomcat.embed.core;
 
     opens com.lavyoung.marketforge.app;
     opens com.lavyoung.marketforge.app.config;
