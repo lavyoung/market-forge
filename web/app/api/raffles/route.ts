@@ -35,15 +35,16 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     // 目前没有接入登录，这条抽奖路径仅允许本地开发使用。
-    if (process.env.NODE_ENV !== "development") {
+    const demoRaffleEnabled = process.env.DEMO_RAFFLE_ENABLED === "true";
+    if (!demoRaffleEnabled) {
         return errorResponse(
             503,
             900_000_001,
-            "抽奖接口尚未接入登录身份，暂不开放",
+            "抽奖接口尚未开放",
         );
     }
 
-    const userId = process.env.DEV_RAFFLE_USER_ID?.trim();
+    const userId = process.env.DEMO_RAFFLE_USER_ID?.trim();
 
     if (!userId) {
         return errorResponse(

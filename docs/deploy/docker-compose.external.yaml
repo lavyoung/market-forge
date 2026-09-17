@@ -1,64 +1,6 @@
-name: market-forge
+name: market-forge-external
 
 services:
-  mysql:
-    image: mysql:8.4
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: market-forge-001
-      MYSQL_USER: ${DB_USERNAME}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      TZ: Asia/Shanghai
-    volumes:
-      - mysql-data:/var/lib/mysql
-      - ./mysql/init/00-init-databases.sh:/docker-entrypoint-initdb.d/00-init-databases.sh:ro
-      - ../sql/create_table.sql:/docker-entrypoint-initdb.d/01-create-tables-001.sql:ro
-      - ./mysql/init/02-create-tables-002.sql:/docker-entrypoint-initdb.d/02-create-tables-002.sql:ro
-      - ../sql/seed_nine_grid_lottery.sql:/docker-entrypoint-initdb.d/03-seed-demo.sql:ro
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 15
-      start_period: 30s
-    networks:
-      - backend
-
-  redis:
-    image: redis:7.4-alpine
-    restart: unless-stopped
-    environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-    command:
-      [
-        "redis-server",
-        "--appendonly",
-        "yes",
-        "--appendfsync",
-        "everysec",
-        "--requirepass",
-        "${REDIS_PASSWORD}"
-      ]
-    volumes:
-      - redis-data:/data
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 15
-      start_period: 10s
-    networks:
-      - backend
-
   api:
     build:
       context: ../..
@@ -69,13 +11,13 @@ services:
       SPRING_PROFILES_ACTIVE: prod
       SERVER_PORT: 8080
 
-      DB_HOST: mysql
-      DB_PORT: 3306
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT:-3306}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
 
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT:-6379}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
 
       TRACING_SAMPLING_PROBABILITY: ${TRACING_SAMPLING_PROBABILITY:-0.1}
@@ -85,11 +27,6 @@ services:
         -XX:+ExitOnOutOfMemoryError
         -Dfile.encoding=UTF-8
         -Duser.timezone=Asia/Shanghai
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     healthcheck:
       test:
         [
@@ -154,8 +91,3 @@ services:
 networks:
   frontend:
   backend:
-    internal: true
-
-volumes:
-  mysql-data:
-  redis-data:

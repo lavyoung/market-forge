@@ -1,15 +1,105 @@
 spring:
+  application:
+    name: market-forge
 
-  datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 3s
 
 server:
   port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
 
 management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
   tracing:
+    enabled: true
     sampling:
-      probability: 0.1
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}
+    propagation:
+      type:
+        - w3c
+
+lavshard:
+  enabled: true
+
+  integration:
+    default-data-source: ds1
+
+    managed-mapper-packages:
+      - com.lavyoung.marketforge.infrastructure.persistent.dao
+
+    ordinary-tables:
+      - award
+      - strategy
+      - strategy_award
+      - strategy_rule
+      - rule_tree
+      - rule_tree_node
+      - rule_tree_node_line
+      - raffle_activity
+      - raffle_activity_count
+
+  data-sources:
+    ds1:
+      managed:
+        url: jdbc:mysql://${DB_HOST}-001:${DB_PORT:3306}/market-forge-001?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+        username: ${DB_USERNAME}
+        password: ${DB_PASSWORD}
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        maximum-pool-size: ${DB_MAX_POOL_SIZE:20}
+        minimum-idle: ${DB_MIN_IDLE:5}
+        connection-timeout: 30000
+
+    ds2:
+      managed:
+        url: jdbc:mysql://${DB_HOST}-002:${DB_PORT:3306}/market-forge-002?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+        username: ${DB_USERNAME}
+        password: ${DB_PASSWORD}
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        maximum-pool-size: ${DB_MAX_POOL_SIZE:20}
+        minimum-idle: ${DB_MIN_IDLE:5}
+        connection-timeout: 30000
+
+  defaults:
+    layout: database-only
+
+  layouts:
+    database-only:
+      version: market-forge-database-v1
+      data-source-ids:
+        - ds1
+        - ds2
+      tables-per-data-source: 1
+      bucket-count: 1024
+      table-suffix:
+        enabled: false
+
+  tables:
+    raffle_activity_order:
+      sharding-column: user_id
+
+    raffle_activity_account:
+      sharding-column: user_id
+
+    raffle_activity_account_flow:
+      sharding-column: user_id

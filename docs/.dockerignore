@@ -1,0 +1,16 @@
+.git
+.idea
+.vscode
+.codex
+
+**/target
+**/.next
+**/node_modules
+**/coverage
+**/logs
+
+web/.env*
+!web/.env.example
+
+deploy/.env
+*.log
