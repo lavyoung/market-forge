@@ -13,7 +13,7 @@ function isPositiveId(value: unknown): value is number {
 }
 
 function isNullableString(value: unknown): value is string | null {
-    return value === null || typeof value === "number";
+    return value === null || typeof value === "string";
 }
 
 function isStrategyAward(value: unknown): value is StrategyAward {

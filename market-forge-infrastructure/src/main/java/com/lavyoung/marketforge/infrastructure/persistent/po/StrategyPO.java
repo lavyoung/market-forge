@@ -1,5 +1,6 @@
 package com.lavyoung.marketforge.infrastructure.persistent.po;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -15,6 +16,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
+@TableName("strategy")
 public class StrategyPO extends BasePO {
     /**
      * 数据库自增主键。

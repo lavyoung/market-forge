@@ -14,6 +14,7 @@
     requires spring.context;
     requires spring.web;
     requires spring.webmvc;
+    requires spring.beans;
     requires org.mybatis.spring;
     requires org.springdoc.openapi.ui;
     requires io.swagger.v3.oas.annotations;
@@ -26,4 +27,5 @@
 
     opens com.lavyoung.marketforge.app;
     opens com.lavyoung.marketforge.app.config;
+    opens com.lavyoung.marketforge.app.interceptor to spring.beans;
 }

@@ -87,7 +87,7 @@ export default function RafflePage({strategyId}: RafflePageProp) {
 
 
     useEffect(() => {
-        mountedRef.current = false;
+        mountedRef.current = true;
 
         return () => {
             mountedRef.current = false;

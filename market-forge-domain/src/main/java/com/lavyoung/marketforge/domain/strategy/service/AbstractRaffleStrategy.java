@@ -77,6 +77,7 @@ public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
         // 没到默认的策略 说明其他策略捕获处理 直接返回结果
         if (!Objects.equals(RuleModel.DEFAULT, chainStrategyAwardVO.ruleModel())) {
             return RaffleAwardEntity.builder()
+                    .strategyId(strategyId)
                     .awardId(chainStrategyAwardVO.awardId())
                     .build();
         }
@@ -85,6 +86,7 @@ public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
         log.info("抽奖策略计算-规则树 userId={} strategyId={} awardId={} ruleModel={} ruleValue={}", userId, strategyId, treeStrategyAwardVO.awardId(),
                 treeStrategyAwardVO.ruleModel(), treeStrategyAwardVO.awardRuleValue());
         return RaffleAwardEntity.builder()
+                .strategyId(strategyId)
                 .awardId(treeStrategyAwardVO.awardId())
                 .awardConfig(treeStrategyAwardVO.awardRuleValue())
                 .build();

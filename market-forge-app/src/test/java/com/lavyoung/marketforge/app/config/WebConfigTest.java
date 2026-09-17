@@ -1,5 +1,6 @@
 package com.lavyoung.marketforge.app.config;
 
+import com.lavyoung.marketforge.app.interceptor.TraceIdResponseInterceptor;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
 
@@ -23,7 +24,7 @@ class WebConfigTest {
         TestPathMatchConfigurer configurer = new TestPathMatchConfigurer();
 
         // When
-        new WebConfig().configurePathMatch(configurer);
+        new WebConfig(new TraceIdResponseInterceptor(null)).configurePathMatch(configurer);
 
         // Then
         Map<String, Predicate<Class<?>>> prefixes = configurer.pathPrefixes();

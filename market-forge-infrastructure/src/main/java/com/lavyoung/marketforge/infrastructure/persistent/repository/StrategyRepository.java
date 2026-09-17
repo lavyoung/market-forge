@@ -170,7 +170,7 @@ public class StrategyRepository implements IStrategyRepository {
     public StrategyRuleEntity getStrategyRule(Long strategyId, RuleModel ruleModel) {
         return Optional.ofNullable(strategyRuleDao.selectOne(Wrappers.lambdaQuery(StrategyRulePO.class)
                 .eq(StrategyRulePO::getStrategyId, strategyId)
-                .eq(StrategyRulePO::getRuleModel, ruleModel)
+                .eq(StrategyRulePO::getRuleModel, ruleModel.getCode())
         )).stream().map(strategyRuleAssembler::toEntity).findFirst().orElse(null);
     }
 
