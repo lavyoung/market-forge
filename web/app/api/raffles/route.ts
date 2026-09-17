@@ -1,9 +1,5 @@
 import {badGatewayResponse, errorResponse, forwardMarketForge, toProxyResponse} from "@/lib/server/market-forge-api";
 
-type BrowserDrawRequest = {
-    strategyId: number;
-}
-
 function isRecord(value: unknown): value is Record<string, number> {
     return (
         typeof value === "object" && value !== null && !Array.isArray(value)

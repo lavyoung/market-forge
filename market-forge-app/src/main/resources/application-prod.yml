@@ -6,7 +6,7 @@ spring:
     redis:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
+      password: ${REDIS_PASSWORD}
       timeout: 3s
 
 server:
@@ -62,7 +62,7 @@ lavshard:
   data-sources:
     ds1:
       managed:
-        url: jdbc:mysql://${DB_HOST}-001:${DB_PORT:3306}/market-forge-001?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+        url: jdbc:mysql://${DB_HOST}:${DB_PORT:3306}/market-forge-001?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
         username: ${DB_USERNAME}
         password: ${DB_PASSWORD}
         driver-class-name: com.mysql.cj.jdbc.Driver
@@ -72,7 +72,7 @@ lavshard:
 
     ds2:
       managed:
-        url: jdbc:mysql://${DB_HOST}-002:${DB_PORT:3306}/market-forge-002?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+        url: jdbc:mysql://${DB_HOST}:${DB_PORT:3306}/market-forge-002?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
         username: ${DB_USERNAME}
         password: ${DB_PASSWORD}
         driver-class-name: com.mysql.cj.jdbc.Driver
