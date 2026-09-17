@@ -2,6 +2,18 @@ FROM maven:3.9.9-eclipse-temurin-17 AS builder
 
 WORKDIR /workspace
 
+# LavShard 是尚未发布到 Maven 仓库的本地组件。
+# 先编译并安装到当前构建容器的 Maven 本地仓库，
+# 后续 Market Forge 构建即可解析 0.1.0 版本依赖。
+COPY vendor/lavshard /workspace/lavshard
+
+RUN mvn -B \
+    -f /workspace/lavshard/pom.xml \
+    -pl lavshard-spring-boot-starter \
+    -am \
+    -Dmaven.test.skip=true \
+    install
+
 COPY pom.xml ./
 COPY market-forge-types/pom.xml market-forge-types/pom.xml
 COPY market-forge-api/pom.xml market-forge-api/pom.xml

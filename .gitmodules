@@ -1,0 +1,3 @@
+[submodule "vendor/lavshard"]
+	path = vendor/lavshard
+	url = https://github.com/lavyoung/lavshard.git
