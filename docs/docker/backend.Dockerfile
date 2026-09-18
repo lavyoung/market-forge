@@ -64,7 +64,8 @@ WORKDIR /app
 
 COPY --from=builder /workspace/market-forge.jar /app/market-forge.jar
 
-RUN chown marketforge:marketforge /app/market-forge.jar
+RUN mkdir -p /app/logs \
+    && chown -R marketforge:marketforge /app
 
 USER marketforge
 
