@@ -1,7 +1,7 @@
 package com.lavyoung.marketforge.domain.activity.service;
 
 import com.lavyoung.marketforge.domain.activity.model.entity.*;
-import com.lavyoung.marketforge.domain.strategy.repository.IActivityRepository;
+import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 

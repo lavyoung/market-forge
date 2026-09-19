@@ -27,6 +27,7 @@ class ActivityPersistentObjectMappingTest {
             ActivityPO.class, "raffle_activity",
             ActivityCountPO.class, "raffle_activity_count",
             ActivityAccountPO.class, "raffle_activity_account",
+            ActivitySkuPO.class, "raffle_activity_sku",
             ActivityAccountFlowPO.class, "raffle_activity_account_flow",
             ActivityOrderPO.class, "raffle_activity_order"
     );
@@ -43,12 +44,16 @@ class ActivityPersistentObjectMappingTest {
                     "id", "userId", "activityId", "totalCount", "totalCountSurplus", "dayCount",
                     "dayCountSurplus", "monthCount", "monthCountSurplus"
             ),
+            ActivitySkuPO.class, Set.of(
+                    "id", "sku", "activityId", "activityCountId", "stockCount"
+            ),
             ActivityAccountFlowPO.class, Set.of(
                     "id", "userId", "activityId", "totalCount", "dayCount", "monthCount", "flowId",
                     "flowChannel", "bizId"
             ),
             ActivityOrderPO.class, Set.of(
-                    "id", "userId", "activityId", "activityName", "strategyId", "orderId", "orderTime", "state"
+                    "id", "userId", "activityId", "sku", "activityName", "strategyId", "orderId", "orderTime",
+                    "totalCount", "dayCount", "monthCount", "state"
             )
     );
 

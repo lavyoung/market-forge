@@ -42,6 +42,11 @@ public class ActivityOrderPO extends BasePO {
     private Long activityId;
 
     /**
+     * 用户下单的商品 SKU。
+     */
+    private Long sku;
+
+    /**
      * 下单时的活动名称快照。
      */
     private String activityName;
@@ -62,7 +67,22 @@ public class ActivityOrderPO extends BasePO {
     private LocalDateTime orderTime;
 
     /**
-     * 订单状态，例如 {@code not_used}、{@code used} 或 {@code expire}。
+     * 订单授予的总抽奖次数。
+     */
+    private Integer totalCount;
+
+    /**
+     * 订单授予的日抽奖次数。
+     */
+    private Integer dayCount;
+
+    /**
+     * 订单授予的月抽奖次数。
+     */
+    private Integer monthCount;
+
+    /**
+     * 订单状态，例如 {@code not_used}、{@code used}、{@code expire} 或 {@code complete}。
      */
     private String state;
 }

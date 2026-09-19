@@ -105,16 +105,38 @@ class ActivityAssemblerTest {
     }
 
     @Test
+    void shouldConvertActivitySkuInBothDirections() {
+        // Given
+        ActivitySkuAssembler assembler = Mappers.getMapper(ActivitySkuAssembler.class);
+        ActivitySkuEntity expected = ActivitySkuEntity.builder()
+                .sku(901001L)
+                .activityId(100001L)
+                .activityCountId(100001L)
+                .stockCount(1000L)
+                .build();
+
+        // When
+        ActivitySkuEntity actual = assembler.toEntity(assembler.toPO(expected));
+
+        // Then
+        assertEquals(expected, actual);
+    }
+
+    @Test
     void shouldConvertActivityOrderInBothDirections() {
         // Given
         ActivityOrderAssembler assembler = Mappers.getMapper(ActivityOrderAssembler.class);
         ActivityOrderEntity expected = ActivityOrderEntity.builder()
                 .userId("user-001")
                 .activityId(100001L)
+                .sku(901001L)
                 .activityName("九宫格抽奖")
                 .strategyId(100006L)
                 .orderId("order-001")
                 .orderTime(LocalDateTime.of(2026, 9, 18, 12, 0))
+                .totalCount(10)
+                .dayCount(2)
+                .monthCount(5)
                 .state("not_used")
                 .build();
 

@@ -1,4 +1,4 @@
-package com.lavyoung.marketforge.domain.strategy.repository;
+package com.lavyoung.marketforge.domain.activity.repository;
 
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityCountEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityEntity;
@@ -13,9 +13,9 @@ import com.lavyoung.marketforge.domain.activity.model.entity.ActivitySkuEntity;
  */
 public interface IActivityRepository {
 
-    ActivitySkuEntity queryActivitySku(String sku);
+    ActivitySkuEntity queryActivitySku(Long sku);
 
-    ActivityEntity getActivityEntityByIdActivityId(Long aLong);
+    ActivityEntity getActivityEntityByIdActivityId(Long activityId);
 
-    ActivityCountEntity queryRaffleActivityCountByActivityCountId(Long aLong);
+    ActivityCountEntity queryRaffleActivityCountByActivityCountId(Long activityCountId);
 }

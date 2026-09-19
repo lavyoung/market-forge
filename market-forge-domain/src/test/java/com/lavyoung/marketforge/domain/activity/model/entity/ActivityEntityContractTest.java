@@ -32,11 +32,15 @@ class ActivityEntityContractTest {
                     "userId", "activityId", "totalCount", "totalCountSurplus", "dayCount", "dayCountSurplus",
                     "monthCount", "monthCountSurplus"
             ),
+            ActivitySkuEntity.class, Set.of(
+                    "sku", "activityId", "activityCountId", "stockCount"
+            ),
             ActivityAccountFlowEntity.class, Set.of(
                     "userId", "activityId", "totalCount", "dayCount", "monthCount", "flowId", "flowChannel", "bizId"
             ),
             ActivityOrderEntity.class, Set.of(
-                    "userId", "activityId", "activityName", "strategyId", "orderId", "orderTime", "state"
+                    "userId", "activityId", "sku", "activityName", "strategyId", "orderId", "orderTime",
+                    "totalCount", "dayCount", "monthCount", "state"
             )
     );
 

@@ -22,6 +22,7 @@ module market.forge.infrastructure {
 
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler;
     opens com.lavyoung.marketforge.infrastructure.persistent.dao;
+    opens com.lavyoung.marketforge.infrastructure.persistent.dao.activity;
     opens com.lavyoung.marketforge.infrastructure.persistent.handler;
     opens com.lavyoung.marketforge.infrastructure.persistent.po;
     opens com.lavyoung.marketforge.infrastructure.persistent.po.activity;

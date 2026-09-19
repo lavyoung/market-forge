@@ -93,6 +93,8 @@ create table rule_tree_node_line
     update_time     datetime default (now()) not null on update CURRENT_TIMESTAMP comment '更新时间'
 ) comment '规则树节点连线规则';
 
+
+-- 活动相关
 CREATE TABLE `raffle_activity`
 (
     `id`                  bigint(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
@@ -150,6 +152,22 @@ CREATE TABLE `raffle_activity_account`
   DEFAULT CHARSET = utf8mb4 COMMENT ='抽奖活动账户表';
 
 
+DROP TABLE IF EXISTS `raffle_activity_sku`;
+
+CREATE TABLE `raffle_activity_sku`
+(
+    `id`                bigint(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `sku`               bigint(12)          NOT NULL COMMENT '商品sku ',
+    `activity_id`       bigint(12)          NOT NULL COMMENT '活动ID',
+    `activity_count_id` bigint(12)          NOT NULL COMMENT '活动次数编号',
+    `stock_count`       bigint(12)          NOT NULL COMMENT '商品库存',
+    `create_time`       datetime            NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time`       datetime            NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_sku_activity_id_activity_count_id` (`sku`, `activity_id`, `activity_count_id`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='抽奖活动sku表';
+
 
 # 转储表 raffle_activity_account_flow
 # ------------------------------------------------------------
@@ -188,11 +206,15 @@ CREATE TABLE `raffle_activity_order`
     `id`            bigint(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
     `user_id`       varchar(32)         NOT NULL COMMENT '用户ID',
     `activity_id`   bigint(12)          NOT NULL COMMENT '活动ID',
+    `sku`         bigint(12) NOT NULL COMMENT '商品sku',
     `activity_name` varchar(64)         NOT NULL COMMENT '活动名称',
     `strategy_id`   bigint(8)           NOT NULL COMMENT '抽奖策略ID',
     `order_id`      varchar(12)         NOT NULL COMMENT '订单ID',
     `order_time`    datetime            NOT NULL COMMENT '下单时间',
-    `state`         varchar(8)          NOT NULL COMMENT '订单状态（not_used、used、expire）',
+    `total_count` int(11)    NOT NULL DEFAULT 0 COMMENT '总次数',
+    `day_count`   int(11)    NOT NULL DEFAULT 0 COMMENT '日次数',
+    `month_count` int(11)    NOT NULL DEFAULT 0 COMMENT '月次数',
+    `state`       varchar(8) NOT NULL COMMENT '订单状态（not_used、used、expire、complete）',
     `create_time`   datetime            NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time`   datetime            NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lavyoung.marketforge.infrastructure.persistent.dao.activity.IActivityCountDao">
+
+    <resultMap id="activityCountResultMap"
+               type="com.lavyoung.marketforge.infrastructure.persistent.po.activity.ActivityCountPO">
+        <id column="id" property="id"/>
+        <result column="activity_count_id" property="activityCountId"/>
+        <result column="total_count" property="totalCount"/>
+        <result column="day_count" property="dayCount"/>
+        <result column="month_count" property="monthCount"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="activityCountColumns">
+        id, activity_count_id, total_count, day_count, month_count, create_time, update_time
+    </sql>
+
+    <select id="queryByActivityCountId" resultMap="activityCountResultMap">
+        SELECT
+        <include refid="activityCountColumns"/>
+        FROM raffle_activity_count
+        WHERE activity_count_id = #{activityCountId}
+        LIMIT 1
+    </select>
+
+</mapper>
