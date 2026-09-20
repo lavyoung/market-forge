@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.lavyoung.marketforge.infrastructure.persistent.po.BasePO;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -17,6 +18,7 @@ import lombok.Setter;
  * @version 1.0.0
  * @date 2026/09/18
  */
+@AllArgsConstructor
 @Getter
 @Setter
 @NoArgsConstructor
@@ -68,4 +70,9 @@ public class ActivityAccountPO extends BasePO {
      * 当月剩余次数。
      */
     private Integer monthCountSurplus;
+
+    /**
+     * 账户版本
+     */
+    private Integer version;
 }

@@ -56,9 +56,15 @@ public enum BusinessResponseCode implements IResponseCode {
     POINTS_ACCOUNT_NOT_FOUND(400_001_001, "points.account.not-found", "积分账户不存在"),
     POINTS_BALANCE_NOT_ENOUGH(400_002_001, "points.balance.not-enough", "积分余额不足"),
     POINTS_DEDUCTION_FAILED(400_002_002, "points.deduction.failed", "积分扣减失败"),
-    POINTS_TRANSACTION_DUPLICATED(400_003_001, "points.transaction.duplicated", "积分流水已处理");
+    POINTS_TRANSACTION_DUPLICATED(400_003_001, "points.transaction.duplicated", "积分流水已处理"),
+
+    // 500 - 活动账户域
+    ACTIVITY_ACCOUNT_ERR(500_001_001, "", ""),
+
+    // 600
 
 
+    ;
     /**
      * 业务编码
      */

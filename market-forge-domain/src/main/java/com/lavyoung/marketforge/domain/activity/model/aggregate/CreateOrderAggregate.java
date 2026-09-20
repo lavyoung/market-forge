@@ -1,5 +1,6 @@
 package com.lavyoung.marketforge.domain.activity.model.aggregate;
 
+import com.lavyoung.marketforge.domain.activity.model.entity.ActivityOrderEntity;
 import lombok.Builder;
 
 /**
@@ -11,6 +12,11 @@ import lombok.Builder;
  */
 @Builder
 public record CreateOrderAggregate(
-
+        String userId,
+        Long activityId,
+        Integer totalCount,
+        Integer dayCount,
+        Integer monthCount,
+        ActivityOrderEntity activityOrder
 ) {
 }

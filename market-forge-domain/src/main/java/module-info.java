@@ -25,4 +25,5 @@ module market.forge.domain {
     opens com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory;
     opens com.lavyoung.marketforge.domain.strategy.service.rule.tree.impl;
     exports com.lavyoung.marketforge.domain.activity.repository;
+    exports com.lavyoung.marketforge.domain.activity.model.aggregate;
 }

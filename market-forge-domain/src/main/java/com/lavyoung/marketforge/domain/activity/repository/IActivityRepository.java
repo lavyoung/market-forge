@@ -1,5 +1,6 @@
 package com.lavyoung.marketforge.domain.activity.repository;
 
+import com.lavyoung.marketforge.domain.activity.model.aggregate.CreateOrderAggregate;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityCountEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivitySkuEntity;
@@ -18,4 +19,6 @@ public interface IActivityRepository {
     ActivityEntity getActivityEntityByIdActivityId(Long activityId);
 
     ActivityCountEntity queryRaffleActivityCountByActivityCountId(Long activityCountId);
+
+    String saveOrderAggregate(CreateOrderAggregate createOrderAggregate);
 }

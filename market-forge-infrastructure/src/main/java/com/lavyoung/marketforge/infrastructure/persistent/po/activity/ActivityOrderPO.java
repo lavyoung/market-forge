@@ -85,4 +85,9 @@ public class ActivityOrderPO extends BasePO {
      * 订单状态，例如 {@code not_used}、{@code used}、{@code expire} 或 {@code complete}。
      */
     private String state;
+
+    /**
+     * 业务幂等ID
+     */
+    private String outBusinessNo;
 }
