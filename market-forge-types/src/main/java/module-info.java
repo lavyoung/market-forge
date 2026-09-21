@@ -9,5 +9,9 @@
     exports com.lavyoung.marketforge.types.exception;
     exports com.lavyoung.marketforge.types.model;
     exports com.lavyoung.marketforge.types.domain.strategy;
+    exports com.lavyoung.marketforge.types.messaging;
+    exports com.lavyoung.marketforge.types.utils;
     requires static lombok;
+    requires org.slf4j;
+    requires spring.context;
 }

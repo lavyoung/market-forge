@@ -8,6 +8,13 @@ module market.forge.domain {
     exports com.lavyoung.marketforge.domain.strategy.model.vo;
     exports com.lavyoung.marketforge.domain.strategy.service;
     exports com.lavyoung.marketforge.domain.strategy.service.armorcy;
+    exports com.lavyoung.marketforge.domain.activity.repository;
+    exports com.lavyoung.marketforge.domain.activity.model.aggregate;
+    exports com.lavyoung.marketforge.domain.activity.service.rule.factory;
+    exports com.lavyoung.marketforge.domain.activity.service.impl;
+    exports com.lavyoung.marketforge.domain.activity.service;
+    exports com.lavyoung.marketforge.domain.strategy.event;
+
     requires spring.context;
     requires org.slf4j;
     requires static lombok;
@@ -15,6 +22,7 @@ module market.forge.domain {
     requires org.apache.commons.lang3;
     requires market.forge.types;
     requires jakarta.annotation;
+
 
     opens com.lavyoung.marketforge.domain.strategy.service.impl;
     opens com.lavyoung.marketforge.domain.strategy.service.armorcy.impl;
@@ -24,6 +32,8 @@ module market.forge.domain {
     opens com.lavyoung.marketforge.domain.strategy.service.rule.chain.impl;
     opens com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory;
     opens com.lavyoung.marketforge.domain.strategy.service.rule.tree.impl;
-    exports com.lavyoung.marketforge.domain.activity.repository;
-    exports com.lavyoung.marketforge.domain.activity.model.aggregate;
+    opens com.lavyoung.marketforge.domain.activity.service.armory;
+    opens com.lavyoung.marketforge.domain.activity.service.armory.impl;
+    opens com.lavyoung.marketforge.domain.activity.service.rule;
+    opens com.lavyoung.marketforge.domain.activity.service.rule.impl;
 }

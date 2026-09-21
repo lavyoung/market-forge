@@ -20,6 +20,13 @@ module market.forge.infrastructure {
     requires mybatis.plus.core;
     requires mybatis.plus.annotation;
     requires spring.tx;
+    requires spring.boot;
+    requires spring.rabbit;
+    requires spring.amqp;
+    requires com.fasterxml.jackson.databind;
+    requires spring.core;
+    requires spring.aop;
+    requires com.fasterxml.jackson.datatype.jsr310;
 
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler;
     opens com.lavyoung.marketforge.infrastructure.persistent.dao;
@@ -30,4 +37,5 @@ module market.forge.infrastructure {
     opens com.lavyoung.marketforge.infrastructure.persistent.redis;
     opens com.lavyoung.marketforge.infrastructure.persistent.repository;
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler.activity;
+    opens com.lavyoung.marketforge.infrastructure.messaging.rabbitmq;
 }

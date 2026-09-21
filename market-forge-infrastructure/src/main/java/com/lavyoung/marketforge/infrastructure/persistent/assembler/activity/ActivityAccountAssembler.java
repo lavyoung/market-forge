@@ -47,6 +47,7 @@ public interface ActivityAccountAssembler {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createTime", ignore = true)
     @Mapping(target = "updateTime", ignore = true)
+    @Mapping(target = "version", ignore = true)
     ActivityAccountPO toPO(ActivityAccountEntity activityAccountEntity);
 
     /**

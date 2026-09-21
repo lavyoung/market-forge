@@ -14,6 +14,7 @@ import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyRulePO;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
 import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
+import com.lavyoung.marketforge.types.messaging.MessagePublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -59,6 +60,9 @@ class StrategyRepositoryTest {
     @Mock
     private StrategyRuleAssembler strategyRuleAssembler;
 
+    @Mock
+    private MessagePublisher messagePublisher;
+
     private StrategyRepository repository;
 
     /**
@@ -73,7 +77,8 @@ class StrategyRepositoryTest {
                 redisService,
                 strategyAwardAssembler,
                 strategyAssembler,
-                strategyRuleAssembler
+                strategyRuleAssembler,
+                messagePublisher
         );
     }
 

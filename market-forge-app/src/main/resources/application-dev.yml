@@ -11,6 +11,27 @@ spring:
       port: ${MARKET_FORGE_REDIS_PORT:6379}
       password: ${MARKET_FORGE_REDIS_PASSWORD:sYogkA6cjqyZBwuI+5bE7AFTWKtVvBQs}
 
+  rabbitmq:
+    addresses: ${MARKET_FORGE_MQ_HOST:192.168.3.127}
+    port: ${MARKET_FORGE_MQ_PORT:5672}
+    username: ${MARKET_FORGE_MQ_USER_NAME:dev}
+    password: ${MARKET_FORGE_MQ_PASSWORD:T83fMSTI6OeQMLYvvpTH9ZPTGXVtwyGh}
+    publisher-confirm-type: correlated   # broker 用 CorrelationData 关联确认结果
+    publisher-returns: true              # 不可路由的消息退回给发布端
+    listener:
+      simple:
+        acknowledge-mode: auto          # 方法正常返回=ack；抛异常=nack（交给 retry 处理）
+        prefetch: 10                    # 每个消费者最多预取 10 条未确认消息
+        concurrency: 2                  # 初始并发消费者数
+        max-concurrency: 4              # 峰值并发
+        default-requeue-rejected: false # 重试耗尽后不重回队列 —— 关键！
+        retry:
+          enabled: true
+          max-attempts: 3               # 总共尝试 3 次（含首次）
+          initial-interval: 100ms
+          multiplier: 2.0
+          max-interval: 10s
+
 lavshard:
   enabled: true
 

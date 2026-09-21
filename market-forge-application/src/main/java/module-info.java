@@ -5,13 +5,17 @@
  */
 module market.forge.application {
     requires market.forge.domain;
+    requires market.forge.types;
     requires org.slf4j;
     requires spring.context;
     requires static lombok;
+
     exports com.lavyoung.marketforge.application.strategy.model;
     exports com.lavyoung.marketforge.application.strategy.service;
+    exports com.lavyoung.marketforge.application.strategy.service.impl;
+    exports com.lavyoung.marketforge.application.strategy.messaging;
 
     opens com.lavyoung.marketforge.application.strategy.service;
-    exports com.lavyoung.marketforge.application.strategy.service.impl;
     opens com.lavyoung.marketforge.application.strategy.service.impl;
+    opens com.lavyoung.marketforge.application.strategy.messaging;
 }

@@ -103,7 +103,7 @@ public class ActivityRepository implements IActivityRepository {
         }
 
         if (res <= 0) {
-            throw new BusinessException(BusinessResponseCode.ACTIVITY_ACCOUNT_ERR);
+            throw new BusinessException(BusinessResponseCode.ACTIVITY_ACCOUNT_PROCESS_FAILED);
         }
         return assemblerPO.getOrderId();
     }

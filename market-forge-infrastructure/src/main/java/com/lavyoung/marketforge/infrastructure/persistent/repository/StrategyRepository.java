@@ -1,6 +1,7 @@
 package com.lavyoung.marketforge.infrastructure.persistent.repository;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.lavyoung.marketforge.domain.strategy.event.AwardStockDeductedEvent;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
@@ -18,6 +19,7 @@ import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyRulePO;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
 import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
+import com.lavyoung.marketforge.types.messaging.MessagePublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -80,6 +82,11 @@ public class StrategyRepository implements IStrategyRepository {
      * 策略规则持久化对象转换器。
      */
     private final StrategyRuleAssembler strategyRuleAssembler;
+
+    /**
+     * 集成事件发布端口：库存变更后通知下游。
+     */
+    private final MessagePublisher messagePublisher;
 
     /**
      * {@inheritDoc}
@@ -258,12 +265,25 @@ public class StrategyRepository implements IStrategyRepository {
 
     @Override
     public void awardStockConsumeSendQueue(StrategyAwardStockKeyVO awardStockKeyVO) {
-        redisService.offerDelayed(
-                Constants.RedisKeys.STRATEGY_AWARD_STOCK_QUEUE,
-                Objects.requireNonNull(awardStockKeyVO, "awardStockKeyVO must not be null"),
-                AWARD_STOCK_QUEUE_DELAY
-        );
+        Objects.requireNonNull(awardStockKeyVO, "awardStockKeyVO must not be null");
+        try {
+            messagePublisher.publish(new AwardStockDeductedEvent(
+                    awardStockKeyVO.strategyId(),
+                    awardStockKeyVO.awardId(),
+                    awardStockKeyVO.userId()
+            ));
+        } catch (RuntimeException e) {
+            // MQ 已是数据库库存同步的唯一通道，发布失败不能静默丢弃：转入 Redis 延迟队列，交给补偿任务重试。
+            log.error("奖品库存扣减事件发布失败，转入补偿队列 strategyId={} awardId={} userId={}",
+                    awardStockKeyVO.strategyId(), awardStockKeyVO.awardId(), awardStockKeyVO.userId(), e);
+            redisService.offerDelayed(
+                    Constants.RedisKeys.STRATEGY_AWARD_STOCK_QUEUE,
+                    awardStockKeyVO,
+                    AWARD_STOCK_QUEUE_DELAY
+            );
+        }
     }
+
 
     @Override
     public Optional<StrategyAwardStockKeyVO> pollQueueValue() {

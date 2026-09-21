@@ -59,7 +59,8 @@ public enum BusinessResponseCode implements IResponseCode {
     POINTS_TRANSACTION_DUPLICATED(400_003_001, "points.transaction.duplicated", "积分流水已处理"),
 
     // 500 - 活动账户域
-    ACTIVITY_ACCOUNT_ERR(500_001_001, "", ""),
+    ACTIVITY_ACCOUNT_NOT_FOUND(500_001_001, "activity_account_not_found", "活动账户不存在"),
+    ACTIVITY_ACCOUNT_PROCESS_FAILED(500_001_001, "activity_account_process_failed", "活动账户更新失败"),
 
     // 600
 

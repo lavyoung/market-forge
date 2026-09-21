@@ -14,6 +14,7 @@ import lombok.Builder;
 @Builder
 public record StrategyAwardStockKeyVO(
         Long strategyId,
-        Long awardId
+        Long awardId,
+        String userId
 ) {
 }

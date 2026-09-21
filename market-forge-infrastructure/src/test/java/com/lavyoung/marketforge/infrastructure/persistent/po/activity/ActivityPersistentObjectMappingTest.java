@@ -42,7 +42,7 @@ class ActivityPersistentObjectMappingTest {
             ),
             ActivityAccountPO.class, Set.of(
                     "id", "userId", "activityId", "totalCount", "totalCountSurplus", "dayCount",
-                    "dayCountSurplus", "monthCount", "monthCountSurplus"
+                    "dayCountSurplus", "monthCount", "monthCountSurplus", "version"
             ),
             ActivitySkuPO.class, Set.of(
                     "id", "sku", "activityId", "activityCountId", "stockCount"
@@ -53,7 +53,7 @@ class ActivityPersistentObjectMappingTest {
             ),
             ActivityOrderPO.class, Set.of(
                     "id", "userId", "activityId", "sku", "activityName", "strategyId", "orderId", "orderTime",
-                    "totalCount", "dayCount", "monthCount", "state"
+                    "totalCount", "dayCount", "monthCount", "state", "outBusinessNo"
             )
     );
 

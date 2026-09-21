@@ -46,6 +46,7 @@ public class RuleStockLogicTreeNode implements ILogicTreeNode {
             repository.awardStockConsumeSendQueue(StrategyAwardStockKeyVO.builder()
                     .awardId(awardId)
                     .strategyId(strategyId)
+                    .userId(userId)
                     .build()
             );
             return DefaultTreeFactory.TreeActionEntity.builder()
