@@ -13,7 +13,9 @@ module market.forge.domain {
     exports com.lavyoung.marketforge.domain.activity.service.rule.factory;
     exports com.lavyoung.marketforge.domain.activity.service.impl;
     exports com.lavyoung.marketforge.domain.activity.service;
+    exports com.lavyoung.marketforge.domain.activity.event;
     exports com.lavyoung.marketforge.domain.strategy.event;
+    exports com.lavyoung.marketforge.domain.activity.model.vo;
 
     requires spring.context;
     requires org.slf4j;

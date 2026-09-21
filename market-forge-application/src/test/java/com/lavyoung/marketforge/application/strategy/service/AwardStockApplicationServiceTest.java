@@ -15,7 +15,7 @@ import static org.mockito.Mockito.*;
 class AwardStockApplicationServiceTest {
 
     private static final StrategyAwardStockKeyVO MESSAGE =
-            new StrategyAwardStockKeyVO(100_001L, 100_011L);
+            new StrategyAwardStockKeyVO(100_001L, 100_011L, "user-001");
 
     /**
      * Given 队列中有到期消息，When 同步库存，Then 更新数据库并在队列为空时结束。

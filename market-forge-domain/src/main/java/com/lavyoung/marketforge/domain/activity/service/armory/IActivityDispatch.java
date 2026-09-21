@@ -1,5 +1,7 @@
 package com.lavyoung.marketforge.domain.activity.service.armory;
 
+import java.time.LocalDateTime;
+
 /**
  *
  *
@@ -8,4 +10,6 @@ package com.lavyoung.marketforge.domain.activity.service.armory;
  * @date 2026/09/21
  */
 public interface IActivityDispatch {
+
+    boolean subtractionActivitySkuStock(Long sku, LocalDateTime endDateTime);
 }

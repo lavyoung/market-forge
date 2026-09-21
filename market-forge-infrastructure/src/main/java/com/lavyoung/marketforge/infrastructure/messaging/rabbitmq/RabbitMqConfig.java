@@ -34,9 +34,16 @@ public class RabbitMqConfig {
         } else {
             log.warn("RabbitMQ 连接工厂不是 CachingConnectionFactory，实际={}", connectionFactory.getClass().getName());
         }
+        return createTemplate(connectionFactory, converter);
+    }
+
+    private static RabbitTemplate createTemplate(ConnectionFactory connectionFactory, Jackson2JsonMessageConverter converter) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
         template.setMessageConverter(converter);
         template.setMandatory(true);
+        template.setConfirmCallback((correlationData, ack, cause) ->
+                log.debug("MQ 诊断-收到 broker 确认 ack={} messageId={} cause={}", ack, correlationData == null ? null : correlationData.getId(), cause)
+        );
         template.setReturnsCallback(returned -> {
             log.error(
                     "消息无法路由到队列 exchange={} routingKey={} replyText={}",

@@ -68,5 +68,11 @@ public class Constants {
          * 策略奖品库存异步同步队列键。
          */
         public static final String STRATEGY_AWARD_STOCK_QUEUE = "strategy_award_stock_queue";
+
+        public static final String ACTIVITY_DETAIL_KEY = "activity_detail_key:";
+
+        public static final String ACTIVITY_SKU_STOCK_COUNT_KEY = "activity_sku_stock_count_key:";
+
+        public static final String ACTIVITY_SKU_COUNT_QUERY_KEY = "activity_sku_count_query:";
     }
 }

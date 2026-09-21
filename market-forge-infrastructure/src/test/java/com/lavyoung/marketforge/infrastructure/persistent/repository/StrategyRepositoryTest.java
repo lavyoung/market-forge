@@ -189,7 +189,7 @@ class StrategyRepositoryTest {
     @Test
     void shouldSendAwardStockMessageToDelayedQueue() {
         // Given
-        StrategyAwardStockKeyVO message = new StrategyAwardStockKeyVO(STRATEGY_ID, AWARD_ID);
+        StrategyAwardStockKeyVO message = new StrategyAwardStockKeyVO(STRATEGY_ID, AWARD_ID, "user-001");
 
         // When
         repository.awardStockConsumeSendQueue(message);
@@ -208,7 +208,7 @@ class StrategyRepositoryTest {
     @Test
     void shouldPollAwardStockMessageFromDelayedQueue() {
         // Given
-        StrategyAwardStockKeyVO expected = new StrategyAwardStockKeyVO(STRATEGY_ID, AWARD_ID);
+        StrategyAwardStockKeyVO expected = new StrategyAwardStockKeyVO(STRATEGY_ID, AWARD_ID, "user-001");
         when(redisService.pollDelayed(
                 Constants.RedisKeys.STRATEGY_AWARD_STOCK_QUEUE,
                 StrategyAwardStockKeyVO.class

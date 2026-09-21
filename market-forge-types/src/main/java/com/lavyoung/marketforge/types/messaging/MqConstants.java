@@ -30,4 +30,10 @@ public final class MqConstants {
 
     public static final String AWARD_STOCK_DEDUCT_QUEUE = "award.stock.deduct.queue";
     public static final String AWARD_STOCK_DEDUCT_ROUTING_KEY = "award.stock.deduct";
+
+    public static final String SKU_STOCK_DEDUCT_QUEUE = "activity.sku.stock.deduct.queue";
+    public static final String SKU_STOCK_DEDUCT_ROUTING_KEY = "activity.sku.stock.deduct";
+
+    public static final String SKU_STOCK_ZERO_QUEUE = "activity.sku.stock.zero.queue";
+    public static final String SKU_STOCK_ZERO_ROUTING_KEY = "activity.sku.stock.zero";
 }

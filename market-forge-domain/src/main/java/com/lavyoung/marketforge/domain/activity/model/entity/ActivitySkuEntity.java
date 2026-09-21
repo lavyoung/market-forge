@@ -18,6 +18,6 @@ public record ActivitySkuEntity(
         Long sku,
         Long activityId,
         Long activityCountId,
-        Long stockCount
+        Integer stockCount
 ) {
 }

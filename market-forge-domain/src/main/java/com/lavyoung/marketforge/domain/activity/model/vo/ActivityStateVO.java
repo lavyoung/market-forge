@@ -1,5 +1,8 @@
 package com.lavyoung.marketforge.domain.activity.model.vo;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
 /**
  *
  *
@@ -7,5 +10,13 @@ package com.lavyoung.marketforge.domain.activity.model.vo;
  * @version 1.0.0
  * @date 2026/09/20
  */
+@AllArgsConstructor
+@Getter
 public enum ActivityStateVO {
+
+    OPEN,
+
+    CLOSE,
+
+    ;
 }
