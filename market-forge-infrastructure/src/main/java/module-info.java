@@ -27,6 +27,7 @@ module market.forge.infrastructure {
     requires spring.core;
     requires spring.aop;
     requires com.fasterxml.jackson.datatype.jsr310;
+    requires jakarta.annotation;
 
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler;
     opens com.lavyoung.marketforge.infrastructure.persistent.dao;

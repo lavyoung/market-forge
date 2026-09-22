@@ -3,8 +3,11 @@ package com.lavyoung.marketforge.infrastructure.messaging.rabbitmq;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.lavyoung.marketforge.domain.activity.event.ActivitySkuStockDeductedEvent;
+import com.lavyoung.marketforge.domain.activity.event.ActivitySkuZeroStockEvent;
 import com.lavyoung.marketforge.domain.strategy.event.AwardStockDeductedEvent;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
+import com.lavyoung.marketforge.types.messaging.IntegrationEvent;
 import com.lavyoung.marketforge.types.messaging.MessageContext;
 import com.lavyoung.marketforge.types.messaging.MessageEnvelope;
 import com.lavyoung.marketforge.types.messaging.MessageHandler;
@@ -45,6 +48,12 @@ class RabbitMessageListenerAdapterTest {
     @Mock
     private MessageHandler<AwardStockDeductedEvent> awardStockDeductedHandler;
 
+    @Mock
+    private MessageHandler<ActivitySkuStockDeductedEvent> activitySkuStockDeductedEventMessageHandler;
+
+    @Mock
+    private MessageHandler<ActivitySkuZeroStockEvent> activitySkuZeroStockEventMessageHandler;
+
     private ObjectMapper objectMapper;
 
     private RabbitMessageListenerAdapter adapter;
@@ -57,7 +66,10 @@ class RabbitMessageListenerAdapterTest {
         objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        adapter = new RabbitMessageListenerAdapter(redisService, objectMapper, awardStockDeductedHandler);
+        adapter = new RabbitMessageListenerAdapter(
+                objectMapper,
+                redisService
+        );
     }
 
     /**
@@ -125,6 +137,57 @@ class RabbitMessageListenerAdapterTest {
         MessageProperties properties = new MessageProperties();
         properties.setMessageId(event.eventId());
         properties.setRedelivered(false);
+        return new Message(body, properties);
+    }
+
+    @Test
+    void shouldDispatchSkuStockDeductedEvent() throws Exception {
+        ActivitySkuStockDeductedEvent event =
+                new ActivitySkuStockDeductedEvent(10001L, 20001L, "user-001");
+
+        when(redisService.setIfAbsent(
+                anyString(),
+                anyString(),
+                any(Duration.class)
+        )).thenReturn(true);
+
+        adapter.onSkuStockDeducted(messageOf(event));
+
+        verify(activitySkuStockDeductedEventMessageHandler).handle(
+                eq(event),
+                any(MessageContext.class)
+        );
+    }
+
+    @Test
+    void shouldDispatchSkuStockZeroEvent() throws Exception {
+        ActivitySkuZeroStockEvent event =
+                new ActivitySkuZeroStockEvent(10001L);
+
+        when(redisService.setIfAbsent(
+                anyString(),
+                anyString(),
+                any(Duration.class)
+        )).thenReturn(true);
+
+        adapter.onSkuStockZero(messageOf(event));
+
+        verify(activitySkuZeroStockEventMessageHandler).handle(
+                eq(event),
+                any(MessageContext.class)
+        );
+    }
+
+    private <T extends IntegrationEvent> Message messageOf(T event)
+            throws Exception {
+        byte[] body = objectMapper.writeValueAsBytes(
+                MessageEnvelope.of(event, TRACE_ID)
+        );
+
+        MessageProperties properties = new MessageProperties();
+        properties.setMessageId(event.eventId());
+        properties.setRedelivered(false);
+
         return new Message(body, properties);
     }
 }

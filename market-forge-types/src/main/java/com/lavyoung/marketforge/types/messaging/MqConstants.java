@@ -19,6 +19,7 @@ public final class MqConstants {
      */
     public static final String CONSUMED_KEY_PREFIX = "mq:consumed:";
 
+    public static final Duration CONSUMED_MARK_TTL = Duration.ofHours(24);
     /**
      * 等待 broker 确认的最长时间。
      */

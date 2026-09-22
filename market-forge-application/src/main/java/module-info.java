@@ -14,8 +14,10 @@ module market.forge.application {
     exports com.lavyoung.marketforge.application.strategy.service;
     exports com.lavyoung.marketforge.application.strategy.service.impl;
     exports com.lavyoung.marketforge.application.strategy.messaging;
+    exports com.lavyoung.marketforge.application.activity.messaging;
 
     opens com.lavyoung.marketforge.application.strategy.service;
     opens com.lavyoung.marketforge.application.strategy.service.impl;
     opens com.lavyoung.marketforge.application.strategy.messaging;
+    opens com.lavyoung.marketforge.application.activity.messaging;
 }
