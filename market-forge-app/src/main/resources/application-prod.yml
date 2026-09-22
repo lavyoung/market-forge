@@ -15,6 +15,20 @@ spring:
     password: ${RABBITMQ_PASSWORD}
     publisher-confirm-type: correlated
     publisher-returns: true
+    listener:
+      simple:
+        acknowledge-mode: auto          # 方法正常返回=ack；抛异常=nack（交给 retry 处理）
+        prefetch: 10                    # 每个消费者最多预取 10 条未确认消息
+        concurrency: 2                  # 初始并发消费者数
+        max-concurrency: 4              # 峰值并发
+        default-requeue-rejected: false # 重试耗尽后不重回队列 —— 关键！
+        retry:
+          enabled: true
+          max-attempts: 3               # 总共尝试 3 次（含首次）
+          initial-interval: 100ms
+          multiplier: 2.0
+          max-interval: 10s
+
 
 server:
   port: ${SERVER_PORT:8080}

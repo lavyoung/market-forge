@@ -46,7 +46,8 @@ public class RabbitMessagePublisher implements MessagePublisher {
                     message.getMessageProperties().setHeader("eventType", envelope.eventType());
                     message.getMessageProperties().setHeader(MdcUtil.getTraceIdKey(), envelope.traceId());
                     return message;
-                }
+                },
+                correlationData
         );
 
         // 校验发送结果
