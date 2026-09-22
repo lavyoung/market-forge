@@ -1,20 +1,17 @@
 package com.lavyoung.marketforge.infrastructure.persistent.repository;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.lavyoung.marketforge.domain.activity.event.ActivitySkuStockDeductedEvent;
 import com.lavyoung.marketforge.domain.activity.event.ActivitySkuZeroStockEvent;
-import com.lavyoung.marketforge.domain.activity.model.aggregate.CreateOrderAggregate;
-import com.lavyoung.marketforge.domain.activity.model.entity.ActivityCountEntity;
-import com.lavyoung.marketforge.domain.activity.model.entity.ActivityEntity;
-import com.lavyoung.marketforge.domain.activity.model.entity.ActivityOrderEntity;
-import com.lavyoung.marketforge.domain.activity.model.entity.ActivitySkuEntity;
+import com.lavyoung.marketforge.domain.activity.model.aggregate.CreatePartakeOrderAggregate;
+import com.lavyoung.marketforge.domain.activity.model.aggregate.CreateQuotaOrderAggregate;
+import com.lavyoung.marketforge.domain.activity.model.entity.*;
 import com.lavyoung.marketforge.domain.activity.model.vo.ActivitySkuStockKeyVO;
+import com.lavyoung.marketforge.domain.activity.model.vo.UserRaffleOrderStateVO;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.activity.*;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.activity.*;
-import com.lavyoung.marketforge.infrastructure.persistent.po.activity.ActivityAccountPO;
-import com.lavyoung.marketforge.infrastructure.persistent.po.activity.ActivityOrderPO;
-import com.lavyoung.marketforge.infrastructure.persistent.po.activity.ActivityPO;
-import com.lavyoung.marketforge.infrastructure.persistent.po.activity.ActivitySkuPO;
+import com.lavyoung.marketforge.infrastructure.persistent.po.activity.*;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
 import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.exception.BusinessException;
@@ -25,15 +22,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
+import java.time.*;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 /**
- *
+ * 活动域仓储实现。
+ * <p>
+ * 负责活动、SKU、账户和订单的数据库读写，并协调 Redis 库存缓存与 MQ 库存同步消息。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -49,12 +45,16 @@ public class ActivityRepository implements IActivityRepository {
     private final IActivityCountDao activityCountDao;
     private final IActivityOrderDao activityOrderDao;
     private final IActivityAccountDao activityAccountDao;
+    private final IActivityAccountDayDao activityAccountDayDao;
+    private final IActivityAccountMonthDao activityAccountMonthDao;
 
     private final ActivityAssembler activityAssembler;
     private final ActivitySkuAssembler activitySkuAssembler;
     private final ActivityCountAssembler activityCountAssembler;
     private final ActivityOrderAssembler activityOrderAssembler;
     private final ActivityAccountAssembler activityAccountAssembler;
+    private final ActivityAccountDayAssembler activityAccountDayAssembler;
+    private final ActivityAccountMonthAssembler activityAccountMonthAssembler;
 
     private final IRedisService redisService;
     private final MessagePublisher messagePublisher;
@@ -86,38 +86,38 @@ public class ActivityRepository implements IActivityRepository {
 
     @Override
     @Transactional
-    public String saveOrderAggregate(CreateOrderAggregate createOrderAggregate) {
-        ActivityOrderEntity activityOrderEntity = createOrderAggregate.activityOrder();
+    public String saveOrderAggregate(CreateQuotaOrderAggregate createQuotaOrderAggregate) {
+        ActivityOrderEntity activityOrderEntity = createQuotaOrderAggregate.activityOrder();
         // PO对象
         ActivityOrderPO assemblerPO = activityOrderAssembler.toPO(activityOrderEntity);
         // 写入订单
         activityOrderDao.insert(assemblerPO);
 
-        Optional<ActivityAccountPO> accountPOPresent = activityAccountDao.queryByUserIdAndActivityId(createOrderAggregate.userId(), createOrderAggregate.activityId());
+        Optional<ActivityAccountPO> accountPOPresent = activityAccountDao.queryByUserIdAndActivityId(createQuotaOrderAggregate.userId(), createQuotaOrderAggregate.activityId());
         int res;
         ActivityAccountPO activityAccountPO;
         if (accountPOPresent.isPresent()) {
             // 更新
             activityAccountPO = accountPOPresent.get();
-            activityAccountPO.setTotalCount(createOrderAggregate.totalCount() + activityAccountPO.getTotalCount());
-            activityAccountPO.setTotalCountSurplus(createOrderAggregate.totalCount() + activityAccountPO.getTotalCountSurplus());
-            activityAccountPO.setDayCount(createOrderAggregate.dayCount() + activityAccountPO.getDayCount());
-            activityAccountPO.setDayCountSurplus(createOrderAggregate.dayCount() + activityAccountPO.getDayCountSurplus());
-            activityAccountPO.setMonthCount(createOrderAggregate.monthCount() + activityAccountPO.getMonthCount());
-            activityAccountPO.setMonthCountSurplus(createOrderAggregate.monthCount() + activityAccountPO.getMonthCountSurplus());
+            activityAccountPO.setTotalCount(createQuotaOrderAggregate.totalCount() + activityAccountPO.getTotalCount());
+            activityAccountPO.setTotalCountSurplus(createQuotaOrderAggregate.totalCount() + activityAccountPO.getTotalCountSurplus());
+            activityAccountPO.setDayCount(createQuotaOrderAggregate.dayCount() + activityAccountPO.getDayCount());
+            activityAccountPO.setDayCountSurplus(createQuotaOrderAggregate.dayCount() + activityAccountPO.getDayCountSurplus());
+            activityAccountPO.setMonthCount(createQuotaOrderAggregate.monthCount() + activityAccountPO.getMonthCount());
+            activityAccountPO.setMonthCountSurplus(createQuotaOrderAggregate.monthCount() + activityAccountPO.getMonthCountSurplus());
             activityAccountPO.setVersion(activityAccountPO.getVersion() + 1);
             res = activityAccountDao.updateById(activityAccountPO);
         } else {
             activityAccountPO = new ActivityAccountPO(
                     null,
-                    createOrderAggregate.userId(),
-                    createOrderAggregate.activityId(),
-                    createOrderAggregate.totalCount(),
-                    createOrderAggregate.totalCount(),
-                    createOrderAggregate.dayCount(),
-                    createOrderAggregate.dayCount(),
-                    createOrderAggregate.monthCount(),
-                    createOrderAggregate.monthCount(),
+                    createQuotaOrderAggregate.userId(),
+                    createQuotaOrderAggregate.activityId(),
+                    createQuotaOrderAggregate.totalCount(),
+                    createQuotaOrderAggregate.totalCount(),
+                    createQuotaOrderAggregate.dayCount(),
+                    createQuotaOrderAggregate.dayCount(),
+                    createQuotaOrderAggregate.monthCount(),
+                    createQuotaOrderAggregate.monthCount(),
                     1
             );
             res = activityAccountDao.insert(activityAccountPO);
@@ -188,6 +188,121 @@ public class ActivityRepository implements IActivityRepository {
                     activitySkuStockKeyVO,
                     Duration.ofSeconds(3)
             );
+        }
+    }
+
+    @Override
+    public ActivityOrderEntity queryNotUsedRaffleOrder(PartakeRaffleActivityEntity partakeRaffleActivity) {
+        return activityOrderAssembler.toEntity(activityOrderDao.selectOne(Wrappers.lambdaQuery(ActivityOrderPO.class)
+                .eq(ActivityOrderPO::getUserId, partakeRaffleActivity.userId())
+                .eq(ActivityOrderPO::getActivityId, partakeRaffleActivity.activityId())
+                .eq(ActivityOrderPO::getState, UserRaffleOrderStateVO.CREATE.getCode())
+        ));
+    }
+
+    @Override
+    public ActivityAccountEntity queryActivityAccountByUserId(String userId, Long activityId) {
+        return activityAccountAssembler.toEntity(activityAccountDao.selectOne(Wrappers.lambdaQuery(ActivityAccountPO.class)
+                .eq(ActivityAccountPO::getActivityId, activityId)
+                .eq(ActivityAccountPO::getUserId, userId)
+        ));
+    }
+
+    @Override
+    public ActivityAccountMonthEntity queryActivityAccountMonthByUserId(String userId, Long activityId, YearMonth yearMonth) {
+        Optional<ActivityAccountMonthPO> activityAccountMonthPO = activityAccountMonthDao.queryByUserIdAndActivityIdAndMonth(
+                userId,
+                activityId,
+                yearMonth.toString()
+        );
+        return activityAccountMonthAssembler.toEntity(activityAccountMonthPO.orElse(null));
+    }
+
+    @Override
+    public ActivityAccountDayEntity queryActivityAccountDayByUserId(String userId, Long activityId, LocalDate localDate) {
+        Optional<ActivityAccountDayPO> activityAccountDayPO = activityAccountDayDao.queryByUserIdAndActivityIdAndDay(
+                userId,
+                activityId,
+                localDate
+        );
+        return activityAccountDayAssembler.toEntity(activityAccountDayPO.orElse(null));
+    }
+
+    @Override
+    public void saveCreatePartakeOrderAggregate(CreatePartakeOrderAggregate createPartakeOrderAggregate, ActivityOrderEntity activityOrderEntity) {
+        String userId = createPartakeOrderAggregate.userId();
+        Long activityId = createPartakeOrderAggregate.activityId();
+        ActivityAccountDayEntity activityAccountDayEntity = createPartakeOrderAggregate.activityAccountDayEntity();
+        ActivityAccountMonthEntity activityAccountMonthEntity = createPartakeOrderAggregate.activityAccountMonthEntity();
+        // 更新总账户额度
+        int totalAccountRes = activityAccountDao.decrementTotalCountSurplus(
+                userId,
+                activityId
+        );
+        if (totalAccountRes != 1) {
+            log.warn("写入创建参与活动记录账户 更新总账户额度错误 userId={} activityId={}", userId, activityId);
+            throw new BusinessException(BusinessResponseCode.ACTIVITY_ACCOUNT_QUOTA_NOT_ENOUGH);
+        }
+
+        // 检查月账单
+        if (!createPartakeOrderAggregate.isExistAccountMonth()) {
+            // 新增账户 当前是扣一次的 用于生成抽奖单
+            ActivityAccountMonthPO activityAccountMonthPO = activityAccountMonthAssembler.toPO(activityAccountMonthEntity);
+            activityAccountMonthPO.setMonthCountSurplus(activityAccountMonthPO.getMonthCountSurplus() - 1);
+            activityAccountMonthPO.setVersion(1);
+            activityAccountMonthDao.insert(activityAccountMonthPO);
+        } else {
+            int monthAccountRes = activityAccountMonthDao.decrementMonthCountSurplus(
+                    userId,
+                    activityId,
+                    activityAccountMonthEntity.month().toString()
+            );
+            if (monthAccountRes <= 0) {
+                log.warn("写入创建活动参与记录 更新月账户额度不足 userId={}, activityId={} month={}", userId,
+                        activityId, activityAccountMonthEntity.month());
+                throw new BusinessException(BusinessResponseCode.ACTIVITY_ACCOUNT_QUOTA_MONTH_NOT_ENOUGH);
+            }
+        }
+
+        // 检查日额度
+        if (!createPartakeOrderAggregate.isExistAccountDay()) {
+            ActivityAccountDayPO activityAccountDayPO = activityAccountDayAssembler.toPO(activityAccountDayEntity);
+            activityAccountDayPO.setDayCountSurplus(activityAccountDayPO.getDayCountSurplus() - 1);
+            activityAccountDayPO.setVersion(1);
+            activityAccountDayDao.insert(activityAccountDayPO);
+        } else {
+            int dayAccountRes = activityAccountDayDao.decrementDayCountSurplus(
+                    userId,
+                    activityId,
+                    activityAccountDayEntity.day()
+            );
+            if (dayAccountRes <= 0) {
+                log.warn("写入创建活动参与记录 更新日账户额度不足 userId={}, activityId={} day={}", userId,
+                        activityId, activityAccountDayEntity.day());
+                throw new BusinessException(BusinessResponseCode.ACTIVITY_ACCOUNT_QUOTA_DAY_NOT_ENOUGH);
+            }
+        }
+
+        // 创建订单
+        ActivityOrderEntity order = new ActivityOrderEntity(
+                activityOrderEntity.userId(),
+                activityOrderEntity.activityId(),
+                activityOrderEntity.sku(),
+                activityOrderEntity.activityName(),
+                activityOrderEntity.strategyId(),
+                activityOrderEntity.orderId(),
+                activityOrderEntity.orderTime(),
+                1,
+                1,
+                1,
+                activityOrderEntity.state(),
+                activityOrderEntity.outBusinessNo()
+        );
+        ActivityOrderPO activityOrderPO = activityOrderAssembler.toPO(order);
+        int insert = activityOrderDao.insert(activityOrderPO);
+        if (insert <= 0) {
+            log.warn("写入创建活动参与记录 插入活动订单错误 userId={} activity={}, order={}", userId, activityId, order);
+            throw new BusinessException(BusinessResponseCode.ACTIVITY_ACCOUNT_QUOTA_DAY_NOT_ENOUGH);
         }
     }
 }

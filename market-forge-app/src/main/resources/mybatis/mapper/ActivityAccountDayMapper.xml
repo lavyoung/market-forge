@@ -31,4 +31,15 @@
         LIMIT 1
     </select>
 
+    <update id="decrementDayCountSurplus">
+        UPDATE raffle_activity_account_day
+        SET day_count_surplus = day_count_surplus - 1,
+        version = version + 1,
+        update_time = NOW()
+        WHERE user_id = #{userId}
+        AND activity_id = #{activityId}
+        AND day = #{day}
+        AND day_count_surplus > 0
+    </update>
+
 </mapper>

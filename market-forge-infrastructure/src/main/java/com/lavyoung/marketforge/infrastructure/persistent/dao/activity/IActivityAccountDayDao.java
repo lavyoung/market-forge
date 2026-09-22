@@ -29,4 +29,17 @@ public interface IActivityAccountDayDao extends BaseMapper<ActivityAccountDayPO>
             @Param("userId") String userId,
             @Param("activityId") Long activityId,
             @Param("day") LocalDate day);
+
+    /**
+     * 原子扣减用户活动日账户剩余额度。
+     *
+     * @param userId     用户标识
+     * @param activityId 活动标识
+     * @param day        账户归属日期
+     * @return 成功扣减时为 {@code 1}，额度不足或账户不存在时为 {@code 0}
+     */
+    int decrementDayCountSurplus(
+            @Param("userId") String userId,
+            @Param("activityId") Long activityId,
+            @Param("day") LocalDate day);
 }

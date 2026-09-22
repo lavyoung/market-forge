@@ -31,4 +31,15 @@
         LIMIT 1
     </select>
 
+    <update id="decrementMonthCountSurplus">
+        UPDATE raffle_activity_account_month
+        SET month_count_surplus = month_count_surplus - 1,
+        version = version + 1,
+        update_time = NOW()
+        WHERE user_id = #{userId}
+        AND activity_id = #{activityId}
+        AND month = #{month}
+        AND month_count_surplus > 0
+    </update>
+
 </mapper>

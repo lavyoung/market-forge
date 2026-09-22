@@ -5,14 +5,22 @@ import com.lavyoung.marketforge.domain.activity.model.entity.ActivityShopCartEnt
 import com.lavyoung.marketforge.domain.activity.model.entity.SkuRechargeEntity;
 
 /**
- *
+ * 活动账户额度服务端口。
+ * <p>
+ * 负责根据活动 SKU 或外部充值行为创建额度订单，并为用户活动账户增加可抽奖次数。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
  * @date 2026/09/18
  */
-public interface IRaffleOrder {
+public interface IRaffleActivityAccountQuotaService {
 
+    /**
+     * 创建活动抽奖额度订单。
+     *
+     * @param activityShopCart 活动商品购物车实体
+     * @return 活动订单实体
+     */
     ActivityOrderEntity createRaffleActivityOrder(ActivityShopCartEntity activityShopCart);
 
     /**

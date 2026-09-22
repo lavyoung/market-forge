@@ -28,4 +28,17 @@ public interface IActivityAccountMonthDao extends BaseMapper<ActivityAccountMont
             @Param("userId") String userId,
             @Param("activityId") Long activityId,
             @Param("month") String month);
+
+    /**
+     * 原子扣减用户活动月账户剩余额度。
+     *
+     * @param userId     用户标识
+     * @param activityId 活动标识
+     * @param month      yyyy-MM 格式的账户归属月份
+     * @return 成功扣减时为 {@code 1}，额度不足或账户不存在时为 {@code 0}
+     */
+    int decrementMonthCountSurplus(
+            @Param("userId") String userId,
+            @Param("activityId") Long activityId,
+            @Param("month") String month);
 }

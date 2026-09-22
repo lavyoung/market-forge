@@ -1,10 +1,12 @@
-package com.lavyoung.marketforge.domain.activity.service;
+package com.lavyoung.marketforge.domain.activity.service.quota;
 
-import com.lavyoung.marketforge.domain.activity.model.aggregate.CreateOrderAggregate;
+import com.lavyoung.marketforge.domain.activity.model.aggregate.CreateQuotaOrderAggregate;
 import com.lavyoung.marketforge.domain.activity.model.entity.*;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
-import com.lavyoung.marketforge.domain.activity.service.rule.IActionChain;
-import com.lavyoung.marketforge.domain.activity.service.rule.factory.DefaultActivityChainFactory;
+import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityAccountQuotaService;
+import com.lavyoung.marketforge.domain.activity.service.IRaffleActivitySkuStockService;
+import com.lavyoung.marketforge.domain.activity.service.quota.rule.IActionChain;
+import com.lavyoung.marketforge.domain.activity.service.quota.rule.factory.DefaultActivityChainFactory;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import com.lavyoung.marketforge.types.model.CommonResponseCode;
@@ -12,20 +14,29 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- *
+ * 活动账户额度创建流程模板。
+ * <p>
+ * 统一处理 SKU、活动、次数配置查询和活动规则校验，子类负责构建聚合并完成持久化。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
  * @date 2026/09/18
  */
 @Slf4j
-public abstract class AbstractRaffleActivity extends RaffleActivitySupport implements IRaffleOrder {
+public abstract class AbstractRaffleRaffleActivityAccountQuotaService extends RaffleActivitySupport implements IRaffleActivityAccountQuotaService, IRaffleActivitySkuStockService {
 
-    public AbstractRaffleActivity(IActivityRepository activityRepository, DefaultActivityChainFactory activityChainFactory) {
+    public AbstractRaffleRaffleActivityAccountQuotaService(IActivityRepository activityRepository, DefaultActivityChainFactory activityChainFactory) {
         super(activityRepository, activityChainFactory);
     }
 
+    /**
+     * 根据活动商品购物车创建活动订单。
+     *
+     * @param activityShopCart 活动商品购物车实体
+     * @return 活动订单实体
+     */
     @Override
+    @Deprecated
     public ActivityOrderEntity createRaffleActivityOrder(ActivityShopCartEntity activityShopCart) {
 
         // 通过sku查询活动信息
@@ -63,14 +74,28 @@ public abstract class AbstractRaffleActivity extends RaffleActivitySupport imple
             throw new BusinessException(BusinessResponseCode.POINTS_TRANSACTION_DUPLICATED);
         }
         // 构建订单对象
-        CreateOrderAggregate createOrderAggregate = buildOrderAggregate(skuRechargeEntity, activitySkuEntity, activityEntity, activityCountEntity);
+        CreateQuotaOrderAggregate createQuotaOrderAggregate = buildOrderAggregate(skuRechargeEntity, activitySkuEntity, activityEntity, activityCountEntity);
         // 保存订单
-        doSaveOrder(createOrderAggregate);
+        doSaveOrder(createQuotaOrderAggregate);
         // 返回单号
-        return createOrderAggregate.activityOrder().orderId();
+        return createQuotaOrderAggregate.activityOrder().orderId();
     }
 
-    protected abstract void doSaveOrder(CreateOrderAggregate createOrderAggregate);
+    /**
+     * 保存创建额度订单聚合。
+     *
+     * @param createQuotaOrderAggregate 创建额度订单聚合
+     */
+    protected abstract void doSaveOrder(CreateQuotaOrderAggregate createQuotaOrderAggregate);
 
-    protected abstract CreateOrderAggregate buildOrderAggregate(SkuRechargeEntity skuRechargeEntity, ActivitySkuEntity activitySkuEntity, ActivityEntity activityEntity, ActivityCountEntity activityCountEntity);
+    /**
+     * 根据充值请求、活动 SKU、活动详情和次数配置构建额度订单聚合。
+     *
+     * @param skuRechargeEntity   活动 SKU 充值实体
+     * @param activitySkuEntity   活动 SKU 实体
+     * @param activityEntity      活动实体
+     * @param activityCountEntity 活动次数配置实体
+     * @return 创建额度订单聚合
+     */
+    protected abstract CreateQuotaOrderAggregate buildOrderAggregate(SkuRechargeEntity skuRechargeEntity, ActivitySkuEntity activitySkuEntity, ActivityEntity activityEntity, ActivityCountEntity activityCountEntity);
 }

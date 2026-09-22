@@ -1,4 +1,4 @@
-package com.lavyoung.marketforge.domain.activity.service.rule.impl;
+package com.lavyoung.marketforge.domain.activity.service.quota.rule.impl;
 
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityCountEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityEntity;
@@ -6,7 +6,7 @@ import com.lavyoung.marketforge.domain.activity.model.entity.ActivitySkuEntity;
 import com.lavyoung.marketforge.domain.activity.model.vo.ActivitySkuStockKeyVO;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.domain.activity.service.armory.IActivityDispatch;
-import com.lavyoung.marketforge.domain.activity.service.rule.AbstractActionChain;
+import com.lavyoung.marketforge.domain.activity.service.quota.rule.AbstractActionChain;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
@@ -14,8 +14,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- *
- * 活动商品库存处理
+ * 活动 SKU 库存规则节点。
+ * <p>
+ * 在缓存侧预扣 SKU 库存，并投递后续数据库库存同步消息，防止额度订单创建时超卖。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0

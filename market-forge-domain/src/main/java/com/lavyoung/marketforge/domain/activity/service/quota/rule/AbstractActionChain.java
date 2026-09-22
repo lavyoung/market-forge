@@ -1,10 +1,11 @@
-package com.lavyoung.marketforge.domain.activity.service.rule;
+package com.lavyoung.marketforge.domain.activity.service.quota.rule;
 
 import lombok.extern.slf4j.Slf4j;
 
 /**
- *
- * 抽象实现类
+ * 活动规则责任链抽象节点。
+ * <p>
+ * 提供责任链后继节点的编排能力，具体规则节点只需关注自身业务校验逻辑。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0

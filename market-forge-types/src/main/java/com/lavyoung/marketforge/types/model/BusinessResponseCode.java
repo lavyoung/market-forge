@@ -61,6 +61,9 @@ public enum BusinessResponseCode implements IResponseCode {
     // 500 - 活动账户域
     ACTIVITY_ACCOUNT_NOT_FOUND(500_001_001, "activity_account_not_found", "活动账户不存在"),
     ACTIVITY_ACCOUNT_PROCESS_FAILED(500_001_002, "activity_account_process_failed", "活动账户更新失败"),
+    ACTIVITY_ACCOUNT_QUOTA_NOT_ENOUGH(500_001_003, "activity_account_quota_not_enough", "活动账户额度不足"),
+    ACTIVITY_ACCOUNT_QUOTA_DAY_NOT_ENOUGH(500_001_004, "activity_account_quota_day_not_enough", "活动账户日额度不足"),
+    ACTIVITY_ACCOUNT_QUOTA_MONTH_NOT_ENOUGH(500_001_005, "activity_account_quota_month_not_enough", "活动账户月额度不足"),
     ACTIVITY_STATE_ERROR(500_002_001, "activity_state_error", "活动未开放"),
     ACTIVITY_TIME_RANGE_ERROR(500_002_002, "activity_time_range_error", "活动不在有效时间"),
     ACTIVITY_NOT_FOUND(500_002_003, "activity_not_found", "活动不在有效时间"),

@@ -1,10 +1,10 @@
-package com.lavyoung.marketforge.domain.activity.service.rule.impl;
+package com.lavyoung.marketforge.domain.activity.service.quota.rule.impl;
 
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityCountEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivitySkuEntity;
 import com.lavyoung.marketforge.domain.activity.model.vo.ActivityStateVO;
-import com.lavyoung.marketforge.domain.activity.service.rule.AbstractActionChain;
+import com.lavyoung.marketforge.domain.activity.service.quota.rule.AbstractActionChain;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.extern.slf4j.Slf4j;
@@ -13,8 +13,9 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 
 /**
- *
- * 活动商品基础信息处理
+ * 活动商品基础信息规则节点。
+ * <p>
+ * 校验活动开放状态、活动有效期和 SKU 基础库存，过滤明显不可创建额度订单的请求。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
