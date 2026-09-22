@@ -16,6 +16,7 @@ module market.forge.domain {
     exports com.lavyoung.marketforge.domain.activity.event;
     exports com.lavyoung.marketforge.domain.strategy.event;
     exports com.lavyoung.marketforge.domain.activity.model.vo;
+    exports com.lavyoung.marketforge.domain.messaging.model.entity;
 
     requires spring.context;
     requires org.slf4j;

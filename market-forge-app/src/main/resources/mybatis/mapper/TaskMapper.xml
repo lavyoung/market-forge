@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lavyoung.marketforge.infrastructure.persistent.dao.mq.ITaskDao">
+
+    <resultMap id="taskResultMap"
+               type="com.lavyoung.marketforge.infrastructure.persistent.po.mq.TaskPO">
+        <id column="id" property="id"/>
+        <result column="topic" property="topic"/>
+        <result column="event_id" property="eventId"/>
+        <result column="event_type" property="eventType"/>
+        <result column="message_body" property="messageBody"/>
+        <result column="occurred_at" property="occurredAt"/>
+        <result column="state" property="state"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="taskColumns">
+        id, topic, event_id, event_type, message_body, occurred_at, state, create_time, update_time
+    </sql>
+
+    <select id="queryByEventId" resultMap="taskResultMap">
+        SELECT
+        <include refid="taskColumns"/>
+        FROM task
+        WHERE event_id = #{eventId}
+        LIMIT 1
+    </select>
+
+</mapper>

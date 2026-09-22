@@ -27,8 +27,9 @@ class ActivityPersistentObjectMappingTest {
             ActivityPO.class, "raffle_activity",
             ActivityCountPO.class, "raffle_activity_count",
             ActivityAccountPO.class, "raffle_activity_account",
+            ActivityAccountDayPO.class, "raffle_activity_account_day",
+            ActivityAccountMonthPO.class, "raffle_activity_account_month",
             ActivitySkuPO.class, "raffle_activity_sku",
-            ActivityAccountFlowPO.class, "raffle_activity_account_flow",
             ActivityOrderPO.class, "raffle_activity_order"
     );
 
@@ -44,12 +45,14 @@ class ActivityPersistentObjectMappingTest {
                     "id", "userId", "activityId", "totalCount", "totalCountSurplus", "dayCount",
                     "dayCountSurplus", "monthCount", "monthCountSurplus", "version"
             ),
+            ActivityAccountDayPO.class, Set.of(
+                    "id", "userId", "activityId", "dayCount", "dayCountSurplus", "day", "version"
+            ),
+            ActivityAccountMonthPO.class, Set.of(
+                    "id", "userId", "activityId", "monthCount", "monthCountSurplus", "month", "version"
+            ),
             ActivitySkuPO.class, Set.of(
                     "id", "sku", "activityId", "activityCountId", "stockCount"
-            ),
-            ActivityAccountFlowPO.class, Set.of(
-                    "id", "userId", "activityId", "totalCount", "dayCount", "monthCount", "flowId",
-                    "flowChannel", "bizId"
             ),
             ActivityOrderPO.class, Set.of(
                     "id", "userId", "activityId", "sku", "activityName", "strategyId", "orderId", "orderTime",
@@ -57,6 +60,9 @@ class ActivityPersistentObjectMappingTest {
             )
     );
 
+    /**
+     * 验证活动域持久化对象声明的表名与数据库表结构保持一致。
+     */
     @Test
     void shouldMapPersistentObjectsToExpectedTables() {
         // Given
@@ -71,6 +77,11 @@ class ActivityPersistentObjectMappingTest {
         });
     }
 
+    /**
+     * 验证活动域持久化对象的主键字段使用数据库自增策略。
+     *
+     * @throws NoSuchFieldException 当持久化对象缺少 id 字段时抛出
+     */
     @Test
     void shouldDeclareAutoIncrementPrimaryKeys() throws NoSuchFieldException {
         // Given
@@ -86,6 +97,9 @@ class ActivityPersistentObjectMappingTest {
         }
     }
 
+    /**
+     * 验证活动域持久化对象声明的业务字段与表结构保持一致。
+     */
     @Test
     void shouldContainAllActivityTableFields() {
         // Given

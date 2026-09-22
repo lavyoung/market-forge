@@ -32,11 +32,14 @@ class ActivityEntityContractTest {
                     "userId", "activityId", "totalCount", "totalCountSurplus", "dayCount", "dayCountSurplus",
                     "monthCount", "monthCountSurplus"
             ),
+            ActivityAccountDayEntity.class, Set.of(
+                    "userId", "activityId", "day", "dayCount", "dayCountSurplus"
+            ),
+            ActivityAccountMonthEntity.class, Set.of(
+                    "userId", "activityId", "month", "monthCount", "monthCountSurplus"
+            ),
             ActivitySkuEntity.class, Set.of(
                     "sku", "activityId", "activityCountId", "stockCount"
-            ),
-            ActivityAccountFlowEntity.class, Set.of(
-                    "userId", "activityId", "totalCount", "dayCount", "monthCount", "flowId", "flowChannel", "bizId"
             ),
             ActivityOrderEntity.class, Set.of(
                     "userId", "activityId", "sku", "activityName", "strategyId", "orderId", "orderTime",
@@ -44,6 +47,9 @@ class ActivityEntityContractTest {
             )
     );
 
+    /**
+     * 验证活动域模型均使用不可变 record 承载业务字段。
+     */
     @Test
     void shouldDefineActivityModelsAsImmutableRecords() {
         // Given
@@ -55,6 +61,9 @@ class ActivityEntityContractTest {
         );
     }
 
+    /**
+     * 验证活动域模型只暴露当前业务需要的 record 组件。
+     */
     @Test
     void shouldExposeOnlyBusinessComponents() {
         // Given

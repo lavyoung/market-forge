@@ -5,7 +5,9 @@ import com.lavyoung.marketforge.infrastructure.persistent.assembler.activity.*;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -18,6 +20,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 class ActivityAssemblerTest {
 
+    /**
+     * 验证活动实体与持久化对象之间的双向转换契约。
+     */
     @Test
     void shouldConvertActivityInBothDirections() {
         // Given
@@ -42,6 +47,9 @@ class ActivityAssemblerTest {
         assertEquals(expected, actual);
     }
 
+    /**
+     * 验证活动次数配置实体与持久化对象之间的双向转换契约。
+     */
     @Test
     void shouldConvertActivityCountInBothDirections() {
         // Given
@@ -60,6 +68,9 @@ class ActivityAssemblerTest {
         assertEquals(expected, actual);
     }
 
+    /**
+     * 验证用户活动总账户实体与持久化对象之间的双向转换契约。
+     */
     @Test
     void shouldConvertActivityAccountInBothDirections() {
         // Given
@@ -82,28 +93,53 @@ class ActivityAssemblerTest {
         assertEquals(expected, actual);
     }
 
+    /**
+     * 验证用户活动日账户实体与持久化对象之间的双向转换契约。
+     */
     @Test
-    void shouldConvertActivityAccountFlowInBothDirections() {
+    void shouldConvertActivityAccountDayInBothDirections() {
         // Given
-        ActivityAccountFlowAssembler assembler = Mappers.getMapper(ActivityAccountFlowAssembler.class);
-        ActivityAccountFlowEntity expected = ActivityAccountFlowEntity.builder()
+        ActivityAccountDayAssembler assembler = Mappers.getMapper(ActivityAccountDayAssembler.class);
+        ActivityAccountDayEntity expected = ActivityAccountDayEntity.builder()
                 .userId("user-001")
                 .activityId(100001L)
-                .totalCount(1)
-                .dayCount(1)
-                .monthCount(1)
-                .flowId("flow-001")
-                .flowChannel("activity")
-                .bizId("order-001")
+                .day(LocalDate.of(2026, 9, 22))
+                .dayCount(2)
+                .dayCountSurplus(1)
                 .build();
 
         // When
-        ActivityAccountFlowEntity actual = assembler.toEntity(assembler.toPO(expected));
+        ActivityAccountDayEntity actual = assembler.toEntity(assembler.toPO(expected));
 
         // Then
         assertEquals(expected, actual);
     }
 
+    /**
+     * 验证用户活动月账户实体与持久化对象之间的双向转换契约。
+     */
+    @Test
+    void shouldConvertActivityAccountMonthInBothDirections() {
+        // Given
+        ActivityAccountMonthAssembler assembler = Mappers.getMapper(ActivityAccountMonthAssembler.class);
+        ActivityAccountMonthEntity expected = ActivityAccountMonthEntity.builder()
+                .userId("user-001")
+                .activityId(100001L)
+                .month(YearMonth.of(2026, 9))
+                .monthCount(5)
+                .monthCountSurplus(3)
+                .build();
+
+        // When
+        ActivityAccountMonthEntity actual = assembler.toEntity(assembler.toPO(expected));
+
+        // Then
+        assertEquals(expected, actual);
+    }
+
+    /**
+     * 验证活动 SKU 实体与持久化对象之间的双向转换契约。
+     */
     @Test
     void shouldConvertActivitySkuInBothDirections() {
         // Given
@@ -112,7 +148,7 @@ class ActivityAssemblerTest {
                 .sku(901001L)
                 .activityId(100001L)
                 .activityCountId(100001L)
-                .stockCount(1000L)
+                .stockCount(1000)
                 .build();
 
         // When
@@ -122,6 +158,9 @@ class ActivityAssemblerTest {
         assertEquals(expected, actual);
     }
 
+    /**
+     * 验证活动订单实体与持久化对象之间的双向转换契约。
+     */
     @Test
     void shouldConvertActivityOrderInBothDirections() {
         // Given

@@ -79,6 +79,8 @@ lavshard:
       - rule_tree_node_line
       - raffle_activity
       - raffle_activity_count
+      - raffle_activity_sku
+      - task
 
   data-sources:
     ds1:
@@ -122,5 +124,11 @@ lavshard:
     raffle_activity_account:
       sharding-column: user_id
 
-    raffle_activity_account_flow:
+    raffle_activity_account_day:
+      sharding-column: user_id
+
+    raffle_activity_account_month:
+      sharding-column: user_id
+
+    user_award_record:
       sharding-column: user_id

@@ -54,6 +54,8 @@ lavshard:
       - rule_tree_node_line
       - raffle_activity
       - raffle_activity_count
+      - raffle_activity_sku
+      - task
 
   data-sources:
     ds1:
@@ -100,17 +102,21 @@ lavshard:
         enabled: false
 
   tables:
-    # 以下三张表统一按照 user_id 路由。
-    # 同一个用户的账户、流水和订单将进入同一个数据库。
+    # 以下业务表统一按照 user_id 路由，同一用户的数据进入同一个数据库。
     raffle_activity_order:
       sharding-column: user_id
 
     raffle_activity_account:
       sharding-column: user_id
 
-    raffle_activity_account_flow:
+    raffle_activity_account_day:
       sharding-column: user_id
 
+    raffle_activity_account_month:
+      sharding-column: user_id
+
+    user_award_record:
+      sharding-column: user_id
 
 springdoc:
   api-docs:
