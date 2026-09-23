@@ -5,7 +5,7 @@
 <mapper namespace="com.lavyoung.marketforge.infrastructure.persistent.dao.mq.ITaskDao">
 
     <resultMap id="taskResultMap"
-               type="com.lavyoung.marketforge.infrastructure.persistent.po.mq.TaskPO">
+               type="com.lavyoung.marketforge.infrastructure.persistent.po.TaskPO">
         <id column="id" property="id"/>
         <result column="topic" property="topic"/>
         <result column="event_id" property="eventId"/>

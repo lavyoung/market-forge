@@ -1,7 +1,7 @@
 package com.lavyoung.marketforge.infrastructure.persistent.dao.mq;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.lavyoung.marketforge.infrastructure.persistent.po.mq.TaskPO;
+import com.lavyoung.marketforge.infrastructure.persistent.po.TaskPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

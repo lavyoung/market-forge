@@ -1,6 +1,6 @@
 package com.lavyoung.marketforge.infrastructure.persistent.assembler;
 
-import com.lavyoung.marketforge.domain.strategy.model.entity.UserAwardRecordEntity;
+import com.lavyoung.marketforge.domain.award.model.entity.UserAwardRecordEntity;
 import com.lavyoung.marketforge.infrastructure.persistent.po.UserAwardRecordPO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

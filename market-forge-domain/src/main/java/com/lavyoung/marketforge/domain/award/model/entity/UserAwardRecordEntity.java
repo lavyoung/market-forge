@@ -1,5 +1,6 @@
-package com.lavyoung.marketforge.domain.strategy.model.entity;
+package com.lavyoung.marketforge.domain.award.model.entity;
 
+import com.lavyoung.marketforge.domain.award.model.valobj.AwardStateVO;
 import lombok.Builder;
 
 import java.time.LocalDateTime;
@@ -27,6 +28,6 @@ public record UserAwardRecordEntity(
         Long awardId,
         String awardTitle,
         LocalDateTime awardTime,
-        String awardState
+        AwardStateVO awardState
 ) {
 }

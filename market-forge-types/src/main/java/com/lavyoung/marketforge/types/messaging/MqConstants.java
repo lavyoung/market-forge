@@ -37,4 +37,10 @@ public final class MqConstants {
 
     public static final String SKU_STOCK_ZERO_QUEUE = "activity.sku.stock.zero.queue";
     public static final String SKU_STOCK_ZERO_ROUTING_KEY = "activity.sku.stock.zero";
+
+    // 奖品发放主交换机
+    public static final String USER_AWARD_EXCHANGE = "market-forge.user.award.exchange";
+
+    public static final String USER_AWARD_SEND_ROUTE_KEY = "user.award.send.key";
+    public static final String USER_AWARD_SEND_QUEUE = "user.award.send.queue";
 }

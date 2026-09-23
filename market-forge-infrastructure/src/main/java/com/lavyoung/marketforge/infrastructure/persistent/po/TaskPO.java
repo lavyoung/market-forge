@@ -1,9 +1,8 @@
-package com.lavyoung.marketforge.infrastructure.persistent.po.mq;
+package com.lavyoung.marketforge.infrastructure.persistent.po;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.lavyoung.marketforge.infrastructure.persistent.po.BasePO;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;

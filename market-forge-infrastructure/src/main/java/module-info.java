@@ -28,6 +28,7 @@ module market.forge.infrastructure {
     requires spring.aop;
     requires com.fasterxml.jackson.datatype.jsr310;
     requires jakarta.annotation;
+    requires cn.hutool;
 
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler;
     opens com.lavyoung.marketforge.infrastructure.persistent.dao;
@@ -39,6 +40,6 @@ module market.forge.infrastructure {
     opens com.lavyoung.marketforge.infrastructure.persistent.redis;
     opens com.lavyoung.marketforge.infrastructure.persistent.repository;
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler.activity;
+    opens com.lavyoung.marketforge.infrastructure.messaging;
     opens com.lavyoung.marketforge.infrastructure.messaging.rabbitmq;
-    opens com.lavyoung.marketforge.infrastructure.persistent.po.mq;
 }

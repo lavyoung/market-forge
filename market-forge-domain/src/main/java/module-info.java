@@ -15,8 +15,9 @@ module market.forge.domain {
     exports com.lavyoung.marketforge.domain.activity.service;
     exports com.lavyoung.marketforge.domain.activity.event;
     exports com.lavyoung.marketforge.domain.strategy.event;
+    exports com.lavyoung.marketforge.domain.award.event;
     exports com.lavyoung.marketforge.domain.activity.model.vo;
-    exports com.lavyoung.marketforge.domain.messaging.model.entity;
+    exports com.lavyoung.marketforge.domain.award.repository;
 
     requires spring.context;
     requires org.slf4j;
@@ -41,4 +42,7 @@ module market.forge.domain {
     opens com.lavyoung.marketforge.domain.activity.service.quota.rule;
     opens com.lavyoung.marketforge.domain.activity.service.quota.rule.impl;
     exports com.lavyoung.marketforge.domain.activity.service.quota;
+    exports com.lavyoung.marketforge.domain.award.model.entity;
+    exports com.lavyoung.marketforge.domain.award.model.valobj;
+    exports com.lavyoung.marketforge.domain.award.model.aggreate;
 }

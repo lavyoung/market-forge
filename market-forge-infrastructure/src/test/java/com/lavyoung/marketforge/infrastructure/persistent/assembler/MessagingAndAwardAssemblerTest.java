@@ -1,10 +1,13 @@
 package com.lavyoung.marketforge.infrastructure.persistent.assembler;
 
-import com.lavyoung.marketforge.domain.messaging.model.entity.TaskEntity;
-import com.lavyoung.marketforge.domain.strategy.model.entity.UserAwardRecordEntity;
+import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
+import com.lavyoung.marketforge.domain.award.model.entity.TaskEntity;
+import com.lavyoung.marketforge.domain.award.model.entity.UserAwardRecordEntity;
+import com.lavyoung.marketforge.domain.award.model.valobj.AwardStateVO;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,7 +35,7 @@ class MessagingAndAwardAssemblerTest {
                 .awardId(100011L)
                 .awardTitle("测试奖品")
                 .awardTime(LocalDateTime.of(2026, 9, 22, 12, 0))
-                .awardState("create")
+                .awardState(AwardStateVO.CREATE)
                 .build();
 
         // When
@@ -49,11 +52,18 @@ class MessagingAndAwardAssemblerTest {
     void shouldConvertTaskInBothDirections() {
         // Given
         TaskAssembler assembler = Mappers.getMapper(TaskAssembler.class);
+        SendAwardRecordEvent event = SendAwardRecordEvent.builder()
+                .eventId("8f8d3cbb-4dda-4570-88ab-21956a65e83f")
+                .occurredAt(Instant.parse("2026-09-22T04:00:00Z"))
+                .userId("user-001")
+                .awardId(100011L)
+                .awardTitle("测试奖品")
+                .build();
         TaskEntity expected = TaskEntity.builder()
                 .topic("market-forge.exchange")
-                .eventId("8f8d3cbb-4dda-4570-88ab-21956a65e83f")
-                .eventType("activity.sku.stock.deduct")
-                .messageBody("{\"sku\":100001}")
+                .eventId(event.eventId())
+                .eventType(event.eventType())
+                .messageBody(event)
                 .occurredAt(LocalDateTime.of(2026, 9, 22, 12, 0))
                 .state("create")
                 .build();
