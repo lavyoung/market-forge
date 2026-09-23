@@ -59,12 +59,25 @@ public class ActivityRepository implements IActivityRepository {
     private final IRedisService redisService;
     private final MessagePublisher messagePublisher;
 
+    /**
+     * 按 SKU 查询活动商品配置。
+     *
+     * @param sku 活动 SKU
+     * @return 活动 SKU 领域实体；不存在时返回 {@code null}
+     */
     @Override
     public ActivitySkuEntity queryActivitySku(Long sku) {
         Optional<ActivitySkuPO> activitySkuPO = activitySkuDao.queryBySku(sku);
         return activitySkuAssembler.toEntity(activitySkuPO.orElse(null));
     }
 
+    /**
+     * 按活动标识查询活动详情，并在缓存缺失时回源数据库。
+     *
+     * @param activityId 活动标识
+     * @return 活动领域实体
+     * @throws BusinessException 当活动不存在时抛出
+     */
     @Override
     public ActivityEntity getActivityEntityByIdActivityId(Long activityId) {
         return redisService.getValue(Constants.RedisKeys.ACTIVITY_DETAIL_KEY + activityId, ActivityEntity.class).orElseGet(() -> {
@@ -74,16 +87,32 @@ public class ActivityRepository implements IActivityRepository {
                 redisService.setValue(Constants.RedisKeys.ACTIVITY_DETAIL_KEY + activityId, entity);
                 return entity;
             } else {
-                throw new BusinessException(BusinessResponseCode.LOTTERY_ACTIVITY_NOT_FOUND);
+                throw BusinessException.of(BusinessResponseCode.LOTTERY_ACTIVITY_NOT_FOUND, activityId);
             }
         });
     }
 
+    /**
+     * 按活动次数配置标识查询次数配置。
+     *
+     * @param activityCountId 活动次数配置标识
+     * @return 活动次数配置领域实体；不存在时返回 {@code null}
+     */
     @Override
     public ActivityCountEntity queryRaffleActivityCountByActivityCountId(Long activityCountId) {
         return activityCountAssembler.toEntity(activityCountDao.queryByActivityCountId(activityCountId).orElse(null));
     }
 
+    /**
+     * 保存 SKU 充值订单并累计用户活动账户额度。
+     * <p>
+     * 该方法在同一事务内写入活动订单，并根据用户活动账户是否已存在执行创建或累加。账户写入失败
+     * 时抛出业务异常，确保调用方感知入账失败。
+     *
+     * @param createQuotaOrderAggregate 创建额度订单聚合
+     * @return 活动额度订单号
+     * @throws BusinessException 当账户创建或更新失败时抛出
+     */
     @Override
     @Transactional
     public String saveOrderAggregate(CreateQuotaOrderAggregate createQuotaOrderAggregate) {
@@ -124,16 +153,38 @@ public class ActivityRepository implements IActivityRepository {
         }
 
         if (res <= 0) {
-            throw new BusinessException(BusinessResponseCode.ACTIVITY_ACCOUNT_PROCESS_FAILED);
+            throw BusinessException.of(BusinessResponseCode.ACTIVITY_ACCOUNT_PROCESS_FAILED,
+                    createQuotaOrderAggregate.userId(),
+                    createQuotaOrderAggregate.activityId(),
+                    activityOrderEntity.sku(),
+                    activityOrderEntity.orderId(),
+                    activityOrderEntity.outBusinessNo());
         }
         return assemblerPO.getOrderId();
     }
 
+    /**
+     * 缓存活动 SKU 库存数量。
+     *
+     * @param cacheKey   库存缓存键
+     * @param stockCount 库存数量
+     */
     @Override
     public void cacheActivitySkuStockCount(String cacheKey, Integer stockCount) {
         redisService.setValue(cacheKey, stockCount);
     }
 
+    /**
+     * 在缓存侧预扣活动 SKU 库存。
+     * <p>
+     * 方法会先读取 Redis 库存计数，在有库存时为当前库存位置加锁，再通过 CAS 扣减计数；库存耗尽
+     * 时发送库存清零事件，交给异步流程同步数据库库存。
+     *
+     * @param sku         活动 SKU
+     * @param cacheKey    库存缓存键
+     * @param endDateTime 活动结束时间，用于计算库存锁过期时间
+     * @return 预扣成功返回 {@code true}；库存不足或 CAS 失败返回 {@code false}
+     */
     @Override
     public boolean subtractionActivitySkuStock(Long sku, String cacheKey, LocalDateTime endDateTime) {
         int surplus = redisService.getValue(cacheKey, Integer.class).orElse(0);
@@ -157,9 +208,16 @@ public class ActivityRepository implements IActivityRepository {
         if (!setIfAbsent) {
             log.error("活动sku库存加锁失败 {}", lockKey);
         }
-        return true;
+        // 扣减缓存库存
+        return redisService.compareAndSetAtomicLong(cacheKey, surplus, surplus - 1);
     }
 
+    /**
+     * 查询活动并刷新活动详情缓存。
+     *
+     * @param activityId 活动标识
+     * @throws BusinessException 当活动不存在时抛出
+     */
     @Override
     public void queryRaffleActivityByActivityId(Long activityId) {
         Optional<ActivityPO> po = activityDao.queryByActivityId(activityId);
@@ -167,10 +225,17 @@ public class ActivityRepository implements IActivityRepository {
             ActivityEntity entity = activityAssembler.toEntity(po.get());
             redisService.setValue(Constants.RedisKeys.ACTIVITY_DETAIL_KEY + activityId, entity);
         } else {
-            throw new BusinessException(BusinessResponseCode.LOTTERY_ACTIVITY_NOT_FOUND);
+            throw BusinessException.of(BusinessResponseCode.LOTTERY_ACTIVITY_NOT_FOUND, activityId);
         }
     }
 
+    /**
+     * 发布活动 SKU 库存扣减消息。
+     * <p>
+     * 消息发布失败时写入延迟补偿队列，避免数据库库存同步因短暂消息异常而永久丢失。
+     *
+     * @param activitySkuStockKeyVO 活动 SKU 库存同步消息键
+     */
     @Override
     public void activitySkuStockConsumeSendQueue(ActivitySkuStockKeyVO activitySkuStockKeyVO) {
         try {
@@ -184,13 +249,19 @@ public class ActivityRepository implements IActivityRepository {
             log.error("活动次数扣减事件发布失败，转入补偿队列 sku={} activityId={} userId={}",
                     activitySkuStockKeyVO.sku(), activitySkuStockKeyVO.activityId(), activitySkuStockKeyVO.userId(), e);
             redisService.offerDelayed(
-                    Constants.RedisKeys.STRATEGY_AWARD_STOCK_QUEUE,
+                    Constants.RedisKeys.ACTIVITY_SKU_STOCK_QUEUE,
                     activitySkuStockKeyVO,
                     Duration.ofSeconds(3)
             );
         }
     }
 
+    /**
+     * 查询用户当前未使用的抽奖参与订单。
+     *
+     * @param partakeRaffleActivity 用户参与活动入参
+     * @return 未使用的参与订单；不存在时返回 {@code null}
+     */
     @Override
     public ActivityOrderEntity queryNotUsedRaffleOrder(PartakeRaffleActivityEntity partakeRaffleActivity) {
         return activityOrderAssembler.toEntity(activityOrderDao.selectOne(Wrappers.lambdaQuery(ActivityOrderPO.class)
@@ -200,6 +271,13 @@ public class ActivityRepository implements IActivityRepository {
         ));
     }
 
+    /**
+     * 查询用户活动总账户。
+     *
+     * @param userId     用户标识
+     * @param activityId 活动标识
+     * @return 用户活动总账户；不存在时返回 {@code null}
+     */
     @Override
     public ActivityAccountEntity queryActivityAccountByUserId(String userId, Long activityId) {
         return activityAccountAssembler.toEntity(activityAccountDao.selectOne(Wrappers.lambdaQuery(ActivityAccountPO.class)
@@ -208,6 +286,14 @@ public class ActivityRepository implements IActivityRepository {
         ));
     }
 
+    /**
+     * 查询用户活动月账户。
+     *
+     * @param userId     用户标识
+     * @param activityId 活动标识
+     * @param yearMonth  账户归属月份
+     * @return 用户活动月账户；不存在时返回 {@code null}
+     */
     @Override
     public ActivityAccountMonthEntity queryActivityAccountMonthByUserId(String userId, Long activityId, YearMonth yearMonth) {
         Optional<ActivityAccountMonthPO> activityAccountMonthPO = activityAccountMonthDao.queryByUserIdAndActivityIdAndMonth(
@@ -218,6 +304,14 @@ public class ActivityRepository implements IActivityRepository {
         return activityAccountMonthAssembler.toEntity(activityAccountMonthPO.orElse(null));
     }
 
+    /**
+     * 查询用户活动日账户。
+     *
+     * @param userId     用户标识
+     * @param activityId 活动标识
+     * @param localDate  账户归属日期
+     * @return 用户活动日账户；不存在时返回 {@code null}
+     */
     @Override
     public ActivityAccountDayEntity queryActivityAccountDayByUserId(String userId, Long activityId, LocalDate localDate) {
         Optional<ActivityAccountDayPO> activityAccountDayPO = activityAccountDayDao.queryByUserIdAndActivityIdAndDay(
@@ -228,6 +322,16 @@ public class ActivityRepository implements IActivityRepository {
         return activityAccountDayAssembler.toEntity(activityAccountDayPO.orElse(null));
     }
 
+    /**
+     * 保存抽奖参与订单并扣减用户活动账户额度。
+     * <p>
+     * 该方法在同一事务中扣减总账户、月账户、日账户额度，并写入一笔待抽奖参与订单。任一账户扣减
+     * 或订单落库失败都会抛出业务异常并回滚事务。
+     *
+     * @param createPartakeOrderAggregate 创建参与订单聚合
+     * @param activityOrderEntity         待保存的活动参与订单
+     * @throws BusinessException 当额度不足或订单创建失败时抛出
+     */
     @Override
     public void saveCreatePartakeOrderAggregate(CreatePartakeOrderAggregate createPartakeOrderAggregate, ActivityOrderEntity activityOrderEntity) {
         String userId = createPartakeOrderAggregate.userId();
@@ -241,7 +345,8 @@ public class ActivityRepository implements IActivityRepository {
         );
         if (totalAccountRes != 1) {
             log.warn("写入创建参与活动记录账户 更新总账户额度错误 userId={} activityId={}", userId, activityId);
-            throw new BusinessException(BusinessResponseCode.ACTIVITY_ACCOUNT_QUOTA_NOT_ENOUGH);
+            throw BusinessException.of(BusinessResponseCode.ACTIVITY_ACCOUNT_QUOTA_NOT_ENOUGH,
+                    userId, activityId, activityOrderEntity.orderId(), activityOrderEntity.sku());
         }
 
         // 检查月账单
@@ -260,7 +365,8 @@ public class ActivityRepository implements IActivityRepository {
             if (monthAccountRes <= 0) {
                 log.warn("写入创建活动参与记录 更新月账户额度不足 userId={}, activityId={} month={}", userId,
                         activityId, activityAccountMonthEntity.month());
-                throw new BusinessException(BusinessResponseCode.ACTIVITY_ACCOUNT_QUOTA_MONTH_NOT_ENOUGH);
+                throw BusinessException.of(BusinessResponseCode.ACTIVITY_ACCOUNT_QUOTA_MONTH_NOT_ENOUGH,
+                        userId, activityId, activityAccountMonthEntity.month(), activityOrderEntity.orderId(), activityOrderEntity.sku());
             }
         }
 
@@ -279,7 +385,8 @@ public class ActivityRepository implements IActivityRepository {
             if (dayAccountRes <= 0) {
                 log.warn("写入创建活动参与记录 更新日账户额度不足 userId={}, activityId={} day={}", userId,
                         activityId, activityAccountDayEntity.day());
-                throw new BusinessException(BusinessResponseCode.ACTIVITY_ACCOUNT_QUOTA_DAY_NOT_ENOUGH);
+                throw BusinessException.of(BusinessResponseCode.ACTIVITY_ACCOUNT_QUOTA_DAY_NOT_ENOUGH,
+                        userId, activityId, activityAccountDayEntity.day(), activityOrderEntity.orderId(), activityOrderEntity.sku());
             }
         }
 
@@ -302,7 +409,60 @@ public class ActivityRepository implements IActivityRepository {
         int insert = activityOrderDao.insert(activityOrderPO);
         if (insert <= 0) {
             log.warn("写入创建活动参与记录 插入活动订单错误 userId={} activity={}, order={}", userId, activityId, order);
-            throw new BusinessException(BusinessResponseCode.ACTIVITY_ACCOUNT_QUOTA_DAY_NOT_ENOUGH);
+            throw BusinessException.of(BusinessResponseCode.ACTIVITY_ORDER_CREATE_FAILED,
+                    userId, activityId, order.sku(), order.orderId());
         }
+    }
+
+    /**
+     * 从活动 SKU 库存延迟队列中取出一条待处理消息。
+     *
+     * @return 活动 SKU 库存消息；队列为空时返回 {@code null}
+     * @throws Exception 当队列读取失败时抛出
+     */
+    @Override
+    public ActivitySkuStockKeyVO takeQueueValue() throws Exception {
+        return redisService.pollDelayed(
+                Constants.RedisKeys.ACTIVITY_SKU_STOCK_QUEUE,
+                ActivitySkuStockKeyVO.class
+        ).orElse(null);
+    }
+
+    /**
+     * 扣减数据库侧活动 SKU 库存。
+     *
+     * @param sku 活动 SKU
+     * @throws BusinessException 当 SKU 不存在或数据库库存扣减失败时抛出
+     */
+    @Override
+    public void updateActivitySkuStock(Long sku) {
+        ActivitySkuPO activitySkuPO = activitySkuDao.queryBySku(sku)
+                .orElseThrow(() -> BusinessException.of(BusinessResponseCode.ACTIVITY_SKU_NOT_FOUND, sku));
+        int updateCount = activitySkuDao.decrementStockCount(
+                activitySkuPO.getSku(),
+                activitySkuPO.getActivityId(),
+                activitySkuPO.getActivityCountId()
+        );
+        if (updateCount <= 0) {
+            log.warn("活动 SKU 库存扣减失败 sku={} activityId={} activityCountId={}",
+                    activitySkuPO.getSku(), activitySkuPO.getActivityId(), activitySkuPO.getActivityCountId());
+            throw BusinessException.of(BusinessResponseCode.ACTIVITY_SKU_STOCK_NOT_ENOUGH,
+                    activitySkuPO.getSku(), activitySkuPO.getActivityId(), activitySkuPO.getActivityCountId());
+        }
+    }
+
+    /**
+     * 清空指定活动 SKU 的数据库库存和缓存库存。
+     *
+     * @param sku 活动 SKU
+     * @throws BusinessException 当 SKU 不存在时抛出
+     */
+    @Override
+    public void clearActivitySkuStock(Long sku) {
+        ActivitySkuPO activitySkuPO = activitySkuDao.queryBySku(sku)
+                .orElseThrow(() -> BusinessException.of(BusinessResponseCode.ACTIVITY_SKU_NOT_FOUND, sku));
+        activitySkuPO.setStockCount(0L);
+        activitySkuDao.updateById(activitySkuPO);
+        redisService.delete(Constants.RedisKeys.ACTIVITY_SKU_STOCK_COUNT_KEY + sku);
     }
 }

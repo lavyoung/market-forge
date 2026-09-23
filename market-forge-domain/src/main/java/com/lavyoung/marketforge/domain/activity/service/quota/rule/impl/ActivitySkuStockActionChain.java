@@ -30,6 +30,18 @@ public class ActivitySkuStockActionChain extends AbstractActionChain {
     private final IActivityDispatch activityDispatch;
     private final IActivityRepository activityRepository;
 
+    /**
+     * 校验并预扣活动 SKU 库存。
+     * <p>
+     * 先通过活动调度端口在缓存侧预扣库存，预扣成功后发布库存同步消息，用于后续异步扣减数据库
+     * 库存；预扣失败则直接抛出库存不足异常，阻断额度订单创建。
+     *
+     * @param activitySku   活动 SKU 配置
+     * @param activity      活动配置
+     * @param activityCount 活动次数配置
+     * @return 预扣库存并发布同步消息成功时返回 {@code true}
+     * @throws BusinessException 当活动 SKU 库存不足或预扣失败时抛出
+     */
     @Override
     public boolean action(ActivitySkuEntity activitySku, ActivityEntity activity, ActivityCountEntity activityCount) {
         log.info("活动责任链-商品库存处理【校验&扣减】开始-sku={}, activityId={}, activityCountId={}", activitySku.sku(),
@@ -47,6 +59,7 @@ public class ActivitySkuStockActionChain extends AbstractActionChain {
             );
             return true;
         }
-        throw new BusinessException(BusinessResponseCode.ACTIVITY_SKU_STOCK_NOT_ENOUGH);
+        throw BusinessException.of(BusinessResponseCode.ACTIVITY_SKU_STOCK_NOT_ENOUGH,
+                activitySku.sku(), activity.activityId(), activityCount.activityCountId());
     }
 }

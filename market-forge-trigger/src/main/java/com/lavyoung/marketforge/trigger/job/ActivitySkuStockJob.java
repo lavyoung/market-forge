@@ -23,10 +23,21 @@ public class ActivitySkuStockJob {
 
     private final IRaffleActivitySkuStockService skuStock;
 
+    /**
+     * 执行活动 SKU 库存同步任务。
+     * <p>
+     * 每次调度从延迟队列中取出一条库存同步消息，队列为空时直接返回；取到消息后触发领域服务
+     * 扣减数据库库存。异常会向外抛出，交由调度框架记录本次执行失败。
+     *
+     * @throws RuntimeException 当队列读取或库存同步失败时抛出
+     */
     @Scheduled(fixedDelayString = "${market-forge.job.award-stock.fixed-delay-ms:1000}")
     public void exec() {
         try {
             ActivitySkuStockKeyVO activitySkuStockKeyVO = skuStock.takeQueueValue();
+            if (activitySkuStockKeyVO == null) {
+                return;
+            }
             log.info("消费活动SKU库存消息 Redis sku={}, activityId={}", activitySkuStockKeyVO.sku(), activitySkuStockKeyVO.activityId());
             skuStock.updateActivitySkuStock(activitySkuStockKeyVO.sku());
         } catch (Exception e) {

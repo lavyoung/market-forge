@@ -84,6 +84,39 @@ class ResponseContractTest {
     }
 
     /**
+     * Given 带占位符的响应编码，When 创建带参数业务异常，Then 使用参数格式化响应文案。
+     */
+    @Test
+    void shouldFormatBusinessExceptionMessageWithArgs() {
+        // Given
+        IResponseCode responseCode = TestResponseCode.RESOURCE_NOT_FOUND_WITH_ID;
+
+        // When
+        BusinessException exception = BusinessException.of(responseCode, "SKU-1001");
+
+        // Then
+        assertEquals(700_002, exception.getCode());
+        assertEquals("资源 SKU-1001 不存在", exception.getMessage());
+        assertArrayEquals(new Object[]{"SKU-1001"}, exception.getArgs());
+    }
+
+    /**
+     * Given 不带占位符的响应编码，When 创建带参数业务异常，Then 保留动态参数作为排障上下文。
+     */
+    @Test
+    void shouldAppendArgsWhenMessageHasNoPlaceholder() {
+        // Given
+        IResponseCode responseCode = TestResponseCode.RESOURCE_NOT_FOUND;
+
+        // When
+        BusinessException exception = BusinessException.of(responseCode, "SKU-1001");
+
+        // Then
+        assertEquals("资源不存在，参数：[SKU-1001]", exception.getMessage());
+        assertArrayEquals(new Object[]{"SKU-1001"}, exception.getArgs());
+    }
+
+    /**
      * Given 空响应编码，When 创建业务异常，Then 立即拒绝非法调用。
      */
     @Test
@@ -97,7 +130,8 @@ class ResponseContractTest {
      */
     private enum TestResponseCode implements IResponseCode {
 
-        RESOURCE_NOT_FOUND(700_001, "resource.not-found", "资源不存在");
+        RESOURCE_NOT_FOUND(700_001, "resource.not-found", "资源不存在"),
+        RESOURCE_NOT_FOUND_WITH_ID(700_002, "resource.not-found-with-id", "资源 {0} 不存在");
 
         private final int code;
         private final String i18nKey;

@@ -33,6 +33,7 @@ public interface IActivityRepository {
      *
      * @param activityId 活动标识
      * @return 活动实体
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 当活动不存在时抛出
      */
     ActivityEntity getActivityEntityByIdActivityId(Long activityId);
 
@@ -46,9 +47,12 @@ public interface IActivityRepository {
 
     /**
      * 保存额度充值订单并累计用户活动账户次数。
+     * <p>
+     * 实现方应保证订单创建和用户活动账户入账在同一事务内完成，避免订单与账户额度不一致。
      *
      * @param createQuotaOrderAggregate 创建额度订单聚合
      * @return 活动额度订单号
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 当订单创建、账户创建或账户更新失败时抛出
      */
     String saveOrderAggregate(CreateQuotaOrderAggregate createQuotaOrderAggregate);
 
@@ -62,11 +66,14 @@ public interface IActivityRepository {
 
     /**
      * 从缓存侧预扣活动 SKU 库存。
+     * <p>
+     * 该操作用于额度充值下单前的快速库存防超卖校验。返回 {@code true} 仅表示缓存侧预扣成功，
+     * 数据库库存同步由后续异步流程完成。
      *
      * @param sku         商品 SKU
      * @param cacheKey    库存缓存键
      * @param endDateTime 活动结束时间
-     * @return 预扣成功返回 true；库存不足返回 false
+     * @return 预扣成功返回 {@code true}；库存不足、锁定失败或 CAS 失败返回 {@code false}
      */
     boolean subtractionActivitySkuStock(Long sku, String cacheKey, LocalDateTime endDateTime);
 
@@ -74,6 +81,7 @@ public interface IActivityRepository {
      * 查询活动并写入活动详情缓存。
      *
      * @param activityId 活动标识
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 当活动不存在时抛出
      */
     void queryRaffleActivityByActivityId(Long activityId);
 
@@ -123,9 +131,36 @@ public interface IActivityRepository {
 
     /**
      * 保存抽奖参与订单并扣减用户活动账户额度。
+     * <p>
+     * 实现方应保证总账户、月账户、日账户扣减和参与订单创建在同一事务内完成。
      *
      * @param createPartakeOrderAggregate 创建抽奖参与订单聚合
      * @param activityOrderEntity         抽奖参与订单实体
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 当额度不足、账户扣减失败或订单创建失败时抛出
      */
     void saveCreatePartakeOrderAggregate(CreatePartakeOrderAggregate createPartakeOrderAggregate, ActivityOrderEntity activityOrderEntity);
+
+    /**
+     * 从活动 SKU 库存延迟队列获取一条待同步消息。
+     *
+     * @return 活动 SKU 库存消息；队列为空时返回 null
+     * @throws Exception 当队列读取失败时抛出
+     */
+    ActivitySkuStockKeyVO takeQueueValue() throws Exception;
+
+    /**
+     * 根据 SKU 原子扣减数据库中的活动 SKU 库存。
+     *
+     * @param sku 商品 SKU
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 当 SKU 不存在或库存扣减失败时抛出
+     */
+    void updateActivitySkuStock(Long sku);
+
+    /**
+     * 清空指定 SKU 的数据库库存和缓存库存。
+     *
+     * @param sku 商品 SKU
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 当 SKU 不存在或库存清理失败时抛出
+     */
+    void clearActivitySkuStock(Long sku);
 }

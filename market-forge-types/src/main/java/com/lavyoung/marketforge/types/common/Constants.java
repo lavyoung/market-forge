@@ -33,6 +33,18 @@ public class Constants {
      */
     public static final String UNDERLINE = "_";
 
+    /**
+     * 业务单号前缀。
+     * <p>
+     * 仅表达业务来源，不承担全局唯一性；完整单号仍需由 ID 生成器或外部业务号生成。
+     */
+    public interface BusinessNoPrefix {
+
+        /**
+         * 抽奖活动订单前缀。
+         */
+        String RAFFLE_ORDER_PREFIX = "ROP";
+    }
 
     /**
      * 抽奖策略相关的 Redis 键前缀。
@@ -69,10 +81,24 @@ public class Constants {
          */
         public static final String STRATEGY_AWARD_STOCK_QUEUE = "strategy_award_stock_queue";
 
+        /**
+         * 活动 SKU 库存异步同步队列键。
+         */
+        public static final String ACTIVITY_SKU_STOCK_QUEUE = "activity_sku_stock_queue";
+
+        /**
+         * 活动详情缓存键前缀。
+         */
         public static final String ACTIVITY_DETAIL_KEY = "activity_detail_key:";
 
+        /**
+         * 活动 SKU 库存缓存计数器键前缀。
+         */
         public static final String ACTIVITY_SKU_STOCK_COUNT_KEY = "activity_sku_stock_count_key:";
 
+        /**
+         * 活动 SKU 次数配置查询缓存键前缀。
+         */
         public static final String ACTIVITY_SKU_COUNT_QUERY_KEY = "activity_sku_count_query:";
     }
 }

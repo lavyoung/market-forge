@@ -15,4 +15,21 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum OrderStateVO {
+
+    /**
+     * 额度充值订单已完成。
+     */
+    COMPLETE("complete", "已完成"),
+
+    ;
+
+    /**
+     * 状态编码，持久化到活动订单表。
+     */
+    private final String code;
+
+    /**
+     * 状态说明，用于日志和后台展示。
+     */
+    private final String desc;
 }

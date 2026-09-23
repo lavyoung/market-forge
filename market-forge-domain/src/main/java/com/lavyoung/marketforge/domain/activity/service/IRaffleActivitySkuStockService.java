@@ -16,13 +16,15 @@ public interface IRaffleActivitySkuStockService {
     /**
      * 获取一条待处理的活动 SKU 库存消息。
      *
-     * @return 活动 SKU 库存消息键
+     * @return 活动 SKU 库存消息键；队列为空时返回 {@code null}
      * @throws Exception 当队列读取失败时抛出
      */
     ActivitySkuStockKeyVO takeQueueValue() throws Exception;
 
     /**
      * 清空待处理库存消息队列。
+     *
+     * @throws UnsupportedOperationException 当前实现不支持清空队列时抛出
      */
     void clearQueueValue();
 
@@ -30,6 +32,7 @@ public interface IRaffleActivitySkuStockService {
      * 根据延迟队列消息更新活动 SKU 数据库库存。
      *
      * @param sku 商品 SKU
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 当 SKU 不存在或库存扣减失败时抛出
      */
     void updateActivitySkuStock(Long sku);
 
@@ -37,6 +40,7 @@ public interface IRaffleActivitySkuStockService {
      * 缓存库存耗尽后清空数据库侧活动 SKU 库存。
      *
      * @param sku 商品 SKU
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 当 SKU 不存在或清理失败时抛出
      */
     void clearActivitySkuStock(Long sku);
 }

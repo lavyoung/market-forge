@@ -1,7 +1,5 @@
 package com.lavyoung.marketforge.domain.activity.service;
 
-import com.lavyoung.marketforge.domain.activity.model.entity.ActivityOrderEntity;
-import com.lavyoung.marketforge.domain.activity.model.entity.ActivityShopCartEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.SkuRechargeEntity;
 
 /**
@@ -16,21 +14,15 @@ import com.lavyoung.marketforge.domain.activity.model.entity.SkuRechargeEntity;
 public interface IRaffleActivityAccountQuotaService {
 
     /**
-     * 创建活动抽奖额度订单。
-     *
-     * @param activityShopCart 活动商品购物车实体
-     * @return 活动订单实体
-     */
-    ActivityOrderEntity createRaffleActivityOrder(ActivityShopCartEntity activityShopCart);
-
-    /**
-     * 创建 sku 账户充值订单，给用户增加抽奖次数
+     * 创建活动 SKU 账户充值订单。
      * <p>
-     * 1. 在【打卡、签到、分享、对话、积分兑换】等行为动作下，创建出活动订单，给用户的活动账户【日、月】充值可用的抽奖次数。
-     * 2. 对于用户可获得的抽奖次数，比如首次进来就有一次，则是依赖于运营配置的动作，在前端页面上。用户点击后，可以获得一次抽奖次数。
+     * 该方法用于“抽奖次数入账”场景，例如签到、分享、积分兑换、购买 SKU 等行为触发用户获得抽奖次数。
+     * 实现方应完成 SKU、活动、次数配置和库存规则校验，创建额度订单，并为用户活动账户增加总、日、月
+     * 可用次数。返回的订单号用于追踪本次入账结果。
      *
-     * @param skuRechargeEntity 活动商品充值实体对象
-     * @return 活动ID
+     * @param skuRechargeEntity 活动 SKU 充值请求，包含用户、SKU 和外部业务幂等号
+     * @return 活动额度充值订单号
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 当参数非法、配置缺失、活动不可用、库存不足或入账失败时抛出
      */
     String createSkuRechargeOrder(SkuRechargeEntity skuRechargeEntity);
 }
