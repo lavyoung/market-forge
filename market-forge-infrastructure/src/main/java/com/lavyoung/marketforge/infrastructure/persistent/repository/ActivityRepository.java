@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.*;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -60,16 +61,18 @@ public class ActivityRepository implements IActivityRepository {
     private final IRedisService redisService;
     private final MessagePublisher messagePublisher;
 
-    /**
-     * 按 SKU 查询活动商品配置。
-     *
-     * @param sku 活动 SKU
-     * @return 活动 SKU 领域实体；不存在时返回 {@code null}
-     */
     @Override
     public ActivitySkuEntity queryActivitySku(Long sku) {
-        Optional<ActivitySkuPO> activitySkuPO = activitySkuDao.queryBySku(sku);
-        return activitySkuAssembler.toEntity(activitySkuPO.orElse(null));
+        Objects.requireNonNull(sku, "sku must be not null");
+        String cacheKey = Constants.RedisKeys.ACTIVITY_SKU_KEY + sku;
+        return redisService.getValue(cacheKey, ActivitySkuEntity.class).orElseGet(() -> {
+            Optional<ActivitySkuPO> skuPO = activitySkuDao.queryBySku(sku);
+            ActivitySkuEntity entity = activitySkuAssembler.toEntity(skuPO.orElse(null));
+            if (entity != null) {
+                redisService.setValue(cacheKey, entity);
+            }
+            return entity;
+        });
     }
 
     /**
@@ -81,6 +84,7 @@ public class ActivityRepository implements IActivityRepository {
      */
     @Override
     public ActivityEntity getActivityEntityByIdActivityId(Long activityId) {
+        Objects.requireNonNull(activityId, "activityId must be not null");
         return redisService.getValue(Constants.RedisKeys.ACTIVITY_DETAIL_KEY + activityId, ActivityEntity.class).orElseGet(() -> {
             Optional<ActivityPO> po = activityDao.queryByActivityId(activityId);
             if (po.isPresent()) {
@@ -93,15 +97,18 @@ public class ActivityRepository implements IActivityRepository {
         });
     }
 
-    /**
-     * 按活动次数配置标识查询次数配置。
-     *
-     * @param activityCountId 活动次数配置标识
-     * @return 活动次数配置领域实体；不存在时返回 {@code null}
-     */
     @Override
     public ActivityCountEntity queryRaffleActivityCountByActivityCountId(Long activityCountId) {
-        return activityCountAssembler.toEntity(activityCountDao.queryByActivityCountId(activityCountId).orElse(null));
+        Objects.requireNonNull(activityCountId, "activityCountId must be not null");
+        String cacheKey = Constants.RedisKeys.ACTIVITY_COUNT_KEY + activityCountId;
+        return redisService.getValue(cacheKey, ActivityCountEntity.class).orElseGet(() -> {
+            Optional<ActivityCountPO> activityCountPO = activityCountDao.queryByActivityCountId(activityCountId);
+            ActivityCountEntity entity = activityCountAssembler.toEntity(activityCountPO.orElse(null));
+            if (entity != null) {
+                redisService.setValue(cacheKey, entity);
+            }
+            return entity;
+        });
     }
 
     /**
@@ -164,15 +171,9 @@ public class ActivityRepository implements IActivityRepository {
         return assemblerPO.getOrderId();
     }
 
-    /**
-     * 缓存活动 SKU 库存数量。
-     *
-     * @param cacheKey   库存缓存键
-     * @param stockCount 库存数量
-     */
     @Override
-    public void cacheActivitySkuStockCount(String cacheKey, Integer stockCount) {
-        redisService.setValue(cacheKey, stockCount);
+    public void cacheActivitySkuStockCount(Long sku, Integer stockCount) {
+        redisService.setValue(Constants.RedisKeys.ACTIVITY_SKU_STOCK_COUNT_KEY + sku, stockCount);
     }
 
     /**
@@ -182,12 +183,14 @@ public class ActivityRepository implements IActivityRepository {
      * 时发送库存清零事件，交给异步流程同步数据库库存。
      *
      * @param sku         活动 SKU
-     * @param cacheKey    库存缓存键
      * @param endDateTime 活动结束时间，用于计算库存锁过期时间
      * @return 预扣成功返回 {@code true}；库存不足或 CAS 失败返回 {@code false}
      */
     @Override
-    public boolean subtractionActivitySkuStock(Long sku, String cacheKey, LocalDateTime endDateTime) {
+    public boolean subtractionActivitySkuStock(Long sku, LocalDateTime endDateTime) {
+        Objects.requireNonNull(sku, "sku must not be null");
+        Objects.requireNonNull(endDateTime, "endDateTime must not be null");
+        String cacheKey = Constants.RedisKeys.ACTIVITY_SKU_STOCK_COUNT_KEY + sku;
         int surplus = redisService.getValue(cacheKey, Integer.class).orElse(0);
         if (surplus == 0) {
             // 没有库存了 发送mq消息进行库存更新
@@ -211,23 +214,6 @@ public class ActivityRepository implements IActivityRepository {
         }
         // 扣减缓存库存
         return redisService.compareAndSetAtomicLong(cacheKey, surplus, surplus - 1);
-    }
-
-    /**
-     * 查询活动并刷新活动详情缓存。
-     *
-     * @param activityId 活动标识
-     * @throws BusinessException 当活动不存在时抛出
-     */
-    @Override
-    public void queryRaffleActivityByActivityId(Long activityId) {
-        Optional<ActivityPO> po = activityDao.queryByActivityId(activityId);
-        if (po.isPresent()) {
-            ActivityEntity entity = activityAssembler.toEntity(po.get());
-            redisService.setValue(Constants.RedisKeys.ACTIVITY_DETAIL_KEY + activityId, entity);
-        } else {
-            throw BusinessException.of(BusinessResponseCode.LOTTERY_ACTIVITY_NOT_FOUND, activityId);
-        }
     }
 
     /**

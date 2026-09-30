@@ -1,10 +1,10 @@
 package com.lavyoung.marketforge.domain.activity.service.armory.impl;
 
+import com.lavyoung.marketforge.domain.activity.model.entity.ActivityCountEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivitySkuEntity;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.domain.activity.service.armory.IActivityArmory;
 import com.lavyoung.marketforge.domain.activity.service.armory.IActivityDispatch;
-import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
@@ -43,17 +43,20 @@ public class ActivityArmoryImpl implements IActivityArmory, IActivityDispatch {
      */
     @Override
     public boolean assembleActivitySku(Long sku) {
+        // 活动 SKU 基础配置 并缓存
         ActivitySkuEntity activitySkuEntity = activityRepository.queryActivitySku(sku);
         if (activitySkuEntity == null) {
             throw BusinessException.of(BusinessResponseCode.ACTIVITY_SKU_NOT_FOUND, sku);
         }
-        log.info("组装活动SKU sku={}, activityId={}, activityCountId={}, stockCount={}", sku,
-                activitySkuEntity.activityId(), activitySkuEntity.activityCountId(), activitySkuEntity.stockCount());
-        cacheActivitySkuStockCount(sku, activitySkuEntity.stockCount());
-        // 预热获取 保存到缓存中
-        activityRepository.queryRaffleActivityByActivityId(activitySkuEntity.activityId());
+        // 活动 SKU 库存计数
+        activityRepository.cacheActivitySkuStockCount(sku, activitySkuEntity.stockCount());
+        // 活动详情预热获取 保存到缓存中
+        activityRepository.getActivityEntityByIdActivityId(activitySkuEntity.activityId());
         // 预热活动次数【查询时预热到缓存】
-        activityRepository.queryRaffleActivityCountByActivityCountId(activitySkuEntity.activityCountId());
+        ActivityCountEntity activityCountEntity = activityRepository.queryRaffleActivityCountByActivityCountId(activitySkuEntity.activityCountId());
+        if (activityCountEntity == null) {
+            throw BusinessException.of(BusinessResponseCode.ACTIVITY_COUNT_NOT_FOUND, activitySkuEntity.activityCountId());
+        }
         return true;
     }
 
@@ -69,11 +72,6 @@ public class ActivityArmoryImpl implements IActivityArmory, IActivityDispatch {
         return booleans.stream().allMatch(res -> res);
     }
 
-    private void cacheActivitySkuStockCount(Long sku, Integer stockCount) {
-        String cacheKey = Constants.RedisKeys.ACTIVITY_SKU_STOCK_COUNT_KEY + sku;
-        activityRepository.cacheActivitySkuStockCount(cacheKey, stockCount);
-    }
-
     /**
      * 预扣活动 SKU 缓存库存。
      * <p>
@@ -85,7 +83,6 @@ public class ActivityArmoryImpl implements IActivityArmory, IActivityDispatch {
      */
     @Override
     public boolean subtractionActivitySkuStock(Long sku, LocalDateTime endDateTime) {
-        String cacheKey = Constants.RedisKeys.ACTIVITY_SKU_STOCK_COUNT_KEY + sku;
-        return activityRepository.subtractionActivitySkuStock(sku, cacheKey, endDateTime);
+        return activityRepository.subtractionActivitySkuStock(sku, endDateTime);
     }
 }

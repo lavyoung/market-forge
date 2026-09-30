@@ -59,12 +59,12 @@ public interface IActivityRepository {
     String saveOrderAggregate(CreateQuotaOrderAggregate createQuotaOrderAggregate);
 
     /**
-     * 缓存活动 SKU 库存。
+     * 缓存活动 SKU 库存数量。
      *
-     * @param cacheKey   库存缓存键
+     * @param sku        活动 SKU
      * @param stockCount 库存数量
      */
-    void cacheActivitySkuStockCount(String cacheKey, Integer stockCount);
+    void cacheActivitySkuStockCount(Long sku, Integer stockCount);
 
     /**
      * 从缓存侧预扣活动 SKU 库存。
@@ -73,19 +73,10 @@ public interface IActivityRepository {
      * 数据库库存同步由后续异步流程完成。
      *
      * @param sku         商品 SKU
-     * @param cacheKey    库存缓存键
      * @param endDateTime 活动结束时间
      * @return 预扣成功返回 {@code true}；库存不足、锁定失败或 CAS 失败返回 {@code false}
      */
-    boolean subtractionActivitySkuStock(Long sku, String cacheKey, LocalDateTime endDateTime);
-
-    /**
-     * 查询活动并写入活动详情缓存。
-     *
-     * @param activityId 活动标识
-     * @throws com.lavyoung.marketforge.types.exception.BusinessException 当活动不存在时抛出
-     */
-    void queryRaffleActivityByActivityId(Long activityId);
+    boolean subtractionActivitySkuStock(Long sku, LocalDateTime endDateTime);
 
     /**
      * 发布活动 SKU 库存消费消息。

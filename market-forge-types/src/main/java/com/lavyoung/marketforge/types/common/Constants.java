@@ -92,13 +92,18 @@ public class Constants {
         public static final String ACTIVITY_DETAIL_KEY = "activity_detail_key:";
 
         /**
+         * 活动 SKU 基础配置缓存键前缀。
+         */
+        public static final String ACTIVITY_SKU_KEY = "activity_sku_key:";
+
+        /**
          * 活动 SKU 库存缓存计数器键前缀。
          */
         public static final String ACTIVITY_SKU_STOCK_COUNT_KEY = "activity_sku_stock_count_key:";
 
         /**
-         * 活动 SKU 次数配置查询缓存键前缀。
+         * 活动次数配置缓存键前缀。
          */
-        public static final String ACTIVITY_SKU_COUNT_QUERY_KEY = "activity_sku_count_query:";
+        public static final String ACTIVITY_COUNT_KEY = "activity_count_key:";
     }
 }
