@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 活动装配与库存调度实现。
@@ -54,6 +55,18 @@ public class ActivityArmoryImpl implements IActivityArmory, IActivityDispatch {
         // 预热活动次数【查询时预热到缓存】
         activityRepository.queryRaffleActivityCountByActivityCountId(activitySkuEntity.activityCountId());
         return true;
+    }
+
+    @Override
+    public boolean assembleActivitySkuByActivityId(Long activityId) {
+        // 装配是活动 ID 发起的，所以需要把活动 ID 对应的 SKU 记录一起查询出来”。只按 sku 装配，不方便活动上线时一键预热
+        List<ActivitySkuEntity> skuEntities = activityRepository.queryActivitySkuListByActivityId(activityId);
+        if (skuEntities.isEmpty()) {
+            throw BusinessException.of(BusinessResponseCode.ACTIVITY_SKU_NOT_CONFIGURED, activityId);
+        }
+        List<Boolean> booleans = skuEntities.stream().map(sku -> assembleActivitySku(sku.sku())).distinct().toList();
+        // 确保都初始化保存完成
+        return booleans.stream().allMatch(res -> res);
     }
 
     private void cacheActivitySkuStockCount(Long sku, Integer stockCount) {

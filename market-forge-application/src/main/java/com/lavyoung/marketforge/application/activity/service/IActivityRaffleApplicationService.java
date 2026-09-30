@@ -15,6 +15,17 @@ import com.lavyoung.marketforge.application.activity.model.ActivityRaffleResult;
 public interface IActivityRaffleApplicationService {
 
     /**
+     * 装配指定活动的运行时缓存。
+     * <p>
+     * 该方法是活动维度的一键装配入口，负责编排活动域和策略域：
+     * 先预热活动 SKU、活动详情和次数配置，再预热活动绑定策略的概率表、权重规则和奖品库存。
+     *
+     * @param activityId 抽奖活动标识
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 活动配置不存在、活动未配置 SKU、活动未绑定策略或装配失败时抛出
+     */
+    void armory(Long activityId);
+
+    /**
      * 执行一次活动抽奖。
      *
      * @param command 活动抽奖命令

@@ -3,12 +3,12 @@ package com.lavyoung.marketforge.application.activity.service.impl;
 import com.lavyoung.marketforge.application.award.model.SaveUserAwardRecordCommand;
 import com.lavyoung.marketforge.application.award.service.IAwardApplicationService;
 import com.lavyoung.marketforge.application.strategy.model.RaffleResult;
+import com.lavyoung.marketforge.application.tx.ITransactionExecutor;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityOrderEntity;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityPartakeService;
 import com.lavyoung.marketforge.types.utils.DateUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Objects;
 
@@ -27,6 +27,7 @@ public class ActivityRaffleSettlementTransaction {
 
     private final IRaffleActivityPartakeService activityPartakeService;
     private final IAwardApplicationService awardApplicationService;
+    private final ITransactionExecutor transactionExecutor;
 
     /**
      * 结算一次活动抽奖结果。
@@ -35,17 +36,18 @@ public class ActivityRaffleSettlementTransaction {
      * @param raffleResult  策略抽奖结果
      * @throws com.lavyoung.marketforge.types.exception.BusinessException 活动订单状态更新、中奖记录保存或任务创建失败时抛出
      */
-    @Transactional(rollbackFor = Exception.class)
     public void settle(ActivityOrderEntity activityOrder, RaffleResult raffleResult) {
-        awardApplicationService.saveUserAwardRecord(new SaveUserAwardRecordCommand(
-                activityOrder.userId(),
-                activityOrder.activityId(),
-                raffleResult.strategyId(),
-                activityOrder.orderId(),
-                raffleResult.awardId(),
-                Objects.requireNonNullElse(raffleResult.awardDesc(), String.valueOf(raffleResult.awardId())),
-                DateUtil.now()
-        ));
-        activityPartakeService.consumeRaffleOrder(activityOrder.userId(), activityOrder.orderId());
+        transactionExecutor.execute(() -> {
+            awardApplicationService.saveUserAwardRecord(new SaveUserAwardRecordCommand(
+                    activityOrder.userId(),
+                    activityOrder.activityId(),
+                    raffleResult.strategyId(),
+                    activityOrder.orderId(),
+                    raffleResult.awardId(),
+                    Objects.requireNonNullElse(raffleResult.awardDesc(), String.valueOf(raffleResult.awardId())),
+                    DateUtil.now()
+            ));
+            activityPartakeService.consumeRaffleOrder(activityOrder.userId(), activityOrder.orderId());
+        });
     }
 }

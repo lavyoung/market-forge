@@ -4,9 +4,11 @@ import com.lavyoung.marketforge.application.strategy.model.RaffleCommand;
 import com.lavyoung.marketforge.application.strategy.model.RaffleResult;
 import com.lavyoung.marketforge.application.strategy.model.StrategyAwardResult;
 import com.lavyoung.marketforge.application.strategy.service.impl.StrategyStrategyRaffleServiceImpl;
+import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
+import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.IRaffleAward;
 import com.lavyoung.marketforge.domain.strategy.service.IRaffleStrategy;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyArmory;
@@ -14,6 +16,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -31,6 +34,7 @@ class StrategyRaffleServiceImplTest {
         // Given
         IRaffleStrategy raffleStrategy = mock(IRaffleStrategy.class);
         IStrategyArmory strategyArmory = mock(IStrategyArmory.class);
+        IStrategyRepository strategyRepository = mock(IStrategyRepository.class);
         RaffleFactorEntity factor = RaffleFactorEntity.builder()
                 .userId("user-001")
                 .strategyId(100_001L)
@@ -42,8 +46,14 @@ class StrategyRaffleServiceImplTest {
                 .awardConfig("quantity=1")
                 .awardDesc("随机矿石")
                 .build());
+        when(strategyRepository.getStrategyAwardEntity(100_001L, 100_011L)).thenReturn(Optional.of(
+                StrategyAwardEntity.builder()
+                        .strategyId(100_001L)
+                        .awardId(100_011L)
+                        .awardTitle("随机矿石")
+                        .build()));
         StrategyStrategyRaffleServiceImpl service = new StrategyStrategyRaffleServiceImpl(
-                raffleStrategy, strategyArmory, mock(IRaffleAward.class));
+                raffleStrategy, strategyArmory, mock(IActivityRepository.class), strategyRepository, mock(IRaffleAward.class));
 
         // When
         RaffleResult result = service.raffle(new RaffleCommand("user-001", 100_001L));
@@ -52,9 +62,11 @@ class StrategyRaffleServiceImplTest {
         assertAll(
                 () -> assertEquals(100_001L, result.strategyId()),
                 () -> assertEquals(100_011L, result.awardId()),
-                () -> assertEquals("random_ore", result.awardKey())
+                () -> assertEquals("random_ore", result.awardKey()),
+                () -> assertEquals("随机矿石", result.awardTitle())
         );
         verify(raffleStrategy).performRaffle(factor);
+        verify(strategyRepository).getStrategyAwardEntity(100_001L, 100_011L);
     }
 
     /**
@@ -64,7 +76,8 @@ class StrategyRaffleServiceImplTest {
     void shouldRejectNullCommand() {
         // Given
         StrategyStrategyRaffleServiceImpl service = new StrategyStrategyRaffleServiceImpl(
-                mock(IRaffleStrategy.class), mock(IStrategyArmory.class), mock(IRaffleAward.class));
+                mock(IRaffleStrategy.class), mock(IStrategyArmory.class), mock(IActivityRepository.class),
+                mock(IStrategyRepository.class), mock(IRaffleAward.class));
 
         // When & Then
         assertThrows(NullPointerException.class, () -> service.raffle(null));
@@ -89,7 +102,8 @@ class StrategyRaffleServiceImplTest {
                 .build();
         when(raffleAward.queryRaffleStrategyAwardList(100_001L)).thenReturn(List.of(entity));
         StrategyStrategyRaffleServiceImpl service = new StrategyStrategyRaffleServiceImpl(
-                mock(IRaffleStrategy.class), mock(IStrategyArmory.class), raffleAward);
+                mock(IRaffleStrategy.class), mock(IStrategyArmory.class), mock(IActivityRepository.class),
+                mock(IStrategyRepository.class), raffleAward);
 
         // When
         List<StrategyAwardResult> results = service.queryRaffleStrategyAwardList(100_001L);

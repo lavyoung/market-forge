@@ -13,7 +13,9 @@ import java.util.List;
  */
 public abstract class AggregateRoot<ID> {
 
-    /** 当前尚未发布的领域事件。 */
+    /**
+     * 当前尚未发布的领域事件。
+     */
     private final List<DomainEvent> domainEvents = new ArrayList<>();
 
     /**

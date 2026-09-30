@@ -9,6 +9,9 @@ import com.lavyoung.marketforge.application.strategy.service.IStrategyRaffleServ
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityOrderEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.PartakeRaffleActivityEntity;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityPartakeService;
+import com.lavyoung.marketforge.domain.activity.service.armory.IActivityArmory;
+import com.lavyoung.marketforge.types.exception.BusinessException;
+import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -30,6 +33,7 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
     private final IRaffleActivityPartakeService activityPartakeService;
     private final IStrategyRaffleService strategyRaffleService;
     private final ActivityRaffleSettlementTransaction settlementTransaction;
+    private final IActivityArmory activityArmory;
 
     /**
      * {@inheritDoc}
@@ -37,16 +41,19 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
     @Override
     public ActivityRaffleResult raffle(ActivityRaffleCommand command) {
         ActivityRaffleCommand validCommand = Objects.requireNonNull(command, "command must not be null");
+        // 创建一笔活动订单
         ActivityOrderEntity activityOrder = activityPartakeService.createRaffleOrder(new PartakeRaffleActivityEntity(
                 validCommand.userId(),
                 validCommand.sku(),
                 validCommand.activityId()
         ));
+        // 抽奖
         RaffleResult raffleResult = strategyRaffleService.raffle(new RaffleCommand(
                 activityOrder.userId(),
                 activityOrder.strategyId()
         ));
 
+        // 结算一次活动抽奖结果 用户发奖和活动订单消费
         settlementTransaction.settle(activityOrder, raffleResult);
         return new ActivityRaffleResult(
                 activityOrder.orderId(),
@@ -55,7 +62,20 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
                 raffleResult.awardId(),
                 raffleResult.awardKey(),
                 raffleResult.awardConfig(),
+                raffleResult.awardTitle(),
                 raffleResult.awardDesc()
         );
+    }
+
+    @Override
+    public void armory(Long activityId) {
+        // 装配是活动ID发起的，所以需要把活动ID对应的sku记录一起查询出来进行装配
+        // 活动装配会预热活动详情、活动次数、SKU 库存。
+        boolean assembled = activityArmory.assembleActivitySkuByActivityId(activityId);
+        if (!assembled) {
+            throw BusinessException.of(BusinessResponseCode.ACTIVITY_ASSEMBLY_FAILED, activityId);
+        }
+        // 策略装配会预热概率表、权重表、奖品库存
+        strategyRaffleService.initStrategyRaffleByActivityId(activityId);
     }
 }

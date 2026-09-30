@@ -44,7 +44,7 @@ class StrategyRaffleResponseAssemblerTest {
     void shouldConvertResultToResponse() {
         // Given
         ActivityRaffleResult result = new ActivityRaffleResult(
-                "RO1003010001", 100_301L, 100_001L, 100_011L, "random_ore", "quantity=1", "随机矿石");
+                "RO1003010001", 100_301L, 100_001L, 100_011L, "random_ore", "quantity=1", "随机矿石", "随机矿石");
 
         // When
         StrategyRaffleResponse response = ASSEMBLER.toResponse(result);

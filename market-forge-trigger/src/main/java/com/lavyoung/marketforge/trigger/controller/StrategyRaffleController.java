@@ -36,6 +36,7 @@ public class StrategyRaffleController implements IStrategyRaffleApi {
     private final StrategyAwardResponseAssembler strategyAwardResponseAssembler;
 
     @Override
+    @Deprecated
     public Response<StrategyRaffleResponse> raffle(StrategyRaffleRequest request) {
         StrategyRaffleRequest validRequest = Objects.requireNonNull(request, "request must not be null");
         ActivityRaffleCommand command = strategyRaffleResponseAssembler.toCommand(validRequest);

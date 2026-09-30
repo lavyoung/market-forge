@@ -46,6 +46,7 @@ public interface IStrategyRaffleApi {
             """)
     @ApiResponses({@ApiResponse(responseCode = "200", description = "抽奖成功"), @ApiResponse(responseCode = "400", description = "请求体缺失、格式错误或字段校验失败"), @ApiResponse(responseCode = "422", description = "未满足抽奖业务规则"), @ApiResponse(responseCode = "500", description = "系统内部错误")})
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Deprecated
     Response<StrategyRaffleResponse> raffle(@Valid @RequestBody StrategyRaffleRequest request);
 
     /**

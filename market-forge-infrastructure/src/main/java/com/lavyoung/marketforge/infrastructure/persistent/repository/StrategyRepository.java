@@ -14,8 +14,10 @@ import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyRule
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyAwardDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyRuleDao;
+import com.lavyoung.marketforge.infrastructure.persistent.dao.IUserAwardRecordDao;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyAwardPO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyRulePO;
+import com.lavyoung.marketforge.infrastructure.persistent.po.UserAwardRecordPO;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
 import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
@@ -48,44 +50,17 @@ public class StrategyRepository implements IStrategyRepository {
      */
     private static final Duration AWARD_STOCK_QUEUE_DELAY = Duration.ofSeconds(3);
 
-    /**
-     * 策略奖品数据访问对象。
-     */
     private final IStrategyAwardDao strategyAwardDao;
-
-    /**
-     * 策略基础信息数据访问对象。
-     */
     private final IStrategyDao strategyDao;
-
-    /**
-     * 策略规则数据访问对象。
-     */
     private final IStrategyRuleDao strategyRuleDao;
+    private final IUserAwardRecordDao userAwardRecordDao;
 
-    /**
-     * Redis 缓存服务。
-     */
     private final IRedisService redisService;
 
-    /**
-     * 策略奖品持久化对象转换器。
-     */
     private final StrategyAwardAssembler strategyAwardAssembler;
-
-    /**
-     * 策略持久化对象转换器。
-     */
     private final StrategyAssembler strategyAssembler;
-
-    /**
-     * 策略规则持久化对象转换器。
-     */
     private final StrategyRuleAssembler strategyRuleAssembler;
 
-    /**
-     * 集成事件发布端口：库存变更后通知下游。
-     */
     private final MessagePublisher messagePublisher;
 
     /**
@@ -296,6 +271,14 @@ public class StrategyRepository implements IStrategyRepository {
     @Override
     public boolean updateStrategyAwardStock(Long strategyId, Long awardId) {
         return strategyAwardDao.decrementAwardCountSurplus(strategyId, awardId) == 1;
+    }
+
+    @Override
+    public long queryUserRaffleCount(String userId, Long strategyId) {
+        // 补真实次数锁 合理的是查活动订单或中奖记录： 查活动订单：代表用户已经消耗过多少次参与机会。  查中奖记录：代表用户已经完成过多少次有效抽奖结果
+        return userAwardRecordDao.selectCount(Wrappers.lambdaQuery(UserAwardRecordPO.class)
+                .eq(UserAwardRecordPO::getUserId, userId)
+                .eq(UserAwardRecordPO::getStrategyId, strategyId));
     }
 
     /**

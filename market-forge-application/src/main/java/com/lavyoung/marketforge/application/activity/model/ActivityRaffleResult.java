@@ -9,6 +9,7 @@ package com.lavyoung.marketforge.application.activity.model;
  * @param awardId     命中奖品标识
  * @param awardKey    奖品业务标识
  * @param awardConfig 奖品发放配置
+ * @param awardTitle  奖品标题
  * @param awardDesc   奖品说明
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -20,6 +21,7 @@ public record ActivityRaffleResult(
         Long awardId,
         String awardKey,
         String awardConfig,
+        String awardTitle,
         String awardDesc
 ) {
 }

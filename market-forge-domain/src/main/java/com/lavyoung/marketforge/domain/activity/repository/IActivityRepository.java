@@ -8,6 +8,7 @@ import com.lavyoung.marketforge.domain.activity.model.vo.ActivitySkuStockKeyVO;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -175,4 +176,12 @@ public interface IActivityRepository {
      * @throws com.lavyoung.marketforge.types.exception.BusinessException 当 SKU 不存在或库存清理失败时抛出
      */
     void clearActivitySkuStock(Long sku);
+
+    /**
+     * 查询指定活动下配置的全部 SKU。
+     *
+     * @param activityId 抽奖活动标识
+     * @return 活动 SKU 集合；不存在时返回空集合
+     */
+    List<ActivitySkuEntity> queryActivitySkuListByActivityId(Long activityId);
 }

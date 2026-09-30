@@ -57,7 +57,7 @@ class StrategyRaffleControllerTest {
         IActivityRaffleApplicationService activityRaffleService = mock(IActivityRaffleApplicationService.class);
         ActivityRaffleCommand command = new ActivityRaffleCommand(USER_ID, ACTIVITY_ID, SKU);
         when(activityRaffleService.raffle(command)).thenReturn(
-                new ActivityRaffleResult(ORDER_ID, ACTIVITY_ID, STRATEGY_ID, AWARD_ID, "random_ore", "quantity=1", "随机矿石"));
+                new ActivityRaffleResult(ORDER_ID, ACTIVITY_ID, STRATEGY_ID, AWARD_ID, "random_ore", "quantity=1", "随机矿石", "随机矿石"));
         StrategyRaffleController controller =
                 new StrategyRaffleController(
                         strategyService, activityRaffleService, STRATEGY_RAFFLE_ASSEMBLER, STRATEGY_AWARD_ASSEMBLER);
@@ -88,7 +88,7 @@ class StrategyRaffleControllerTest {
         IStrategyRaffleService strategyService = mock(IStrategyRaffleService.class);
         IActivityRaffleApplicationService activityRaffleService = mock(IActivityRaffleApplicationService.class);
         when(activityRaffleService.raffle(org.mockito.ArgumentMatchers.any())).thenReturn(
-                new ActivityRaffleResult(ORDER_ID, ACTIVITY_ID, STRATEGY_ID, AWARD_ID, null, null, null));
+                new ActivityRaffleResult(ORDER_ID, ACTIVITY_ID, STRATEGY_ID, AWARD_ID, null, null, null, null));
         StrategyRaffleController controller =
                 new StrategyRaffleController(
                         strategyService, activityRaffleService, STRATEGY_RAFFLE_ASSEMBLER, STRATEGY_AWARD_ASSEMBLER);
@@ -180,7 +180,7 @@ class StrategyRaffleControllerTest {
         IStrategyRaffleService strategyService = mock(IStrategyRaffleService.class);
         IActivityRaffleApplicationService activityRaffleService = mock(IActivityRaffleApplicationService.class);
         when(activityRaffleService.raffle(org.mockito.ArgumentMatchers.any())).thenReturn(
-                new ActivityRaffleResult(ORDER_ID, ACTIVITY_ID, STRATEGY_ID, AWARD_ID, "random_ore", null, null));
+                new ActivityRaffleResult(ORDER_ID, ACTIVITY_ID, STRATEGY_ID, AWARD_ID, "random_ore", null, null, null));
         MockMvc mockMvc = standaloneSetup(
                 new StrategyRaffleController(
                         strategyService, activityRaffleService, STRATEGY_RAFFLE_ASSEMBLER, STRATEGY_AWARD_ASSEMBLER))

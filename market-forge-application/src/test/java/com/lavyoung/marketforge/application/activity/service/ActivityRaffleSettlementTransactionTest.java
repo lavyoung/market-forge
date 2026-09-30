@@ -55,7 +55,7 @@ class ActivityRaffleSettlementTransactionTest {
                 .orderTime(LocalDateTime.of(2026, 9, 30, 10, 0))
                 .state(UserRaffleOrderStateVO.CREATE.getCode())
                 .build();
-        RaffleResult raffleResult = new RaffleResult(STRATEGY_ID, AWARD_ID, "random_ore", "quantity=1", "随机矿石");
+        RaffleResult raffleResult = new RaffleResult(STRATEGY_ID, AWARD_ID, "random_ore", "quantity=1", "随机矿石", "随机矿石");
         ActivityRaffleSettlementTransaction transaction =
                 new ActivityRaffleSettlementTransaction(activityPartakeService, awardApplicationService);
 

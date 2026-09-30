@@ -7,6 +7,7 @@ package com.lavyoung.marketforge.application.strategy.model;
  * @param awardId     奖品标识
  * @param awardKey    奖品业务标识
  * @param awardConfig 奖品发放配置
+ * @param awardTitle  奖品标题
  * @param awardDesc   奖品说明
  */
 public record RaffleResult(
@@ -14,6 +15,7 @@ public record RaffleResult(
         Long awardId,
         String awardKey,
         String awardConfig,
+        String awardTitle,
         String awardDesc
 ) {
 }

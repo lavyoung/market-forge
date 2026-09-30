@@ -27,11 +27,6 @@ import org.springframework.stereotype.Component;
 public class RuleLockLogicTreeNode implements ILogicTreeNode {
 
     /**
-     * 当前阶段尚未接入用户抽奖次数账户时使用的开发基准值。
-     */
-    private static final int DEVELOPMENT_USER_RAFFLE_COUNT = 2;
-
-    /**
      * 抽奖策略仓储端口。
      */
     private final IStrategyRepository repository;
@@ -43,7 +38,8 @@ public class RuleLockLogicTreeNode implements ILogicTreeNode {
     public DefaultTreeFactory.TreeActionEntity logic(String userId, Long strategyId, Long awardId, String ruleValue) {
         String lockRuleValue = repository.queryStrategyRuleValue(strategyId, awardId, ruleModel().getCode());
         int requiredRaffleCount = parseRequiredRaffleCount(lockRuleValue, userId, strategyId, awardId);
-        if (requiredRaffleCount > DEVELOPMENT_USER_RAFFLE_COUNT) {
+        long userRaffleCount = repository.queryUserRaffleCount(userId, strategyId);
+        if (requiredRaffleCount > userRaffleCount) {
             return DefaultTreeFactory.TreeActionEntity
                     .builder()
                     .ruleLogicCheckTypeVO(RuleLogicCheckTypeVO.TAKE_OVER)

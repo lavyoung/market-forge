@@ -11,6 +11,7 @@ import com.lavyoung.marketforge.domain.activity.model.entity.ActivityOrderEntity
 import com.lavyoung.marketforge.domain.activity.model.entity.PartakeRaffleActivityEntity;
 import com.lavyoung.marketforge.domain.activity.model.vo.UserRaffleOrderStateVO;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityPartakeService;
+import com.lavyoung.marketforge.domain.activity.service.armory.IActivityArmory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -44,6 +45,9 @@ class ActivityRaffleApplicationServiceImplTest {
     @Mock
     private ActivityRaffleSettlementTransaction settlementTransaction;
 
+    @Mock
+    private IActivityArmory activityArmory;
+
     /**
      * Given 活动订单与策略抽奖结果，When 执行活动抽奖，Then 使用订单中的策略并触发结算。
      */
@@ -51,13 +55,14 @@ class ActivityRaffleApplicationServiceImplTest {
     void shouldCreatePartakeOrderDrawStrategyAndSettleAwardRecord() {
         // Given
         ActivityOrderEntity order = newActivityOrder();
-        RaffleResult raffleResult = new RaffleResult(STRATEGY_ID, AWARD_ID, "random_ore", "quantity=1", "随机矿石");
+        RaffleResult raffleResult = new RaffleResult(STRATEGY_ID, AWARD_ID, "random_ore", "quantity=1", "随机矿石", "随机矿石");
         when(activityPartakeService.createRaffleOrder(any())).thenReturn(order);
         when(strategyRaffleService.raffle(new RaffleCommand(USER_ID, STRATEGY_ID))).thenReturn(raffleResult);
         ActivityRaffleApplicationServiceImpl service = new ActivityRaffleApplicationServiceImpl(
                 activityPartakeService,
                 strategyRaffleService,
-                settlementTransaction
+                settlementTransaction,
+                activityArmory
         );
 
         // When
@@ -76,7 +81,8 @@ class ActivityRaffleApplicationServiceImplTest {
                 () -> assertEquals(ORDER_ID, result.orderId()),
                 () -> assertEquals(ACTIVITY_ID, result.activityId()),
                 () -> assertEquals(STRATEGY_ID, result.strategyId()),
-                () -> assertEquals(AWARD_ID, result.awardId())
+                () -> assertEquals(AWARD_ID, result.awardId()),
+                () -> assertEquals("随机矿石", result.awardTitle())
         );
     }
 
@@ -89,7 +95,8 @@ class ActivityRaffleApplicationServiceImplTest {
         ActivityRaffleApplicationServiceImpl service = new ActivityRaffleApplicationServiceImpl(
                 activityPartakeService,
                 strategyRaffleService,
-                settlementTransaction
+                settlementTransaction,
+                activityArmory
         );
 
         // When & Then

@@ -23,6 +23,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.*;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -486,5 +487,12 @@ public class ActivityRepository implements IActivityRepository {
         activitySkuPO.setStockCount(0L);
         activitySkuDao.updateById(activitySkuPO);
         redisService.delete(Constants.RedisKeys.ACTIVITY_SKU_STOCK_COUNT_KEY + sku);
+    }
+
+    @Override
+    public List<ActivitySkuEntity> queryActivitySkuListByActivityId(Long activityId) {
+        return activitySkuDao.selectList(Wrappers.lambdaQuery(ActivitySkuPO.class)
+                        .eq(ActivitySkuPO::getActivityId, activityId))
+                .stream().map(activitySkuAssembler::toEntity).toList();
     }
 }

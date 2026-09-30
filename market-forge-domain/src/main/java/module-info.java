@@ -52,4 +52,5 @@ module market.forge.domain {
     exports com.lavyoung.marketforge.domain.award.model.entity;
     exports com.lavyoung.marketforge.domain.award.model.valobj;
     exports com.lavyoung.marketforge.domain.award.model.aggreate;
+    exports com.lavyoung.marketforge.domain.activity.service.armory;
 }

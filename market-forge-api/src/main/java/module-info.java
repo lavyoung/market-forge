@@ -19,4 +19,7 @@ module market.forge.api {
 
     opens com.lavyoung.marketforge.api.strategy.request;
     opens com.lavyoung.marketforge.api.strategy.response;
+    exports com.lavyoung.marketforge.api.activity.response;
+    exports com.lavyoung.marketforge.api.activity.request;
+    exports com.lavyoung.marketforge.api.activity;
 }

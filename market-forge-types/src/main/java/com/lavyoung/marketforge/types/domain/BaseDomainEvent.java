@@ -11,10 +11,14 @@ import java.util.UUID;
  */
 public abstract class BaseDomainEvent implements DomainEvent {
 
-    /** 领域事件的唯一标识。 */
+    /**
+     * 领域事件的唯一标识。
+     */
     private final String eventId;
 
-    /** 领域事件的发生时间。 */
+    /**
+     * 领域事件的发生时间。
+     */
     private final LocalDateTime occurredOn;
 
     /**

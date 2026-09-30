@@ -163,4 +163,13 @@ public interface IStrategyRepository {
      * @return 成功扣减返回 {@code true}，记录不存在或库存不足返回 {@code false}
      */
     boolean updateStrategyAwardStock(Long strategyId, Long awardId);
+
+    /**
+     * 查询用户在指定策略下已经完成的抽奖次数。
+     *
+     * @param userId     用户标识
+     * @param strategyId 策略标识
+     * @return 已完成抽奖次数
+     */
+    long queryUserRaffleCount(String userId, Long strategyId);
 }
