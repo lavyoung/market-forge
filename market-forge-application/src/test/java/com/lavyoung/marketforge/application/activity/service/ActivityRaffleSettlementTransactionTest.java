@@ -4,6 +4,7 @@ import com.lavyoung.marketforge.application.activity.service.impl.ActivityRaffle
 import com.lavyoung.marketforge.application.award.model.SaveUserAwardRecordCommand;
 import com.lavyoung.marketforge.application.award.service.IAwardApplicationService;
 import com.lavyoung.marketforge.application.strategy.model.RaffleResult;
+import com.lavyoung.marketforge.application.tx.ITransactionExecutor;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityOrderEntity;
 import com.lavyoung.marketforge.domain.activity.model.vo.UserRaffleOrderStateVO;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityPartakeService;
@@ -15,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -57,7 +59,7 @@ class ActivityRaffleSettlementTransactionTest {
                 .build();
         RaffleResult raffleResult = new RaffleResult(STRATEGY_ID, AWARD_ID, "random_ore", "quantity=1", "随机矿石", "随机矿石");
         ActivityRaffleSettlementTransaction transaction =
-                new ActivityRaffleSettlementTransaction(activityPartakeService, awardApplicationService);
+                new ActivityRaffleSettlementTransaction(activityPartakeService, awardApplicationService, syncTransactionExecutor());
 
         // When
         transaction.settle(order, raffleResult);
@@ -76,5 +78,25 @@ class ActivityRaffleSettlementTransactionTest {
                 () -> assertEquals(AWARD_ID, commandCaptor.getValue().awardId()),
                 () -> assertEquals("随机矿石", commandCaptor.getValue().awardTitle())
         );
+    }
+
+    /**
+     * 创建测试用同步事务执行器。
+     *
+     * @return 直接执行回调的事务执行器
+     */
+    private ITransactionExecutor syncTransactionExecutor() {
+        return new ITransactionExecutor() {
+
+            @Override
+            public void execute(Runnable action) {
+                action.run();
+            }
+
+            @Override
+            public <T> T execute(Supplier<T> supplier) {
+                return supplier.get();
+            }
+        };
     }
 }

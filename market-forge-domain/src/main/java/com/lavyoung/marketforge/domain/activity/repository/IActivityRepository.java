@@ -3,7 +3,6 @@ package com.lavyoung.marketforge.domain.activity.repository;
 import com.lavyoung.marketforge.domain.activity.model.aggregate.CreatePartakeOrderAggregate;
 import com.lavyoung.marketforge.domain.activity.model.aggregate.CreateQuotaOrderAggregate;
 import com.lavyoung.marketforge.domain.activity.model.entity.*;
-import com.lavyoung.marketforge.domain.activity.model.vo.ActivitySkuStockKeyVO;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -69,21 +68,15 @@ public interface IActivityRepository {
     /**
      * 从缓存侧预扣活动 SKU 库存。
      * <p>
-     * 该操作用于额度充值下单前的快速库存防超卖校验。返回 {@code true} 仅表示缓存侧预扣成功，
-     * 数据库库存同步由后续异步流程完成。
+     * 该操作用于额度充值下单前的快速库存防超卖校验。返回结果只表达缓存侧预扣状态，
+     * 数据库库存同步由后续异步流程完成；当缓存库存已经归零时，结果会标记零库存状态。
      *
      * @param sku         商品 SKU
      * @param endDateTime 活动结束时间
-     * @return 预扣成功返回 {@code true}；库存不足、锁定失败或 CAS 失败返回 {@code false}
+     * @return 活动 SKU 库存预扣结果，包含是否预扣成功和是否已经进入零库存状态
+     * @throws NullPointerException 当活动 SKU 或活动结束时间为空时抛出
      */
-    boolean subtractionActivitySkuStock(Long sku, LocalDateTime endDateTime);
-
-    /**
-     * 发布活动 SKU 库存消费消息。
-     *
-     * @param activitySkuStockKeyVO 活动 SKU 库存消息键
-     */
-    void activitySkuStockConsumeSendQueue(ActivitySkuStockKeyVO activitySkuStockKeyVO);
+    ActivitySkuStockDeductEntity subtractionActivitySkuStock(Long sku, LocalDateTime endDateTime);
 
     /**
      * 查询用户当前未使用的抽奖参与订单。
@@ -143,14 +136,6 @@ public interface IActivityRepository {
      * @return 状态更新成功返回 {@code true}；订单不存在或状态不匹配返回 {@code false}
      */
     boolean updateRaffleOrderState(String userId, String orderId, String currentState, String targetState);
-
-    /**
-     * 从活动 SKU 库存延迟队列获取一条待同步消息。
-     *
-     * @return 活动 SKU 库存消息；队列为空时返回 null
-     * @throws Exception 当队列读取失败时抛出
-     */
-    ActivitySkuStockKeyVO takeQueueValue() throws Exception;
 
     /**
      * 根据 SKU 原子扣减数据库中的活动 SKU 库存。

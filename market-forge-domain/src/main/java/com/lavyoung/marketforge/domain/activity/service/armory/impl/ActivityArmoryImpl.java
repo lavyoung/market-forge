@@ -2,6 +2,7 @@ package com.lavyoung.marketforge.domain.activity.service.armory.impl;
 
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityCountEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivitySkuEntity;
+import com.lavyoung.marketforge.domain.activity.model.entity.ActivitySkuStockDeductEntity;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.domain.activity.service.armory.IActivityArmory;
 import com.lavyoung.marketforge.domain.activity.service.armory.IActivityDispatch;
@@ -79,10 +80,10 @@ public class ActivityArmoryImpl implements IActivityArmory, IActivityDispatch {
      *
      * @param sku         活动 SKU
      * @param endDateTime 活动结束时间，用于计算库存锁过期时间
-     * @return 预扣成功返回 {@code true}；库存不足或锁定失败返回 {@code false}
+     * @return 库存预扣结果，包含是否预扣成功和是否进入零库存状态
      */
     @Override
-    public boolean subtractionActivitySkuStock(Long sku, LocalDateTime endDateTime) {
+    public ActivitySkuStockDeductEntity subtractionActivitySkuStock(Long sku, LocalDateTime endDateTime) {
         return activityRepository.subtractionActivitySkuStock(sku, endDateTime);
     }
 }

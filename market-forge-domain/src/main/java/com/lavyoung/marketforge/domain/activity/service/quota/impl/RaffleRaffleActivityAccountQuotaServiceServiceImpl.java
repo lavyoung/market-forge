@@ -5,6 +5,7 @@ import com.lavyoung.marketforge.domain.activity.model.entity.*;
 import com.lavyoung.marketforge.domain.activity.model.vo.ActivitySkuStockKeyVO;
 import com.lavyoung.marketforge.domain.activity.model.vo.OrderStateVO;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
+import com.lavyoung.marketforge.domain.activity.repository.IActivitySkuStockMessageRepository;
 import com.lavyoung.marketforge.domain.activity.service.quota.AbstractRaffleRaffleActivityAccountQuotaService;
 import com.lavyoung.marketforge.domain.activity.service.quota.rule.factory.DefaultActivityChainFactory;
 import com.lavyoung.marketforge.types.common.Constants;
@@ -24,8 +25,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class RaffleRaffleActivityAccountQuotaServiceServiceImpl extends AbstractRaffleRaffleActivityAccountQuotaService {
 
-    public RaffleRaffleActivityAccountQuotaServiceServiceImpl(IActivityRepository activityRepository, DefaultActivityChainFactory activityChainFactory) {
-        super(activityRepository, activityChainFactory);
+    public RaffleRaffleActivityAccountQuotaServiceServiceImpl(IActivityRepository activityRepository, IActivitySkuStockMessageRepository activitySkuStockMessageRepository, DefaultActivityChainFactory activityChainFactory) {
+        super(activityRepository, activitySkuStockMessageRepository, activityChainFactory);
     }
 
     /**
@@ -86,7 +87,7 @@ public class RaffleRaffleActivityAccountQuotaServiceServiceImpl extends Abstract
      */
     @Override
     public ActivitySkuStockKeyVO takeQueueValue() throws Exception {
-        return activityRepository.takeQueueValue();
+        return activitySkuStockMessageRepository.poll().orElse(null);
     }
 
     /**

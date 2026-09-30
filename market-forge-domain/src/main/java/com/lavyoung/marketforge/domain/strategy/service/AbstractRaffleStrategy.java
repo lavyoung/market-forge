@@ -3,6 +3,7 @@ package com.lavyoung.marketforge.domain.strategy.service;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.repository.IRuleTreeRepository;
+import com.lavyoung.marketforge.domain.strategy.repository.IStrategyAwardStockMessageRepository;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
@@ -29,29 +30,13 @@ import java.util.Objects;
 @AllArgsConstructor
 public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
 
-    /**
-     * 抽奖策略仓储端口。
-     */
     protected IStrategyRepository repository;
-
-    /**
-     * 查询并组装规则树的仓储端口。
-     */
+    protected IStrategyAwardStockMessageRepository strategyAwardStockMessageRepository;
     protected IRuleTreeRepository ruleTreeRepository;
 
-    /**
-     * 已装配策略的随机抽奖调度服务。
-     */
     protected IStrategyDispatch strategyDispatch;
 
-    /**
-     * 根据策略配置装配抽奖前责任链的工厂。
-     */
     protected DefaultChainFactory defaultChainFactory;
-
-    /**
-     * 根据规则树配置创建决策引擎的工厂。
-     */
     protected DefaultTreeFactory defaultTreeFactory;
 
     /**

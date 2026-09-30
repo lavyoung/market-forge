@@ -49,7 +49,7 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
 
         // 2.1 使用数据库剩余库存初始化 Redis 库存。
         for (StrategyAwardEntity strategyAwardEntity : strategyAwardEntities) {
-            cacheStrategyAwardStock(
+            repository.cacheStrategyAwardStock(
                     strategyAwardEntity.strategyId(),
                     strategyAwardEntity.awardId(),
                     strategyAwardEntity.awardCountSurplus()
@@ -80,18 +80,6 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
         }
 
         return true;
-    }
-
-    /**
-     * 将单个奖品的剩余库存写入 Redis 原子计数器。
-     *
-     * @param strategyId 策略标识
-     * @param awardId    奖品标识
-     * @param stock      数据库剩余库存
-     */
-    private void cacheStrategyAwardStock(Long strategyId, Long awardId, int stock) {
-        String key = Constants.RedisKeys.STRATEGY_AWARD_STOCK + strategyId + Constants.UNDERLINE + awardId;
-        repository.cacheStrategyAwardStock(key, stock);
     }
 
     /**
@@ -189,9 +177,6 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
 
     @Override
     public boolean subtractAwardStock(Long strategyId, Long awardId) {
-        return repository.subtractAwardStock(
-                Constants.RedisKeys.STRATEGY_AWARD_STOCK + strategyId + Constants.UNDERLINE + awardId,
-                1
-        );
+        return repository.subtractAwardStock(strategyId, awardId, 1);
     }
 }

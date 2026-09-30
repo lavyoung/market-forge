@@ -154,7 +154,7 @@ class RabbitMessageListenerAdapterTest {
     @Test
     void shouldDispatchSkuStockDeductedEvent() throws Exception {
         ActivitySkuStockDeductedEvent event =
-                new ActivitySkuStockDeductedEvent(10001L, 20001L, "user-001");
+                new ActivitySkuStockDeductedEvent(10001L, 20001L);
 
         allowFirstConsumption();
 

@@ -5,6 +5,7 @@ import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleTreeVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IRuleTreeRepository;
+import com.lavyoung.marketforge.domain.strategy.repository.IStrategyAwardStockMessageRepository;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.ILogicChain;
@@ -48,6 +49,9 @@ class DefaultRaffleStrategyTest {
     private IRuleTreeRepository ruleTreeRepository;
 
     @Mock
+    private IStrategyAwardStockMessageRepository strategyAwardStockMessageRepository;
+
+    @Mock
     private IStrategyDispatch strategyDispatch;
 
     @Mock
@@ -71,6 +75,7 @@ class DefaultRaffleStrategyTest {
     void setUp() {
         raffleStrategy = new DefaultRaffleStrategy(
                 repository,
+                strategyAwardStockMessageRepository,
                 ruleTreeRepository,
                 strategyDispatch,
                 chainFactory,

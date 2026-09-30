@@ -1,12 +1,9 @@
 package com.lavyoung.marketforge.infrastructure.persistent.repository;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.lavyoung.marketforge.domain.activity.event.ActivitySkuStockDeductedEvent;
-import com.lavyoung.marketforge.domain.activity.event.ActivitySkuZeroStockEvent;
 import com.lavyoung.marketforge.domain.activity.model.aggregate.CreatePartakeOrderAggregate;
 import com.lavyoung.marketforge.domain.activity.model.aggregate.CreateQuotaOrderAggregate;
 import com.lavyoung.marketforge.domain.activity.model.entity.*;
-import com.lavyoung.marketforge.domain.activity.model.vo.ActivitySkuStockKeyVO;
 import com.lavyoung.marketforge.domain.activity.model.vo.UserRaffleOrderStateVO;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.activity.*;
@@ -187,20 +184,20 @@ public class ActivityRepository implements IActivityRepository {
      * @return 预扣成功返回 {@code true}；库存不足或 CAS 失败返回 {@code false}
      */
     @Override
-    public boolean subtractionActivitySkuStock(Long sku, LocalDateTime endDateTime) {
+    public ActivitySkuStockDeductEntity subtractionActivitySkuStock(Long sku, LocalDateTime endDateTime) {
         Objects.requireNonNull(sku, "sku must not be null");
         Objects.requireNonNull(endDateTime, "endDateTime must not be null");
         String cacheKey = Constants.RedisKeys.ACTIVITY_SKU_STOCK_COUNT_KEY + sku;
         int surplus = redisService.getValue(cacheKey, Integer.class).orElse(0);
         if (surplus == 0) {
             // 没有库存了 发送mq消息进行库存更新
-            messagePublisher.publish(new ActivitySkuZeroStockEvent(
-                    sku
-            ));
-            return false;
+//            messagePublisher.publish(new ActivitySkuZeroStockEvent(
+//                    sku
+//            ));
+            return ActivitySkuStockDeductEntity.builder().success(false).zeroStock(true).build();
         } else if (surplus < 0) {
             redisService.setAtomicLong(cacheKey, 0);
-            return false;
+            return ActivitySkuStockDeductEntity.builder().success(false).zeroStock(true).build();
         }
         // 这里是为了防止重复扣减一个活动的库存值 一般来说 后续恢复库存没那么快
         // 1. 按照cacheKey decr 后的值，如 99、98、97 和 key 组成为库存锁的key进行使用。
@@ -213,34 +210,10 @@ public class ActivityRepository implements IActivityRepository {
             log.error("活动sku库存加锁失败 {}", lockKey);
         }
         // 扣减缓存库存
-        return redisService.compareAndSetAtomicLong(cacheKey, surplus, surplus - 1);
-    }
-
-    /**
-     * 发布活动 SKU 库存扣减消息。
-     * <p>
-     * 消息发布失败时写入延迟补偿队列，避免数据库库存同步因短暂消息异常而永久丢失。
-     *
-     * @param activitySkuStockKeyVO 活动 SKU 库存同步消息键
-     */
-    @Override
-    public void activitySkuStockConsumeSendQueue(ActivitySkuStockKeyVO activitySkuStockKeyVO) {
-        try {
-            // 发送延迟队列
-            messagePublisher.publish(new ActivitySkuStockDeductedEvent(
-                    activitySkuStockKeyVO.sku(),
-                    activitySkuStockKeyVO.activityId(),
-                    activitySkuStockKeyVO.userId()
-            ));
-        } catch (RuntimeException e) {
-            log.error("活动次数扣减事件发布失败，转入补偿队列 sku={} activityId={} userId={}",
-                    activitySkuStockKeyVO.sku(), activitySkuStockKeyVO.activityId(), activitySkuStockKeyVO.userId(), e);
-            redisService.offerDelayed(
-                    Constants.RedisKeys.ACTIVITY_SKU_STOCK_QUEUE,
-                    activitySkuStockKeyVO,
-                    Duration.ofSeconds(3)
-            );
-        }
+        return ActivitySkuStockDeductEntity.builder()
+                .success(redisService.compareAndSetAtomicLong(cacheKey, surplus, surplus - 1))
+                .zeroStock(surplus - 1 == 0)
+                .build();
     }
 
     /**
@@ -421,20 +394,6 @@ public class ActivityRepository implements IActivityRepository {
                 .eq(ActivityOrderPO::getState, currentState)
         );
         return updateCount == 1;
-    }
-
-    /**
-     * 从活动 SKU 库存延迟队列中取出一条待处理消息。
-     *
-     * @return 活动 SKU 库存消息；队列为空时返回 {@code null}
-     * @throws Exception 当队列读取失败时抛出
-     */
-    @Override
-    public ActivitySkuStockKeyVO takeQueueValue() throws Exception {
-        return redisService.pollDelayed(
-                Constants.RedisKeys.ACTIVITY_SKU_STOCK_QUEUE,
-                ActivitySkuStockKeyVO.class
-        ).orElse(null);
     }
 
     /**

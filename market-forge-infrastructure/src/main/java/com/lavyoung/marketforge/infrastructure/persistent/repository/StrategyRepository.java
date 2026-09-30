@@ -1,12 +1,10 @@
 package com.lavyoung.marketforge.infrastructure.persistent.repository;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.lavyoung.marketforge.domain.strategy.event.AwardStockDeductedEvent;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
-import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardStockKeyVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyAwardAssembler;
@@ -133,10 +131,16 @@ public class StrategyRepository implements IStrategyRepository {
      */
     @Override
     public StrategyEntity queryStrategyEntityByStrategyId(Long strategyId) {
-        // 缓存key
         String cacheKey = Constants.RedisKeys.STRATEGY_KEY + strategyId;
-        return redisService.getValue(cacheKey, StrategyEntity.class)
-                .orElseGet(() -> strategyAssembler.toEntity(strategyDao.queryStrategyByStrategyId(strategyId).orElse(null)));
+        return redisService.getValue(cacheKey, StrategyEntity.class).orElseGet(() -> {
+            StrategyEntity entity = strategyAssembler.toEntity(
+                    strategyDao.queryStrategyByStrategyId(strategyId).orElse(null)
+            );
+            if (entity != null) {
+                redisService.setValue(cacheKey, entity);
+            }
+            return entity;
+        });
     }
 
     /**
@@ -207,18 +211,17 @@ public class StrategyRepository implements IStrategyRepository {
     }
 
     @Override
-    public void cacheStrategyAwardStock(String key, int stock) {
+    public void cacheStrategyAwardStock(Long strategyId, Long awardId, int stock) {
+        String key = Constants.RedisKeys.STRATEGY_AWARD_STOCK + strategyId + Constants.UNDERLINE + awardId;
         redisService.setAtomicLong(key, stock);
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * @throws IllegalArgumentException 库存键为空白或扣减数量为空、非正数
-     */
     @Override
-    public boolean subtractAwardStock(String key, int stock) {
-        if (key == null || key.isBlank()) {
+    public boolean subtractAwardStock(Long strategyId, Long awardId, int stock) {
+        Objects.requireNonNull(strategyId, "strategyId must not be null");
+        Objects.requireNonNull(awardId, "awardId must not be null");
+        String key = Constants.RedisKeys.STRATEGY_AWARD_STOCK + strategyId + Constants.UNDERLINE + awardId;
+        if (key.isBlank()) {
             throw new IllegalArgumentException("key must not be blank");
         }
         if (stock <= 0) {
@@ -236,36 +239,6 @@ public class StrategyRepository implements IStrategyRepository {
         } finally {
             redisService.unlock(lockKey);
         }
-    }
-
-    @Override
-    public void awardStockConsumeSendQueue(StrategyAwardStockKeyVO awardStockKeyVO) {
-        Objects.requireNonNull(awardStockKeyVO, "awardStockKeyVO must not be null");
-        try {
-            messagePublisher.publish(new AwardStockDeductedEvent(
-                    awardStockKeyVO.strategyId(),
-                    awardStockKeyVO.awardId(),
-                    awardStockKeyVO.userId()
-            ));
-        } catch (RuntimeException e) {
-            // MQ 已是数据库库存同步的唯一通道，发布失败不能静默丢弃：转入 Redis 延迟队列，交给补偿任务重试。
-            log.error("奖品库存扣减事件发布失败，转入补偿队列 strategyId={} awardId={} userId={}",
-                    awardStockKeyVO.strategyId(), awardStockKeyVO.awardId(), awardStockKeyVO.userId(), e);
-            redisService.offerDelayed(
-                    Constants.RedisKeys.STRATEGY_AWARD_STOCK_QUEUE,
-                    awardStockKeyVO,
-                    AWARD_STOCK_QUEUE_DELAY
-            );
-        }
-    }
-
-
-    @Override
-    public Optional<StrategyAwardStockKeyVO> pollQueueValue() {
-        return redisService.pollDelayed(
-                Constants.RedisKeys.STRATEGY_AWARD_STOCK_QUEUE,
-                StrategyAwardStockKeyVO.class
-        );
     }
 
     @Override

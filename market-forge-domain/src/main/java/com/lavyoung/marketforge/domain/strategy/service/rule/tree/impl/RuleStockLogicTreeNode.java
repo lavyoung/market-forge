@@ -2,7 +2,7 @@ package com.lavyoung.marketforge.domain.strategy.service.rule.tree.impl;
 
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleLogicCheckTypeVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardStockKeyVO;
-import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
+import com.lavyoung.marketforge.domain.strategy.repository.IStrategyAwardStockMessageRepository;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
 import com.lavyoung.marketforge.domain.strategy.service.rule.tree.ILogicTreeNode;
 import com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory.DefaultTreeFactory;
@@ -28,7 +28,7 @@ public class RuleStockLogicTreeNode implements ILogicTreeNode {
     /**
      * 抽奖策略仓储端口，用于投递数据库库存同步消息。
      */
-    private final IStrategyRepository repository;
+    private final IStrategyAwardStockMessageRepository repository;
 
     /**
      * 策略库存调度端口。
@@ -43,7 +43,7 @@ public class RuleStockLogicTreeNode implements ILogicTreeNode {
         boolean status = strategyDispatch.subtractAwardStock(strategyId, awardId);
         if (status) {
             log.info("抽奖策略-规则树，获得奖，库存扣减 userId={} strategyId={} ruleModel={} ruleValue={}", userId, strategyId, ruleModel(), ruleValue);
-            repository.awardStockConsumeSendQueue(StrategyAwardStockKeyVO.builder()
+            repository.send(StrategyAwardStockKeyVO.builder()
                     .awardId(awardId)
                     .strategyId(strategyId)
                     .userId(userId)

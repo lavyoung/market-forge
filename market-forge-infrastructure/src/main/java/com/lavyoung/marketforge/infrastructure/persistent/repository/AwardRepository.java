@@ -21,6 +21,7 @@ import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -50,6 +51,7 @@ public class AwardRepository implements IAwardRepository {
 
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void saveUserAwardRecord(UserAwardRecordAggregate aggregate) {
         UserAwardRecordEntity userAwardRecordEntity = aggregate.userAwardRecordEntity();
         SendAwardRecordEvent event = aggregate.sendAwardRecordEvent();

@@ -5,6 +5,7 @@ import com.lavyoung.marketforge.domain.strategy.model.vo.RuleTreeVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardStockKeyVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IRuleTreeRepository;
+import com.lavyoung.marketforge.domain.strategy.repository.IStrategyAwardStockMessageRepository;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.AbstractRaffleStrategy;
 import com.lavyoung.marketforge.domain.strategy.service.IRaffleAward;
@@ -34,19 +35,8 @@ import java.util.Optional;
 @Component
 public class DefaultRaffleStrategy extends AbstractRaffleStrategy implements IRaffleStock, IRaffleAward {
 
-    /**
-     * 创建默认抽奖策略。
-     *
-     * @param repository          抽奖策略仓储端口
-     * @param ruleTreeRepository  规则树仓储端口
-     * @param strategyDispatch    已装配策略的随机抽奖调度服务
-     * @param defaultChainFactory 抽奖责任链工厂
-     * @param defaultTreeFactory  规则树决策引擎工厂
-     */
-    public DefaultRaffleStrategy(IStrategyRepository repository, IRuleTreeRepository ruleTreeRepository,
-                                 IStrategyDispatch strategyDispatch, DefaultChainFactory defaultChainFactory,
-                                 DefaultTreeFactory defaultTreeFactory) {
-        super(repository, ruleTreeRepository, strategyDispatch, defaultChainFactory, defaultTreeFactory);
+    public DefaultRaffleStrategy(IStrategyRepository repository, IStrategyAwardStockMessageRepository strategyAwardStockMessageRepository, IRuleTreeRepository ruleTreeRepository, IStrategyDispatch strategyDispatch, DefaultChainFactory defaultChainFactory, DefaultTreeFactory defaultTreeFactory) {
+        super(repository, strategyAwardStockMessageRepository, ruleTreeRepository, strategyDispatch, defaultChainFactory, defaultTreeFactory);
     }
 
     /**
@@ -83,12 +73,12 @@ public class DefaultRaffleStrategy extends AbstractRaffleStrategy implements IRa
 
     @Override
     public Optional<StrategyAwardStockKeyVO> pollQueueValue() {
-        return repository.pollQueueValue();
+        return strategyAwardStockMessageRepository.poll();
     }
 
     @Override
     public void requeueStockUpdate(StrategyAwardStockKeyVO message) {
-        repository.awardStockConsumeSendQueue(message);
+        strategyAwardStockMessageRepository.send(message);
     }
 
     @Override

@@ -3,8 +3,9 @@ package com.lavyoung.marketforge.domain.activity.service.quota.rule.impl;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityCountEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivitySkuEntity;
+import com.lavyoung.marketforge.domain.activity.model.entity.ActivitySkuStockDeductEntity;
 import com.lavyoung.marketforge.domain.activity.model.vo.ActivitySkuStockKeyVO;
-import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
+import com.lavyoung.marketforge.domain.activity.repository.IActivitySkuStockMessageRepository;
 import com.lavyoung.marketforge.domain.activity.service.armory.IActivityDispatch;
 import com.lavyoung.marketforge.domain.activity.service.quota.rule.AbstractActionChain;
 import com.lavyoung.marketforge.types.exception.BusinessException;
@@ -28,7 +29,7 @@ import org.springframework.stereotype.Component;
 public class ActivitySkuStockActionChain extends AbstractActionChain {
 
     private final IActivityDispatch activityDispatch;
-    private final IActivityRepository activityRepository;
+    private final IActivitySkuStockMessageRepository activitySkuStockMessageRepository;
 
     /**
      * 校验并预扣活动 SKU 库存。
@@ -47,17 +48,20 @@ public class ActivitySkuStockActionChain extends AbstractActionChain {
         log.info("活动责任链-商品库存处理【校验&扣减】开始-sku={}, activityId={}, activityCountId={}", activitySku.sku(),
                 activity.activityId(), activityCount.activityCountId());
         // 这里判断库存是否允许扣减 真实的库存扣减再后续逻辑发送延迟队列消息 异步消费处理
-        boolean status = activityDispatch.subtractionActivitySkuStock(activitySku.sku(), activity.endDateTime());
+        ActivitySkuStockDeductEntity skuStockDeduct = activityDispatch.subtractionActivitySkuStock(activitySku.sku(), activity.endDateTime());
 
-        if (status) {
+        if (skuStockDeduct.success()) {
             log.info("活动责任链-商品库存处理【有效期、状态、库存(sku)】成功。sku:{} activityId:{}", activitySku.sku(), activity.activityId());
             // 写入延迟队列
-            activityRepository.activitySkuStockConsumeSendQueue(ActivitySkuStockKeyVO.builder()
+            activitySkuStockMessageRepository.send(ActivitySkuStockKeyVO.builder()
                     .sku(activitySku.sku())
                     .activityId(activity.activityId())
                     .build()
             );
             return true;
+        }
+        if (skuStockDeduct.zeroStock()) {
+
         }
         throw BusinessException.of(BusinessResponseCode.ACTIVITY_SKU_STOCK_NOT_ENOUGH,
                 activitySku.sku(), activity.activityId(), activityCount.activityCountId());

@@ -1,6 +1,7 @@
 package com.lavyoung.marketforge.infrastructure.persistent.repository;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.lavyoung.marketforge.domain.strategy.event.AwardStockDeductedEvent;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardStockKeyVO;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyAssembler;
@@ -9,6 +10,7 @@ import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyRule
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyAwardDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyRuleDao;
+import com.lavyoung.marketforge.infrastructure.persistent.dao.IUserAwardRecordDao;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyAwardPO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyRulePO;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
@@ -18,6 +20,7 @@ import com.lavyoung.marketforge.types.messaging.MessagePublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -49,6 +52,9 @@ class StrategyRepositoryTest {
     private IStrategyRuleDao strategyRuleDao;
 
     @Mock
+    private IUserAwardRecordDao userAwardRecordDao;
+
+    @Mock
     private IRedisService redisService;
 
     @Mock
@@ -64,6 +70,7 @@ class StrategyRepositoryTest {
     private MessagePublisher messagePublisher;
 
     private StrategyRepository repository;
+    private StrategyAwardStockMessageRepository stockMessageRepository;
 
     /**
      * Given 模拟基础设施依赖，When 初始化仓储实现，Then 使用可控 DAO 返回值执行测试。
@@ -74,12 +81,14 @@ class StrategyRepositoryTest {
                 strategyAwardDao,
                 strategyDao,
                 strategyRuleDao,
+                userAwardRecordDao,
                 redisService,
                 strategyAwardAssembler,
                 strategyAssembler,
                 strategyRuleAssembler,
                 messagePublisher
         );
+        stockMessageRepository = new StrategyAwardStockMessageRepository(redisService, messagePublisher);
     }
 
     /**
@@ -142,7 +151,7 @@ class StrategyRepositoryTest {
         when(redisService.getAtomicLong(STOCK_KEY)).thenReturn(10L);
 
         // When
-        boolean subtracted = repository.subtractAwardStock(STOCK_KEY, 2);
+        boolean subtracted = repository.subtractAwardStock(STRATEGY_ID, AWARD_ID, 2);
 
         // Then
         assertTrue(subtracted);
@@ -160,7 +169,7 @@ class StrategyRepositoryTest {
         when(redisService.getAtomicLong(STOCK_KEY)).thenReturn(1L);
 
         // When
-        boolean subtracted = repository.subtractAwardStock(STOCK_KEY, 2);
+        boolean subtracted = repository.subtractAwardStock(STRATEGY_ID, AWARD_ID, 2);
 
         // Then
         assertFalse(subtracted);
@@ -175,24 +184,49 @@ class StrategyRepositoryTest {
     @Test
     void shouldRejectInvalidAwardStockArguments() {
         assertAll(
+                () -> assertThrows(NullPointerException.class,
+                        () -> repository.subtractAwardStock(null, AWARD_ID, 1)),
+                () -> assertThrows(NullPointerException.class,
+                        () -> repository.subtractAwardStock(STRATEGY_ID, null, 1)),
                 () -> assertThrows(IllegalArgumentException.class,
-                        () -> repository.subtractAwardStock(" ", 1)),
-                () -> assertThrows(IllegalArgumentException.class,
-                        () -> repository.subtractAwardStock(STOCK_KEY, 0))
+                        () -> repository.subtractAwardStock(STRATEGY_ID, AWARD_ID, 0))
         );
         verify(redisService, never()).lock(STOCK_LOCK_KEY);
     }
 
     /**
-     * Given 一条库存扣减消息，When 发送库存消费队列，Then 延迟三秒投递到库存阻塞队列。
+     * Given 一条库存扣减消息，When 发送库存消费消息，Then 发布奖品库存扣减事件。
      */
     @Test
-    void shouldSendAwardStockMessageToDelayedQueue() {
+    void shouldPublishAwardStockMessage() {
         // Given
         StrategyAwardStockKeyVO message = new StrategyAwardStockKeyVO(STRATEGY_ID, AWARD_ID, "user-001");
 
         // When
-        repository.awardStockConsumeSendQueue(message);
+        stockMessageRepository.send(message);
+
+        // Then
+        ArgumentCaptor<AwardStockDeductedEvent> eventCaptor = ArgumentCaptor.forClass(AwardStockDeductedEvent.class);
+        verify(messagePublisher).publish(eventCaptor.capture());
+        assertAll(
+                () -> assertEquals(message.strategyId(), eventCaptor.getValue().strategyId()),
+                () -> assertEquals(message.awardId(), eventCaptor.getValue().awardId()),
+                () -> assertEquals(message.userId(), eventCaptor.getValue().userId())
+        );
+        verify(redisService, never()).offerDelayed(anyString(), any(), any());
+    }
+
+    /**
+     * Given MQ 发布失败，When 发送库存消费消息，Then 延迟三秒投递到补偿队列。
+     */
+    @Test
+    void shouldFallbackAwardStockMessageToDelayedQueueWhenPublishFails() {
+        // Given
+        StrategyAwardStockKeyVO message = new StrategyAwardStockKeyVO(STRATEGY_ID, AWARD_ID, "user-001");
+        doThrow(new RuntimeException("publish failed")).when(messagePublisher).publish(any(AwardStockDeductedEvent.class));
+
+        // When
+        stockMessageRepository.send(message);
 
         // Then
         verify(redisService).offerDelayed(
@@ -215,7 +249,7 @@ class StrategyRepositoryTest {
         )).thenReturn(Optional.of(expected));
 
         // When
-        Optional<StrategyAwardStockKeyVO> result = repository.pollQueueValue();
+        Optional<StrategyAwardStockKeyVO> result = stockMessageRepository.poll();
 
         // Then
         assertEquals(Optional.of(expected), result);

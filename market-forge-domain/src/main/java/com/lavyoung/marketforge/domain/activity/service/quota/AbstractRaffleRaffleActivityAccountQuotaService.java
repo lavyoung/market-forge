@@ -6,6 +6,7 @@ import com.lavyoung.marketforge.domain.activity.model.entity.ActivityEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivitySkuEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.SkuRechargeEntity;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
+import com.lavyoung.marketforge.domain.activity.repository.IActivitySkuStockMessageRepository;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityAccountQuotaService;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivitySkuStockService;
 import com.lavyoung.marketforge.domain.activity.service.quota.rule.IActionChain;
@@ -28,8 +29,8 @@ import org.apache.commons.lang3.StringUtils;
 @Slf4j
 public abstract class AbstractRaffleRaffleActivityAccountQuotaService extends RaffleActivitySupport implements IRaffleActivityAccountQuotaService, IRaffleActivitySkuStockService {
 
-    public AbstractRaffleRaffleActivityAccountQuotaService(IActivityRepository activityRepository, DefaultActivityChainFactory activityChainFactory) {
-        super(activityRepository, activityChainFactory);
+    public AbstractRaffleRaffleActivityAccountQuotaService(IActivityRepository activityRepository, IActivitySkuStockMessageRepository activitySkuStockMessageRepository, DefaultActivityChainFactory activityChainFactory) {
+        super(activityRepository, activitySkuStockMessageRepository, activityChainFactory);
     }
 
     /**
