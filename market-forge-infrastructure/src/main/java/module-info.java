@@ -7,6 +7,7 @@
  * @date 2026/09/01
  */
 module market.forge.infrastructure {
+    requires java.sql;
     requires java.compiler;
     requires static lombok;
     requires market.forge.domain;
@@ -29,6 +30,7 @@ module market.forge.infrastructure {
     requires com.fasterxml.jackson.datatype.jsr310;
     requires jakarta.annotation;
     requires cn.hutool;
+    requires lavshard.spring.boot.starter;
 
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler;
     opens com.lavyoung.marketforge.infrastructure.persistent.dao;
@@ -42,4 +44,5 @@ module market.forge.infrastructure {
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler.activity;
     opens com.lavyoung.marketforge.infrastructure.messaging;
     opens com.lavyoung.marketforge.infrastructure.messaging.rabbitmq;
+    opens com.lavyoung.marketforge.infrastructure.concurrent;
 }

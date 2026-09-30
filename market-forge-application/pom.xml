@@ -16,6 +16,9 @@
     <artifactId>market-forge-application</artifactId>
 
     <name>${project.artifactId}-${revision}</name>
+    <description>DDD application layer：承载用例编排、事务边界、命令查询流程、消息处理器和跨聚合协调；只调用领域能力与端口契约，禁止写入领域规则、持久化细节和
+        Web 协议适配。
+    </description>
 
     <dependencies>
 
@@ -27,6 +30,11 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
         </dependency>
 
         <dependency>

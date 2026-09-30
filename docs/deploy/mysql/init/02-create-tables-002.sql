@@ -69,19 +69,39 @@ DROP TABLE IF EXISTS `task`;
 CREATE TABLE `task`
 (
     `id`           int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `user_id`         varchar(32) NOT NULL COMMENT '用户ID，同时作为分片键',
     `topic`        varchar(32)  NOT NULL COMMENT '消息主题',
     `event_id`     varchar(64)  NOT NULL COMMENT '消息ID',
     `event_type`   varchar(512) NOT NULL COMMENT '消息路由键',
     `message_body` text         NOT NULL COMMENT '消息路由键',
     `occurred_at`  datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '',
-    `state`        varchar(16)  NOT NULL DEFAULT 'create' COMMENT '任务状态；create-创建、completed-完成、fail-失败',
+    `state`           varchar(16) NOT NULL DEFAULT 'create' COMMENT '任务状态；create-待投递、publishing-投递中、published-已投递、publish_failed-投递失败',
+    `retry_count`     int unsigned NOT NULL DEFAULT 0 COMMENT '投递失败重试次数',
+    `next_retry_time` datetime NULL COMMENT '下一次允许重试时间',
+    `last_error`      varchar(1024) NULL COMMENT '最近一次投递失败原因',
     `create_time`  datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time`  datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uq_event_id` (`event_id`)
+    UNIQUE KEY `uq_event_id` (`event_id`),
+    KEY               `idx_task_publish` (`state`, `next_retry_time`, `create_time`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='任务表，发送MQ';
 
+
+#
+CREATE TABLE `processed_message`
+(
+    `id`          bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `message_id`  varchar(64)  NOT NULL COMMENT '消息唯一标识',
+    `event_type`  varchar(128) NOT NULL COMMENT '事件类型',
+    `occurred_at` datetime     NOT NULL COMMENT '事件发生时间',
+    `create_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_processed_message_id` (`message_id`),
+    KEY           `idx_processed_message_create_time` (`create_time`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='已成功消费消息表';
 
 #
 转储表 user_award_record
@@ -99,7 +119,7 @@ CREATE TABLE `user_award_record`
     `award_id`    int(11) NOT NULL COMMENT '奖品ID',
     `award_title` varchar(128) NOT NULL COMMENT '奖品标题（名称）',
     `award_time`  datetime     NOT NULL COMMENT '中奖时间',
-    `award_state` varchar(16)  NOT NULL DEFAULT 'create' COMMENT '奖品状态；create-创建、completed-发奖完成',
+    `award_state` varchar(16) NOT NULL DEFAULT 'create' COMMENT '奖品状态；create-创建、wait_claim-待领取、granting-发奖中、grant_failed-发奖失败、completed-发奖完成',
     `create_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),

@@ -11,6 +11,7 @@
     exports com.lavyoung.marketforge.types.domain.strategy;
     exports com.lavyoung.marketforge.types.messaging;
     exports com.lavyoung.marketforge.types.utils;
+    exports com.lavyoung.marketforge.types.concurrent;
     requires static lombok;
     requires org.slf4j;
     requires spring.context;

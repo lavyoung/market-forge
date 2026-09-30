@@ -1,6 +1,6 @@
 package com.lavyoung.marketforge.domain.award.model.aggreate;
 
-import com.lavyoung.marketforge.domain.award.model.entity.TaskEntity;
+import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
 import com.lavyoung.marketforge.domain.award.model.entity.UserAwardRecordEntity;
 import lombok.Builder;
 
@@ -14,7 +14,6 @@ import lombok.Builder;
 @Builder
 public record UserAwardRecordAggregate(
         UserAwardRecordEntity userAwardRecordEntity,
-        // 消息
-        TaskEntity taskEntity
+        SendAwardRecordEvent sendAwardRecordEvent
 ) {
 }

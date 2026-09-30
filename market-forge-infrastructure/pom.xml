@@ -18,6 +18,9 @@
     <artifactId>market-forge-infrastructure</artifactId>
 
     <name>${project.artifactId}-${revision}</name>
+    <description>DDD infrastructure layer：实现仓储端口、数据库访问、缓存、消息、线程池、第三方组件适配和防腐层；禁止承载核心业务决策，禁止让
+        domain 反向依赖本模块。
+    </description>
 
     <dependencies>
 
@@ -72,6 +75,16 @@
         <dependency>
             <groupId>io.github.lavyoung</groupId>
             <artifactId>lavshard-spring-boot-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.github.lavyoung</groupId>
+            <artifactId>dynamic-thread-pool-spring-boot-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.github.lavyoung</groupId>
+            <artifactId>dynamic-thread-pool-registry-redis</artifactId>
         </dependency>
 
         <dependency>

@@ -18,6 +18,9 @@
     <artifactId>market-forge-trigger</artifactId>
 
     <name>${project.artifactId}-${revision}</name>
+    <description>DDD trigger layer：承载 HTTP、RPC、MQ listener、定时任务等入站触发适配器，负责参数校验、协议转换和调用
+        application 用例；禁止直接访问 repository、DAO 或编写领域规则。
+    </description>
 
     <dependencies>
 

@@ -67,6 +67,16 @@ public class RabbitMqTopology {
     }
 
     /**
+     * 声明用户发奖交换机。
+     *
+     * @return 持久化用户发奖交换机
+     */
+    @Bean
+    public TopicExchange userAwardExchange() {
+        return new TopicExchange(MqConstants.USER_AWARD_EXCHANGE, true, false);
+    }
+
+    /**
      * 声明死信交换机，路由方向为：业务队列 -&gt; 死信交换机 -&gt; 公共死信队列。
      *
      * @return 持久化 DirectExchange
@@ -201,5 +211,42 @@ public class RabbitMqTopology {
         return BindingBuilder.bind(marketForgeDlq())
                 .to(marketForgeDlx())
                 .with(MqConstants.SKU_STOCK_ZERO_ROUTING_KEY);
+    }
+
+    /**
+     * 声明用户发奖业务队列。
+     *
+     * @return 带死信参数的用户发奖队列
+     */
+    @Bean
+    public Queue userAwardSendQueue() {
+        return QueueBuilder.durable(MqConstants.USER_AWARD_SEND_QUEUE)
+                .deadLetterExchange(MqConstants.DLX)
+                .deadLetterRoutingKey(MqConstants.USER_AWARD_SEND_ROUTE_KEY)
+                .build();
+    }
+
+    /**
+     * 绑定用户发奖路由。
+     *
+     * @return 用户发奖业务绑定
+     */
+    @Bean
+    public Binding userAwardSendBinding() {
+        return BindingBuilder.bind(userAwardSendQueue())
+                .to(userAwardExchange())
+                .with(MqConstants.USER_AWARD_SEND_ROUTE_KEY);
+    }
+
+    /**
+     * 将用户发奖死信路由到公共死信队列。
+     *
+     * @return 用户发奖死信绑定
+     */
+    @Bean
+    public Binding userAwardDeadLetterBinding() {
+        return BindingBuilder.bind(marketForgeDlq())
+                .to(marketForgeDlx())
+                .with(MqConstants.USER_AWARD_SEND_ROUTE_KEY);
     }
 }

@@ -15,12 +15,6 @@ public final class MqConstants {
     }
 
     /**
-     * 幂等键前缀，用于区分"消息已消费"标记与其他缓存用途。
-     */
-    public static final String CONSUMED_KEY_PREFIX = "mq:consumed:";
-
-    public static final Duration CONSUMED_MARK_TTL = Duration.ofHours(24);
-    /**
      * 等待 broker 确认的最长时间。
      */
     public static final Duration CONFIRM_TIMEOUT = Duration.ofSeconds(5);

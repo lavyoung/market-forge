@@ -4,13 +4,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lavyoung.marketforge.domain.activity.event.ActivitySkuStockDeductedEvent;
 import com.lavyoung.marketforge.domain.activity.event.ActivitySkuZeroStockEvent;
+import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
 import com.lavyoung.marketforge.domain.strategy.event.AwardStockDeductedEvent;
 import com.lavyoung.marketforge.infrastructure.messaging.AbstractMessageListenerAdapter;
-import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
+import com.lavyoung.marketforge.infrastructure.messaging.MessageConsumeTransaction;
 import com.lavyoung.marketforge.types.messaging.MessageEnvelope;
 import com.lavyoung.marketforge.types.messaging.MessageHandler;
 import com.lavyoung.marketforge.types.messaging.MqConstants;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -34,16 +34,27 @@ public class RabbitMessageListenerAdapter extends AbstractMessageListenerAdapter
     };
     private static final TypeReference<MessageEnvelope<ActivitySkuZeroStockEvent>> SKU_STOCK_ZERO_TYPE = new TypeReference<>() {
     };
+    private static final TypeReference<MessageEnvelope<SendAwardRecordEvent>> USER_AWARD_SEND_TYPE = new TypeReference<>() {
+    };
 
-    @Resource
-    private MessageHandler<AwardStockDeductedEvent> awardStockDeductedEventMessageHandler;
-    @Resource
-    private MessageHandler<ActivitySkuStockDeductedEvent> activitySkuStockDeductedEventMessageHandler;
-    @Resource
-    private MessageHandler<ActivitySkuZeroStockEvent> activitySkuZeroStockEventMessageHandler;
+    private final MessageHandler<AwardStockDeductedEvent> awardStockDeductedEventMessageHandler;
+    private final MessageHandler<ActivitySkuStockDeductedEvent> activitySkuStockDeductedEventMessageHandler;
+    private final MessageHandler<ActivitySkuZeroStockEvent> activitySkuStockZeroEventMessageHandler;
+    private final MessageHandler<SendAwardRecordEvent> sendAwardRecordMessageHandler;
 
-    public RabbitMessageListenerAdapter(ObjectMapper objectMapper, IRedisService redisService) {
-        super(objectMapper, redisService);
+    public RabbitMessageListenerAdapter(
+            ObjectMapper objectMapper,
+            MessageConsumeTransaction messageConsumeTransaction,
+            MessageHandler<AwardStockDeductedEvent> awardStockDeductedEventMessageHandler,
+            MessageHandler<ActivitySkuStockDeductedEvent> activitySkuStockDeductedEventMessageHandler,
+            MessageHandler<ActivitySkuZeroStockEvent> activitySkuStockZeroEventMessageHandler,
+            MessageHandler<SendAwardRecordEvent> sendAwardRecordMessageHandler
+    ) {
+        super(objectMapper, messageConsumeTransaction);
+        this.awardStockDeductedEventMessageHandler = awardStockDeductedEventMessageHandler;
+        this.activitySkuStockDeductedEventMessageHandler = activitySkuStockDeductedEventMessageHandler;
+        this.activitySkuStockZeroEventMessageHandler = activitySkuStockZeroEventMessageHandler;
+        this.sendAwardRecordMessageHandler = sendAwardRecordMessageHandler;
     }
 
     @RabbitListener(queues = MqConstants.AWARD_STOCK_DEDUCT_QUEUE)
@@ -59,6 +70,17 @@ public class RabbitMessageListenerAdapter extends AbstractMessageListenerAdapter
 
     @RabbitListener(queues = MqConstants.SKU_STOCK_ZERO_QUEUE)
     public void onSkuStockZero(Message message) throws Exception {
-        consume(message, SKU_STOCK_ZERO_TYPE, activitySkuZeroStockEventMessageHandler);
+        consume(message, SKU_STOCK_ZERO_TYPE, activitySkuStockZeroEventMessageHandler);
+    }
+
+    /**
+     * 消费用户中奖记录创建消息并转交应用处理器。
+     *
+     * @param message RabbitMQ 原始消息
+     * @throws Exception 消息反序列化或业务处理失败时抛出
+     */
+    @RabbitListener(queues = MqConstants.USER_AWARD_SEND_QUEUE)
+    public void onUserAwardSend(Message message) throws Exception {
+        consume(message, USER_AWARD_SEND_TYPE, sendAwardRecordMessageHandler);
     }
 }

@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.lavyoung.marketforge.domain.activity.event.ActivitySkuStockDeductedEvent;
 import com.lavyoung.marketforge.domain.activity.event.ActivitySkuZeroStockEvent;
+import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
 import com.lavyoung.marketforge.domain.strategy.event.AwardStockDeductedEvent;
-import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
+import com.lavyoung.marketforge.infrastructure.messaging.MessageConsumeTransaction;
+import com.lavyoung.marketforge.infrastructure.persistent.repository.ProcessedMessageRepository;
 import com.lavyoung.marketforge.types.messaging.IntegrationEvent;
 import com.lavyoung.marketforge.types.messaging.MessageContext;
 import com.lavyoung.marketforge.types.messaging.MessageEnvelope;
@@ -20,7 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 
-import java.time.Duration;
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -40,10 +42,8 @@ class RabbitMessageListenerAdapterTest {
     private static final long STRATEGY_ID = 100_001L;
     private static final long AWARD_ID = 100_011;
     private static final String USER_ID = "user-001";
-    private static final String DEDUP_KEY_PREFIX = "mq:consumed:";
-
     @Mock
-    private IRedisService redisService;
+    private ProcessedMessageRepository processedMessageRepository;
 
     @Mock
     private MessageHandler<AwardStockDeductedEvent> awardStockDeductedHandler;
@@ -53,6 +53,9 @@ class RabbitMessageListenerAdapterTest {
 
     @Mock
     private MessageHandler<ActivitySkuZeroStockEvent> activitySkuZeroStockEventMessageHandler;
+
+    @Mock
+    private MessageHandler<SendAwardRecordEvent> sendAwardRecordMessageHandler;
 
     private ObjectMapper objectMapper;
 
@@ -66,9 +69,15 @@ class RabbitMessageListenerAdapterTest {
         objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        MessageConsumeTransaction messageConsumeTransaction =
+                new MessageConsumeTransaction(processedMessageRepository);
         adapter = new RabbitMessageListenerAdapter(
                 objectMapper,
-                redisService
+                messageConsumeTransaction,
+                awardStockDeductedHandler,
+                activitySkuStockDeductedEventMessageHandler,
+                activitySkuZeroStockEventMessageHandler,
+                sendAwardRecordMessageHandler
         );
     }
 
@@ -78,7 +87,7 @@ class RabbitMessageListenerAdapterTest {
     @Test
     void shouldDeserializeEnvelopeAndDispatchToHandler() throws Exception {
         AwardStockDeductedEvent event = newEvent();
-        when(redisService.setIfAbsent(anyString(), anyString(), any(Duration.class))).thenReturn(true);
+        allowFirstConsumption();
 
         adapter.onAwardStockDeducted(messageOf(event));
 
@@ -101,7 +110,8 @@ class RabbitMessageListenerAdapterTest {
     @Test
     void shouldSkipDuplicateMessage() throws Exception {
         AwardStockDeductedEvent event = newEvent();
-        when(redisService.setIfAbsent(anyString(), anyString(), any(Duration.class))).thenReturn(false);
+        when(processedMessageRepository.tryRecord(anyString(), anyString(), any(LocalDateTime.class)))
+                .thenReturn(false);
 
         adapter.onAwardStockDeducted(messageOf(event));
 
@@ -109,12 +119,12 @@ class RabbitMessageListenerAdapterTest {
     }
 
     /**
-     * 处理失败时必须撤销幂等占位并继续向上抛出，保证重试有机会重新处理。
+     * 处理失败时必须继续向上抛出，使事务回滚幂等登记并允许消息重试。
      */
     @Test
-    void shouldReleaseIdempotentKeyWhenHandlerFails() throws Exception {
+    void shouldPropagateExceptionWhenHandlerFails() throws Exception {
         AwardStockDeductedEvent event = newEvent();
-        when(redisService.setIfAbsent(anyString(), anyString(), any(Duration.class))).thenReturn(true);
+        allowFirstConsumption();
         doThrow(new IllegalStateException("扣减失败"))
                 .when(awardStockDeductedHandler).handle(any(), any());
 
@@ -122,7 +132,8 @@ class RabbitMessageListenerAdapterTest {
 
         assertThrows(IllegalStateException.class, () -> adapter.onAwardStockDeducted(message));
 
-        verify(redisService).delete(DEDUP_KEY_PREFIX + event.eventId());
+        verify(processedMessageRepository).tryRecord(
+                eq(event.eventId()), eq(event.eventType()), any(LocalDateTime.class));
     }
 
     private AwardStockDeductedEvent newEvent() {
@@ -145,11 +156,7 @@ class RabbitMessageListenerAdapterTest {
         ActivitySkuStockDeductedEvent event =
                 new ActivitySkuStockDeductedEvent(10001L, 20001L, "user-001");
 
-        when(redisService.setIfAbsent(
-                anyString(),
-                anyString(),
-                any(Duration.class)
-        )).thenReturn(true);
+        allowFirstConsumption();
 
         adapter.onSkuStockDeducted(messageOf(event));
 
@@ -164,11 +171,7 @@ class RabbitMessageListenerAdapterTest {
         ActivitySkuZeroStockEvent event =
                 new ActivitySkuZeroStockEvent(10001L);
 
-        when(redisService.setIfAbsent(
-                anyString(),
-                anyString(),
-                any(Duration.class)
-        )).thenReturn(true);
+        allowFirstConsumption();
 
         adapter.onSkuStockZero(messageOf(event));
 
@@ -176,6 +179,22 @@ class RabbitMessageListenerAdapterTest {
                 eq(event),
                 any(MessageContext.class)
         );
+    }
+
+    @Test
+    void shouldDispatchUserAwardSendEvent() throws Exception {
+        SendAwardRecordEvent event = new SendAwardRecordEvent(
+                USER_ID, "order-001", AWARD_ID, "测试奖品");
+
+        adapter.onUserAwardSend(messageOf(event));
+
+        verify(sendAwardRecordMessageHandler).handle(eq(event), any(MessageContext.class));
+        verifyNoInteractions(processedMessageRepository);
+    }
+
+    private void allowFirstConsumption() {
+        when(processedMessageRepository.tryRecord(anyString(), anyString(), any(LocalDateTime.class)))
+                .thenReturn(true);
     }
 
     private <T extends IntegrationEvent> Message messageOf(T event)

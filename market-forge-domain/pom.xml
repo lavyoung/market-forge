@@ -18,6 +18,9 @@
     <artifactId>market-forge-domain</artifactId>
 
     <name>${project.artifactId}-${revision}</name>
+    <description>DDD domain layer：承载聚合、实体、值对象、领域服务、领域事件和仓储端口，表达核心业务规则；禁止依赖基础设施实现、Web
+        层模型、数据库细节和远程中间件客户端。
+    </description>
 
     <dependencies>
 

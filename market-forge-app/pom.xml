@@ -18,6 +18,9 @@
     <artifactId>market-forge-app</artifactId>
 
     <name>${project.artifactId}-${revision}</name>
+    <description>DDD bootstrap layer：应用启动与装配模块，负责组合 trigger、application、infrastructure，加载配置并启动
+        Spring Boot；禁止承载业务规则、用例编排和基础设施具体实现。
+    </description>
 
     <dependencies>
 

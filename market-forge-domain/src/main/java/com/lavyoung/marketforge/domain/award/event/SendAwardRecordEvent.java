@@ -1,6 +1,6 @@
 package com.lavyoung.marketforge.domain.award.event;
 
-import com.lavyoung.marketforge.types.messaging.IntegrationEvent;
+import com.lavyoung.marketforge.types.messaging.BusinessIdempotentIntegrationEvent;
 import com.lavyoung.marketforge.types.messaging.MqConstants;
 import lombok.Builder;
 
@@ -19,19 +19,21 @@ public record SendAwardRecordEvent(
         String eventId,
         Instant occurredAt,
         String userId,
+        String orderId,
         Long awardId,
         String awardTitle
-) implements IntegrationEvent {
+) implements BusinessIdempotentIntegrationEvent {
 
     /**
      * 用户发奖消息
      *
      * @param userId     用户ID
+     * @param orderId    抽奖订单ID
      * @param awardId    奖品id
      * @param awardTitle 奖品名称
      */
-    public SendAwardRecordEvent(String userId, Long awardId, String awardTitle) {
-        this(UUID.randomUUID().toString(), Instant.now(), userId, awardId, awardTitle);
+    public SendAwardRecordEvent(String userId, String orderId, Long awardId, String awardTitle) {
+        this(UUID.randomUUID().toString(), Instant.now(), userId, orderId, awardId, awardTitle);
     }
 
     @Override

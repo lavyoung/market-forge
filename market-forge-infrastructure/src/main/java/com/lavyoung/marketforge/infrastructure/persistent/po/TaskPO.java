@@ -31,6 +31,11 @@ public class TaskPO extends BasePO {
     private Long id;
 
     /**
+     * 用户标识，同时作为任务表分片键。
+     */
+    private String userId;
+
+    /**
      * 消息主题或交换机。
      */
     private String topic;
@@ -59,4 +64,19 @@ public class TaskPO extends BasePO {
      * 消息任务状态。
      */
     private String state;
+
+    /**
+     * 已执行的失败重试次数。
+     */
+    private Integer retryCount;
+
+    /**
+     * 下一次允许重试的时间。
+     */
+    private LocalDateTime nextRetryTime;
+
+    /**
+     * 最近一次投递失败原因。
+     */
+    private String lastError;
 }

@@ -96,6 +96,9 @@
 
         <!-- hutool -->
         <hutool.version>5.8.47</hutool.version>
+
+        <!-- dynamic-thread-pool-bom -->
+        <dynamic-thread-pool-bom.version>0.1.1</dynamic-thread-pool-bom.version>
     </properties>
 
 
@@ -116,6 +119,14 @@
                 <groupId>com.alibaba.cloud</groupId>
                 <artifactId>spring-cloud-alibaba-dependencies</artifactId>
                 <version>${spring-cloud-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>io.github.lavyoung</groupId>
+                <artifactId>dynamic-thread-pool-bom</artifactId>
+                <version>${dynamic-thread-pool-bom.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

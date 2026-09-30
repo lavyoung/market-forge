@@ -7,25 +7,31 @@
     <resultMap id="taskResultMap"
                type="com.lavyoung.marketforge.infrastructure.persistent.po.TaskPO">
         <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
         <result column="topic" property="topic"/>
         <result column="event_id" property="eventId"/>
         <result column="event_type" property="eventType"/>
         <result column="message_body" property="messageBody"/>
         <result column="occurred_at" property="occurredAt"/>
         <result column="state" property="state"/>
+        <result column="retry_count" property="retryCount"/>
+        <result column="next_retry_time" property="nextRetryTime"/>
+        <result column="last_error" property="lastError"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
     </resultMap>
 
     <sql id="taskColumns">
-        id, topic, event_id, event_type, message_body, occurred_at, state, create_time, update_time
+        id, user_id, topic, event_id, event_type, message_body, occurred_at, state,
+        retry_count, next_retry_time, last_error, create_time, update_time
     </sql>
 
     <select id="queryByEventId" resultMap="taskResultMap">
         SELECT
         <include refid="taskColumns"/>
         FROM task
-        WHERE event_id = #{eventId}
+        WHERE user_id = #{userId}
+        AND event_id = #{eventId}
         LIMIT 1
     </select>
 

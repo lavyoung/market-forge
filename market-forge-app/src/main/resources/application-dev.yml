@@ -10,6 +10,7 @@ spring:
       host: ${MARKET_FORGE_REDIS_HOST:192.168.3.127}
       port: ${MARKET_FORGE_REDIS_PORT:6379}
       password: ${MARKET_FORGE_REDIS_PASSWORD:sYogkA6cjqyZBwuI+5bE7AFTWKtVvBQs}
+      database: 0
 
   rabbitmq:
     addresses: ${MARKET_FORGE_MQ_HOST:192.168.3.127}
@@ -55,7 +56,7 @@ lavshard:
       - raffle_activity
       - raffle_activity_count
       - raffle_activity_sku
-      - task
+      - processed_message
 
   data-sources:
     ds1:
@@ -118,6 +119,9 @@ lavshard:
     user_award_record:
       sharding-column: user_id
 
+    task:
+      sharding-column: user_id
+
 springdoc:
   api-docs:
     enabled: true
@@ -140,7 +144,32 @@ management:
       type:
         - w3c
 
+
 logging:
   level:
     com.lavyoung.marketforge: debug
     io.github.lavyoung.lavshard: debug
+dynamic:
+  thread-pool:
+    config-sync-enabled: true
+    application-name: ${spring.application.name}
+
+
+market-forge:
+  thread-pool:
+    enabled: true
+    pools:
+      message-task:
+        core-pool-size: 4
+        maximum-pool-size: 8
+        queue-capacity: 1000
+        keep-alive-seconds: 60
+        await-termination-seconds: 30
+        rejected-policy: caller-runs
+      award-grant:
+        core-pool-size: 4
+        maximum-pool-size: 16
+        queue-capacity: 2000
+        keep-alive-seconds: 60
+        await-termination-seconds: 30
+        rejected-policy: abort

@@ -1,17 +1,30 @@
 package com.lavyoung.marketforge.infrastructure.persistent.repository;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
 import com.lavyoung.marketforge.domain.award.model.aggreate.UserAwardRecordAggregate;
-import com.lavyoung.marketforge.domain.award.model.entity.TaskEntity;
 import com.lavyoung.marketforge.domain.award.model.entity.UserAwardRecordEntity;
+import com.lavyoung.marketforge.domain.award.model.valobj.AwardStateVO;
 import com.lavyoung.marketforge.domain.award.repository.IAwardRepository;
+import com.lavyoung.marketforge.domain.message.model.entity.TaskEntity;
+import com.lavyoung.marketforge.domain.message.model.valobj.TaskStateVO;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.TaskAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.UserAwardRecordAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.IUserAwardRecordDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.mq.ITaskDao;
+import com.lavyoung.marketforge.infrastructure.persistent.po.TaskPO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.UserAwardRecordPO;
+import com.lavyoung.marketforge.types.exception.BusinessException;
+import com.lavyoung.marketforge.types.messaging.IntegrationEventCodec;
+import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
+
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Optional;
 
 /**
  *
@@ -30,19 +43,57 @@ public class AwardRepository implements IAwardRepository {
 
     private final UserAwardRecordAssembler userAwardRecordAssembler;
     private final TaskAssembler taskAssembler;
+    private final IntegrationEventCodec eventCodec;
 
 
     @Override
     public void saveUserAwardRecord(UserAwardRecordAggregate aggregate) {
-        TaskEntity taskEntity = aggregate.taskEntity();
         UserAwardRecordEntity userAwardRecordEntity = aggregate.userAwardRecordEntity();
+        SendAwardRecordEvent event = aggregate.sendAwardRecordEvent();
 
         // 保存发奖记录
         UserAwardRecordPO po = userAwardRecordAssembler.toPO(userAwardRecordEntity);
-        userAwardRecordDao.insert(po);
+        int recordRows = userAwardRecordDao.insert(po);
+        if (recordRows < 1) {
+            throw BusinessException.of(BusinessResponseCode.USER_AWARD_RECORD_CREATE_FAILED);
+        }
+
+        TaskEntity taskEntity = TaskEntity.builder()
+                .userId(userAwardRecordEntity.userId())
+                .eventId(event.eventId())
+                .topic(event.exchange())
+                .eventType(event.routingKey())
+                .messageBody(eventCodec.serialize(event))
+                .occurredAt(LocalDateTime.ofInstant(event.occurredAt(), ZoneId.systemDefault()))
+                .state(TaskStateVO.CREATE.getCode())
+                .retryCount(0)
+                .build();
 
         // 发出mq消息记录
+        TaskPO taskPO = taskAssembler.toPO(taskEntity);
+        int res = taskDao.insert(taskPO);
+        if (res < 1) {
+            throw BusinessException.of(BusinessResponseCode.TASK_CREATE_FAILED);
+        }
+    }
 
+    @Override
+    public Optional<UserAwardRecordEntity> queryUserAwardRecord(String userId, String orderId) {
+        QueryWrapper<UserAwardRecordPO> queryWrapper = new QueryWrapper<UserAwardRecordPO>()
+                .eq("user_id", userId)
+                .eq("order_id", orderId)
+                .last("LIMIT 1");
+        return Optional.ofNullable(userAwardRecordDao.selectOne(queryWrapper))
+                .map(userAwardRecordAssembler::toEntity);
+    }
 
+    @Override
+    public boolean updateAwardState(String userId, String orderId, AwardStateVO currentState, AwardStateVO targetState) {
+        UpdateWrapper<UserAwardRecordPO> updateWrapper = new UpdateWrapper<UserAwardRecordPO>()
+                .eq("user_id", userId)
+                .eq("order_id", orderId)
+                .eq("award_state", currentState.getCode())
+                .set("award_state", targetState.getCode());
+        return userAwardRecordDao.update(null, updateWrapper) == 1;
     }
 }

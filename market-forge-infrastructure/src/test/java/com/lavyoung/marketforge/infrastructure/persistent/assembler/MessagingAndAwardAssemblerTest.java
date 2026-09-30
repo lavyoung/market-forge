@@ -1,9 +1,10 @@
 package com.lavyoung.marketforge.infrastructure.persistent.assembler;
 
+import cn.hutool.json.JSONUtil;
 import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
-import com.lavyoung.marketforge.domain.award.model.entity.TaskEntity;
 import com.lavyoung.marketforge.domain.award.model.entity.UserAwardRecordEntity;
 import com.lavyoung.marketforge.domain.award.model.valobj.AwardStateVO;
+import com.lavyoung.marketforge.domain.message.model.entity.TaskEntity;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
@@ -56,16 +57,19 @@ class MessagingAndAwardAssemblerTest {
                 .eventId("8f8d3cbb-4dda-4570-88ab-21956a65e83f")
                 .occurredAt(Instant.parse("2026-09-22T04:00:00Z"))
                 .userId("user-001")
+                .orderId("order-001")
                 .awardId(100011L)
                 .awardTitle("测试奖品")
                 .build();
         TaskEntity expected = TaskEntity.builder()
+                .userId(event.userId())
                 .topic("market-forge.exchange")
                 .eventId(event.eventId())
                 .eventType(event.eventType())
-                .messageBody(event)
+                .messageBody(JSONUtil.toJsonStr(event))
                 .occurredAt(LocalDateTime.of(2026, 9, 22, 12, 0))
                 .state("create")
+                .retryCount(0)
                 .build();
 
         // When

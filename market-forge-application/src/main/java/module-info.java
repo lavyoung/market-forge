@@ -8,6 +8,7 @@ module market.forge.application {
     requires market.forge.types;
     requires org.slf4j;
     requires spring.context;
+    requires spring.tx;
     requires static lombok;
 
     exports com.lavyoung.marketforge.application.strategy.model;
@@ -15,9 +16,18 @@ module market.forge.application {
     exports com.lavyoung.marketforge.application.strategy.service.impl;
     exports com.lavyoung.marketforge.application.strategy.messaging;
     exports com.lavyoung.marketforge.application.activity.messaging;
+    exports com.lavyoung.marketforge.application.message;
+    exports com.lavyoung.marketforge.application.award.model;
+    exports com.lavyoung.marketforge.application.award.service;
+    exports com.lavyoung.marketforge.application.award.service.impl;
+    exports com.lavyoung.marketforge.application.award.messaging;
 
     opens com.lavyoung.marketforge.application.strategy.service;
     opens com.lavyoung.marketforge.application.strategy.service.impl;
     opens com.lavyoung.marketforge.application.strategy.messaging;
     opens com.lavyoung.marketforge.application.activity.messaging;
+    opens com.lavyoung.marketforge.application.message;
+    opens com.lavyoung.marketforge.application.award.service;
+    opens com.lavyoung.marketforge.application.award.service.impl;
+    opens com.lavyoung.marketforge.application.award.messaging;
 }

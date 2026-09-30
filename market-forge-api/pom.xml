@@ -18,6 +18,9 @@
     <artifactId>market-forge-api</artifactId>
 
     <name>${project.artifactId}-${revision}</name>
+    <description>DDD API contract layer：仅定义对外暴露的接口契约、请求响应
+        DTO、校验注解和接口文档元数据；禁止包含业务编排、领域规则、持久化实现和外部组件调用。
+    </description>
 
     <dependencies>
 

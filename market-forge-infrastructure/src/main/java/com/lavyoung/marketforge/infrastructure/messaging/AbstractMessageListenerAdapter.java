@@ -2,14 +2,14 @@ package com.lavyoung.marketforge.infrastructure.messaging;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
-import com.lavyoung.marketforge.types.messaging.*;
+import com.lavyoung.marketforge.types.messaging.IntegrationEvent;
+import com.lavyoung.marketforge.types.messaging.MessageContext;
+import com.lavyoung.marketforge.types.messaging.MessageEnvelope;
+import com.lavyoung.marketforge.types.messaging.MessageHandler;
 import com.lavyoung.marketforge.types.utils.MdcUtil;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
-
-import static com.lavyoung.marketforge.types.messaging.MqConstants.CONSUMED_MARK_TTL;
 
 /**
  *
@@ -23,10 +23,10 @@ import static com.lavyoung.marketforge.types.messaging.MqConstants.CONSUMED_MARK
 public abstract class AbstractMessageListenerAdapter {
 
     protected final ObjectMapper objectMapper;
-    protected final IRedisService redisService;
+    protected final MessageConsumeTransaction messageConsumeTransaction;
 
     /**
-     * 统一处理 RabbitMQ 入站消息，包括反序列化、临时幂等控制、
+     * 统一处理 RabbitMQ 入站消息，包括反序列化、持久化幂等控制、
      * 消息上下文构建、链路追踪和异常清理。
      *
      * @param message        RabbitMQ 原始消息
@@ -41,12 +41,6 @@ public abstract class AbstractMessageListenerAdapter {
     ) throws Exception {
         MessageEnvelope<T> envelope = objectMapper.readValue(message.getBody(), envelopeType);
 
-        String dedupKey = MqConstants.CONSUMED_KEY_PREFIX + envelope.messageId();
-
-        if (!reserveMessage(dedupKey, envelope)) {
-            return;
-        }
-
         try {
             MdcUtil.putTraceId(envelope.traceId());
             MessageContext context = new MessageContext(
@@ -55,34 +49,13 @@ public abstract class AbstractMessageListenerAdapter {
                     Boolean.TRUE.equals(message.getMessageProperties().isRedelivered()),
                     message.getMessageProperties().getHeaders()
             );
-            messageHandler.handle(envelope.payload(), context);
-        } catch (Exception e) {
-            redisService.delete(dedupKey);
-            throw e;
+            boolean consumed = messageConsumeTransaction.consume(envelope, context, messageHandler);
+            if (!consumed) {
+                log.warn("重复消息已跳过 messageId={} traceId={} eventType={}",
+                        envelope.messageId(), envelope.traceId(), envelope.eventType());
+            }
         } finally {
             MdcUtil.clearTraceId();
         }
-    }
-
-    /**
-     * 尝试为消息建立临时消费标记。
-     *
-     * @param dedupKey 幂等键
-     * @param envelope 消息信封
-     * @return 首次消费返回 true，重复消息返回 false
-     */
-    private boolean reserveMessage(String dedupKey, MessageEnvelope<?> envelope) {
-        boolean reserved = redisService.setIfAbsent(dedupKey, envelope.occurredAt().toString(),
-                CONSUMED_MARK_TTL
-        );
-
-        if (!reserved) {
-            log.warn("重复消息已跳过 messageId={} traceId={} eventType={}",
-                    envelope.messageId(),
-                    envelope.traceId(),
-                    envelope.eventType()
-            );
-        }
-        return reserved;
     }
 }

@@ -2,8 +2,10 @@ package com.lavyoung.marketforge.application.strategy.messaging;
 
 import com.lavyoung.marketforge.domain.strategy.event.AwardStockDeductedEvent;
 import com.lavyoung.marketforge.domain.strategy.service.IRaffleStock;
+import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.messaging.MessageContext;
 import com.lavyoung.marketforge.types.messaging.MessageHandler;
+import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -27,8 +29,12 @@ public class AwardStockDeductedMessageHandler implements MessageHandler<AwardSto
         log.info("收到奖品库存扣减事件 messageId={} traceId={} strategyId={} awardId={} userId={}",
                 context.messageId(), context.traceId(),
                 event.strategyId(), event.awardId(), event.userId());
-        // 第 5 课在这里接上真正的库存扣减用例（IAwardStockService / IRaffleStock）。
-        raffleStock.updateStrategyAwardStock(event.strategyId(), event.awardId());
+        boolean updated = raffleStock.updateStrategyAwardStock(event.strategyId(), event.awardId());
+        if (!updated) {
+            throw BusinessException.of(
+                    BusinessResponseCode.AWARD_STOCK_SYNC_FAILED,
+                    event.strategyId(), event.awardId(), event.userId());
+        }
     }
 }
 

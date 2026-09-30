@@ -23,3 +23,22 @@ springdoc:
 logging:
   level:
     root: info
+
+market-forge:
+  thread-pool:
+    enabled: true
+    pools:
+      message-task:
+        core-pool-size: 4
+        maximum-pool-size: 8
+        queue-capacity: 1000
+        keep-alive-seconds: 60
+        await-termination-seconds: 30
+        rejected-policy: caller-runs
+      award-grant:
+        core-pool-size: 4
+        maximum-pool-size: 16
+        queue-capacity: 2000
+        keep-alive-seconds: 60
+        await-termination-seconds: 30
+        rejected-policy: abort

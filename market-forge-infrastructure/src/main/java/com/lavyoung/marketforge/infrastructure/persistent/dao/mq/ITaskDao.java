@@ -19,8 +19,9 @@ public interface ITaskDao extends BaseMapper<TaskPO> {
     /**
      * 按事件唯一标识查询消息任务。
      *
+     * @param userId  用户标识，同时作为任务表分片键
      * @param eventId 事件唯一标识
      * @return 匹配的消息任务；不存在时返回 {@link Optional#empty()}
      */
-    Optional<TaskPO> queryByEventId(@Param("eventId") String eventId);
+    Optional<TaskPO> queryByEventId(@Param("userId") String userId, @Param("eventId") String eventId);
 }

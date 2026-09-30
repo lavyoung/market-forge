@@ -18,6 +18,9 @@
     <artifactId>market-forge-types</artifactId>
 
     <name>${project.artifactId}-${revision}</name>
+    <description>DDD shared kernel：仅承载跨层共享的基础类型、通用异常、响应编码、消息契约与无基础设施依赖的工具能力；禁止放入领域规则、应用编排、持久化实现、Web
+        适配器和 Spring 运行时配置。
+    </description>
 
     <dependencies>
 

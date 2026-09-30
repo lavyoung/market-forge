@@ -80,7 +80,7 @@ lavshard:
       - raffle_activity
       - raffle_activity_count
       - raffle_activity_sku
-      - task
+      - processed_message
 
   data-sources:
     ds1:
@@ -131,4 +131,7 @@ lavshard:
       sharding-column: user_id
 
     user_award_record:
+      sharding-column: user_id
+
+    task:
       sharding-column: user_id
