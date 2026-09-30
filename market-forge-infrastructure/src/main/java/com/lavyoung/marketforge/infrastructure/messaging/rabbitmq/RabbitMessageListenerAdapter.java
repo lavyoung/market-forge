@@ -17,8 +17,10 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
 /**
- *
- * RabbitMQ 入站适配器：把队列里的消息解成领域事件，转交给应用层的 MessageHandler。
+ * RabbitMQ 入站适配器。
+ * <p>
+ * 将各业务队列中的消息反序列化为领域事件，并转交给应用层 {@link MessageHandler}。
+ * 消息幂等、MDC 追踪和异常回滚由父类消费模板统一处理。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -57,17 +59,35 @@ public class RabbitMessageListenerAdapter extends AbstractMessageListenerAdapter
         this.sendAwardRecordMessageHandler = sendAwardRecordMessageHandler;
     }
 
+    /**
+     * 消费奖品库存扣减消息。
+     *
+     * @param message RabbitMQ 原始消息
+     * @throws Exception 消息反序列化或业务处理失败时抛出
+     */
     @RabbitListener(queues = MqConstants.AWARD_STOCK_DEDUCT_QUEUE)
     public void onAwardStockDeducted(Message message) throws Exception {
         consume(message, AWARD_STOCK_DEDUCTED_TYPE, awardStockDeductedEventMessageHandler);
     }
 
+    /**
+     * 消费活动 SKU 库存扣减消息。
+     *
+     * @param message RabbitMQ 原始消息
+     * @throws Exception 消息反序列化或业务处理失败时抛出
+     */
     @RabbitListener(queues = MqConstants.SKU_STOCK_DEDUCT_QUEUE)
     public void onSkuStockDeducted(Message message) throws Exception {
         consume(message, SKU_STOCK_DEDUCTED_TYPE, activitySkuStockDeductedEventMessageHandler);
 
     }
 
+    /**
+     * 消费活动 SKU 库存清零消息。
+     *
+     * @param message RabbitMQ 原始消息
+     * @throws Exception 消息反序列化或业务处理失败时抛出
+     */
     @RabbitListener(queues = MqConstants.SKU_STOCK_ZERO_QUEUE)
     public void onSkuStockZero(Message message) throws Exception {
         consume(message, SKU_STOCK_ZERO_TYPE, activitySkuStockZeroEventMessageHandler);

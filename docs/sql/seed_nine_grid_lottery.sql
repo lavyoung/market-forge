@@ -170,6 +170,99 @@ ON DUPLICATE KEY
            rule_limit_value =
                VALUES(rule_limit_value);
 
+-- 活动抽奖演示数据：HTTP 抽奖入口会按活动和 SKU 创建参与订单，再取活动配置的 strategy_id 执行策略抽奖。
+INSERT INTO raffle_activity_count (id, activity_count_id, total_count, day_count, month_count)
+VALUES (100301, 100301, 100, 10, 100)
+ON DUPLICATE KEY
+    UPDATE total_count =
+               VALUES(total_count),
+           day_count   =
+               VALUES(day_count),
+           month_count =
+               VALUES(month_count);
+
+INSERT INTO raffle_activity
+(id, activity_id, activity_name, activity_desc, begin_date_time, end_date_time,
+ stock_count, stock_count_surplus, activity_count_id, strategy_id, state)
+VALUES (100301, 100301, '九宫格活动抽奖', '九宫格抽奖活动演示数据',
+        '2026-01-01 00:00:00', '2036-12-31 23:59:59',
+        100000, 100000, 100301, 900901001, 'open')
+ON DUPLICATE KEY
+    UPDATE activity_name       =
+               VALUES(activity_name),
+           activity_desc       =
+               VALUES(activity_desc),
+           begin_date_time     =
+               VALUES(begin_date_time),
+           end_date_time       =
+               VALUES(end_date_time),
+           stock_count         =
+               VALUES(stock_count),
+           stock_count_surplus =
+               VALUES(stock_count_surplus),
+           activity_count_id   =
+               VALUES(activity_count_id),
+           strategy_id         =
+               VALUES(strategy_id),
+           state               =
+               VALUES(state);
+
+INSERT INTO raffle_activity_sku (id, sku, activity_id, activity_count_id, stock_count)
+VALUES (9011, 9011, 100301, 100301, 100000)
+ON DUPLICATE KEY
+    UPDATE activity_id       =
+               VALUES(activity_id),
+           activity_count_id =
+               VALUES(activity_count_id),
+           stock_count       =
+               VALUES(stock_count);
+
+INSERT INTO raffle_activity_account
+(user_id, activity_id, total_count, total_count_surplus, day_count, day_count_surplus,
+ month_count, month_count_surplus, version)
+VALUES ('user-001', 100301, 100, 100, 10, 10, 100, 100, 1),
+       ('demo-user-001', 100301, 100, 100, 10, 10, 100, 100, 1)
+ON DUPLICATE KEY
+    UPDATE total_count         =
+               VALUES(total_count),
+           total_count_surplus =
+               VALUES(total_count_surplus),
+           day_count           =
+               VALUES(day_count),
+           day_count_surplus   =
+               VALUES(day_count_surplus),
+           month_count         =
+               VALUES(month_count),
+           month_count_surplus =
+               VALUES(month_count_surplus),
+           version             =
+               VALUES(version);
+
+USE `market-forge-002`;
+
+INSERT INTO raffle_activity_account
+(user_id, activity_id, total_count, total_count_surplus, day_count, day_count_surplus,
+ month_count, month_count_surplus, version)
+VALUES ('user-001', 100301, 100, 100, 10, 10, 100, 100, 1),
+       ('demo-user-001', 100301, 100, 100, 10, 10, 100, 100, 1)
+ON DUPLICATE KEY
+    UPDATE total_count         =
+               VALUES(total_count),
+           total_count_surplus =
+               VALUES(total_count_surplus),
+           day_count           =
+               VALUES(day_count),
+           day_count_surplus   =
+               VALUES(day_count_surplus),
+           month_count         =
+               VALUES(month_count),
+           month_count_surplus =
+               VALUES(month_count_surplus),
+           version             =
+               VALUES(version);
+
+USE `market-forge-001`;
+
 -- ----------------------------------------------------------------------------
 -- 数据校验：执行完脚本后应得到 1 个策略、9 个奖品、9 条策略规则、2 棵规则树。
 -- ----------------------------------------------------------------------------

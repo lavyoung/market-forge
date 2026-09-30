@@ -12,7 +12,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
 
 /**
- *
+ * 消息监听适配器基类。
+ * <p>
+ * 为具体 MQ 监听器提供统一消费模板：反序列化消息信封、构建消费上下文、写入 MDC、
+ * 执行持久化幂等控制，并把业务事件转交应用层处理器。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0

@@ -15,13 +15,14 @@
         <result column="day_count_surplus" property="dayCountSurplus"/>
         <result column="month_count" property="monthCount"/>
         <result column="month_count_surplus" property="monthCountSurplus"/>
+        <result column="version" property="version"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
     </resultMap>
 
     <sql id="activityAccountColumns">
         id, user_id, activity_id, total_count, total_count_surplus, day_count,
-        day_count_surplus, month_count, month_count_surplus, create_time, update_time
+        day_count_surplus, month_count, month_count_surplus, version, create_time, update_time
     </sql>
 
     <select id="queryByUserIdAndActivityId" resultMap="activityAccountResultMap">

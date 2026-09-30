@@ -33,6 +33,8 @@ function isStrategyAward(value: unknown): value is StrategyAward {
 function isRaffleResult(value: unknown): value is RaffleResult {
     return (
         isRecord(value) &&
+        typeof value.orderId === "string" &&
+        isPositiveId(value.activityId) &&
         isPositiveId(value.strategyId) &&
         isPositiveId(value.awardId) &&
         isNullableString(value.awardKey) &&

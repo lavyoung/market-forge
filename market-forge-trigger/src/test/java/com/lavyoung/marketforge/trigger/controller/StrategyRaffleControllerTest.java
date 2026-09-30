@@ -4,8 +4,9 @@ import com.lavyoung.marketforge.api.strategy.IStrategyRaffleApi;
 import com.lavyoung.marketforge.api.strategy.request.StrategyRaffleRequest;
 import com.lavyoung.marketforge.api.strategy.response.StrategyAwardResponse;
 import com.lavyoung.marketforge.api.strategy.response.StrategyRaffleResponse;
-import com.lavyoung.marketforge.application.strategy.model.RaffleCommand;
-import com.lavyoung.marketforge.application.strategy.model.RaffleResult;
+import com.lavyoung.marketforge.application.activity.model.ActivityRaffleCommand;
+import com.lavyoung.marketforge.application.activity.model.ActivityRaffleResult;
+import com.lavyoung.marketforge.application.activity.service.IActivityRaffleApplicationService;
 import com.lavyoung.marketforge.application.strategy.model.StrategyAwardResult;
 import com.lavyoung.marketforge.application.strategy.service.IStrategyRaffleService;
 import com.lavyoung.marketforge.trigger.assembler.StrategyAwardResponseAssembler;
@@ -36,8 +37,11 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standal
 class StrategyRaffleControllerTest {
 
     private static final String USER_ID = "user-001";
+    private static final Long ACTIVITY_ID = 100_301L;
+    private static final Long SKU = 9_011L;
     private static final Long STRATEGY_ID = 100_001L;
     private static final Long AWARD_ID = 100_011L;
+    private static final String ORDER_ID = "RO1003010001";
     private static final StrategyRaffleResponseAssembler STRATEGY_RAFFLE_ASSEMBLER =
             Mappers.getMapper(StrategyRaffleResponseAssembler.class);
     private static final StrategyAwardResponseAssembler STRATEGY_AWARD_ASSEMBLER =
@@ -49,26 +53,30 @@ class StrategyRaffleControllerTest {
     @Test
     void shouldMapApiRequestAndDomainResult() {
         // Given
-        IStrategyRaffleService applicationService = mock(IStrategyRaffleService.class);
-        RaffleCommand command = new RaffleCommand(USER_ID, STRATEGY_ID);
-        when(applicationService.raffle(command)).thenReturn(
-                new RaffleResult(STRATEGY_ID, AWARD_ID, "random_ore", "quantity=1", "随机矿石"));
+        IStrategyRaffleService strategyService = mock(IStrategyRaffleService.class);
+        IActivityRaffleApplicationService activityRaffleService = mock(IActivityRaffleApplicationService.class);
+        ActivityRaffleCommand command = new ActivityRaffleCommand(USER_ID, ACTIVITY_ID, SKU);
+        when(activityRaffleService.raffle(command)).thenReturn(
+                new ActivityRaffleResult(ORDER_ID, ACTIVITY_ID, STRATEGY_ID, AWARD_ID, "random_ore", "quantity=1", "随机矿石"));
         StrategyRaffleController controller =
                 new StrategyRaffleController(
-                        applicationService, STRATEGY_RAFFLE_ASSEMBLER, STRATEGY_AWARD_ASSEMBLER);
+                        strategyService, activityRaffleService, STRATEGY_RAFFLE_ASSEMBLER, STRATEGY_AWARD_ASSEMBLER);
 
         // When
         Response<StrategyRaffleResponse> result =
-                controller.raffle(new StrategyRaffleRequest(USER_ID, STRATEGY_ID));
+                controller.raffle(new StrategyRaffleRequest(USER_ID, ACTIVITY_ID, SKU));
 
         // Then
         assertAll(
+                () -> assertEquals(ORDER_ID, result.data().orderId()),
+                () -> assertEquals(ACTIVITY_ID, result.data().activityId()),
                 () -> assertEquals(STRATEGY_ID, result.data().strategyId()),
                 () -> assertEquals(AWARD_ID, result.data().awardId()),
                 () -> assertEquals("random_ore", result.data().awardKey()),
                 () -> assertEquals("quantity=1", result.data().awardConfig())
         );
-        verify(applicationService).raffle(command);
+        verify(activityRaffleService).raffle(command);
+        verifyNoInteractions(strategyService);
     }
 
     /**
@@ -77,16 +85,17 @@ class StrategyRaffleControllerTest {
     @Test
     void shouldWrapRaffleResultInUnifiedResponse() {
         // Given
-        IStrategyRaffleService applicationService = mock(IStrategyRaffleService.class);
-        when(applicationService.raffle(org.mockito.ArgumentMatchers.any())).thenReturn(
-                new RaffleResult(STRATEGY_ID, AWARD_ID, null, null, null));
+        IStrategyRaffleService strategyService = mock(IStrategyRaffleService.class);
+        IActivityRaffleApplicationService activityRaffleService = mock(IActivityRaffleApplicationService.class);
+        when(activityRaffleService.raffle(org.mockito.ArgumentMatchers.any())).thenReturn(
+                new ActivityRaffleResult(ORDER_ID, ACTIVITY_ID, STRATEGY_ID, AWARD_ID, null, null, null));
         StrategyRaffleController controller =
                 new StrategyRaffleController(
-                        applicationService, STRATEGY_RAFFLE_ASSEMBLER, STRATEGY_AWARD_ASSEMBLER);
+                        strategyService, activityRaffleService, STRATEGY_RAFFLE_ASSEMBLER, STRATEGY_AWARD_ASSEMBLER);
 
         // When
         Response<StrategyRaffleResponse> result =
-                controller.raffle(new StrategyRaffleRequest(USER_ID, STRATEGY_ID));
+                controller.raffle(new StrategyRaffleRequest(USER_ID, ACTIVITY_ID, SKU));
 
         // Then
         assertAll(
@@ -108,7 +117,7 @@ class StrategyRaffleControllerTest {
         when(applicationService.queryRaffleStrategyAwardList(STRATEGY_ID))
                 .thenReturn(List.of(award));
         StrategyRaffleController controller = new StrategyRaffleController(
-                applicationService, STRATEGY_RAFFLE_ASSEMBLER, STRATEGY_AWARD_ASSEMBLER);
+                applicationService, mock(IActivityRaffleApplicationService.class), STRATEGY_RAFFLE_ASSEMBLER, STRATEGY_AWARD_ASSEMBLER);
 
         // When
         Response<List<StrategyAwardResponse>> result =
@@ -127,20 +136,20 @@ class StrategyRaffleControllerTest {
     }
 
     /**
-     * Given 用户标识为空且策略标识非正数，When 执行 Bean Validation，Then 两项约束均被识别。
+     * Given 用户标识为空且活动标识、SKU 非正数，When 执行 Bean Validation，Then 三项约束均被识别。
      */
     @Test
     void shouldRejectStructurallyInvalidRequest() {
         // Given
         try (var validatorFactory = Validation.buildDefaultValidatorFactory()) {
             Validator validator = validatorFactory.getValidator();
-            StrategyRaffleRequest request = new StrategyRaffleRequest(" ", 0L);
+            StrategyRaffleRequest request = new StrategyRaffleRequest(" ", 0L, 0L);
 
             // When
             var violations = validator.validate(request);
 
             // Then
-            assertEquals(2, violations.size());
+            assertEquals(3, violations.size());
         }
     }
 
@@ -151,7 +160,10 @@ class StrategyRaffleControllerTest {
     void shouldRejectNullRequest() {
         // Given
         StrategyRaffleController controller = new StrategyRaffleController(
-                mock(IStrategyRaffleService.class), STRATEGY_RAFFLE_ASSEMBLER, STRATEGY_AWARD_ASSEMBLER);
+                mock(IStrategyRaffleService.class),
+                mock(IActivityRaffleApplicationService.class),
+                STRATEGY_RAFFLE_ASSEMBLER,
+                STRATEGY_AWARD_ASSEMBLER);
 
         // When & Then
         assertThrows(NullPointerException.class, () -> controller.raffle(null));
@@ -165,18 +177,20 @@ class StrategyRaffleControllerTest {
     @Test
     void shouldExposeRaffleHttpContract() throws Exception {
         // Given
-        IStrategyRaffleService applicationService = mock(IStrategyRaffleService.class);
-        when(applicationService.raffle(org.mockito.ArgumentMatchers.any())).thenReturn(
-                new RaffleResult(STRATEGY_ID, AWARD_ID, "random_ore", null, null));
+        IStrategyRaffleService strategyService = mock(IStrategyRaffleService.class);
+        IActivityRaffleApplicationService activityRaffleService = mock(IActivityRaffleApplicationService.class);
+        when(activityRaffleService.raffle(org.mockito.ArgumentMatchers.any())).thenReturn(
+                new ActivityRaffleResult(ORDER_ID, ACTIVITY_ID, STRATEGY_ID, AWARD_ID, "random_ore", null, null));
         MockMvc mockMvc = standaloneSetup(
                 new StrategyRaffleController(
-                        applicationService, STRATEGY_RAFFLE_ASSEMBLER, STRATEGY_AWARD_ASSEMBLER))
+                        strategyService, activityRaffleService, STRATEGY_RAFFLE_ASSEMBLER, STRATEGY_AWARD_ASSEMBLER))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
         String requestBody = """
                 {
                   "userId": "user-001",
-                  "strategyId": 100001
+                  "activityId": 100301,
+                  "sku": 9011
                 }
                 """;
 
@@ -186,6 +200,8 @@ class StrategyRaffleControllerTest {
                         .content(requestBody))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(CommonResponseCode.SUCCESS.getCode()))
+                .andExpect(jsonPath("$.data.orderId").value(ORDER_ID))
+                .andExpect(jsonPath("$.data.activityId").value(ACTIVITY_ID))
                 .andExpect(jsonPath("$.data.strategyId").value(STRATEGY_ID))
                 .andExpect(jsonPath("$.data.awardId").value(AWARD_ID))
                 .andExpect(jsonPath("$.data.awardKey").value("random_ore"));
@@ -201,6 +217,7 @@ class StrategyRaffleControllerTest {
         // Given
         MockMvc mockMvc = standaloneSetup(new StrategyRaffleController(
                 mock(IStrategyRaffleService.class),
+                mock(IActivityRaffleApplicationService.class),
                 STRATEGY_RAFFLE_ASSEMBLER,
                 STRATEGY_AWARD_ASSEMBLER))
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -208,7 +225,8 @@ class StrategyRaffleControllerTest {
         String requestBody = """
                 {
                   "userId": " ",
-                  "strategyId": 0
+                  "activityId": 0,
+                  "sku": 0
                 }
                 """;
 
@@ -232,6 +250,7 @@ class StrategyRaffleControllerTest {
         MockMvc mockMvc = standaloneSetup(
                 new StrategyRaffleController(
                         mock(IStrategyRaffleService.class),
+                        mock(IActivityRaffleApplicationService.class),
                         STRATEGY_RAFFLE_ASSEMBLER,
                         STRATEGY_AWARD_ASSEMBLER)).build();
 

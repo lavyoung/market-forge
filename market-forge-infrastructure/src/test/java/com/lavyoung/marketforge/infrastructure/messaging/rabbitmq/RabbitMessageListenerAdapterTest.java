@@ -186,10 +186,13 @@ class RabbitMessageListenerAdapterTest {
         SendAwardRecordEvent event = new SendAwardRecordEvent(
                 USER_ID, "order-001", AWARD_ID, "测试奖品");
 
+        allowFirstConsumption();
+
         adapter.onUserAwardSend(messageOf(event));
 
         verify(sendAwardRecordMessageHandler).handle(eq(event), any(MessageContext.class));
-        verifyNoInteractions(processedMessageRepository);
+        verify(processedMessageRepository).tryRecord(
+                eq(event.eventId()), eq(event.eventType()), any(LocalDateTime.class));
     }
 
     private void allowFirstConsumption() {

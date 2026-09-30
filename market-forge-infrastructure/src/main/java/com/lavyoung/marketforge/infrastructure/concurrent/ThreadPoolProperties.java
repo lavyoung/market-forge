@@ -8,7 +8,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 线程池配置属性
+ * 线程池配置属性。
+ * <p>
+ * 绑定 {@code market-forge.thread-pool} 前缀下的线程池配置，支持按业务名称声明多个线程池。
+ * 配置值由 {@link ThreadPoolFactory} 统一转换为运行期执行器。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -22,6 +25,9 @@ public class ThreadPoolProperties {
 
     private Map<String, Pool> pools = new LinkedHashMap<>();
 
+    /**
+     * 单个命名线程池的参数配置。
+     */
     @Data
     public static class Pool {
 

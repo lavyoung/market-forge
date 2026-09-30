@@ -5,8 +5,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.io.Serializable;
 
 /**
- * 策略抽奖结果契约。
+ * 活动抽奖结果契约。
  *
+ * @param orderId     抽奖参与订单号
+ * @param activityId  抽奖活动标识
  * @param strategyId  抽奖策略标识
  * @param awardId     命中奖品标识
  * @param awardKey    奖品业务标识
@@ -21,6 +23,18 @@ import java.io.Serializable;
         description = "策略抽奖结果"
 )
 public record StrategyRaffleResponse(
+
+        @Schema(
+                description = "抽奖参与订单号",
+                example = "RO100301202609301234"
+        )
+        String orderId,
+
+        @Schema(
+                description = "抽奖活动标识",
+                example = "100301"
+        )
+        Long activityId,
 
         @Schema(
                 description = "抽奖策略标识",

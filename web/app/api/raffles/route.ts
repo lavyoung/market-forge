@@ -41,6 +41,8 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const userId = process.env.DEMO_RAFFLE_USER_ID?.trim();
+    const activityId = Number(process.env.DEMO_RAFFLE_ACTIVITY_ID);
+    const sku = Number(process.env.DEMO_RAFFLE_SKU);
 
     if (!userId) {
         return errorResponse(
@@ -50,12 +52,21 @@ export async function POST(request: Request): Promise<Response> {
         );
     }
 
+    if (!Number.isSafeInteger(activityId) || activityId <= 0 || !Number.isSafeInteger(sku) || sku <= 0) {
+        return errorResponse(
+            500,
+            900_000_001,
+            "开发活动未配置",
+        );
+    }
+
     try {
         const upstream = await forwardMarketForge("/api/v1/raffles", {
             method: "POST",
             body: JSON.stringify({
                 userId,
-                strategyId: input.strategyId,
+                activityId,
+                sku,
             }),
         },);
         return toProxyResponse(upstream);

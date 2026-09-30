@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 抽奖策略 REST API 契约。
+ * 抽奖 REST API 契约。
  * <p>
  * 本接口同时约定资源路径、HTTP 方法、请求校验和统一响应结构。服务端适配器只需实现本接口，
  * HTTP 客户端也可复用该契约生成代理，避免提供方与消费方分别维护路由和数据结构。
@@ -24,7 +24,7 @@ import java.util.List;
  * @version 1.0.0
  * @date 2026/09/09
  */
-@Tag(name = "策略抽奖", description = "提供策略装配、奖品查询和抽奖能力")
+@Tag(name = "抽奖", description = "提供活动抽奖、策略装配和奖品查询能力")
 @RequestMapping(path = IStrategyRaffleApi.BASE_PATH, produces = MediaType.APPLICATION_JSON_VALUE)
 public interface IStrategyRaffleApi {
 
@@ -34,15 +34,15 @@ public interface IStrategyRaffleApi {
     String BASE_PATH = "/raffles";
 
     /**
-     * 根据用户与策略执行一次抽奖。
+     * 根据用户、活动和 SKU 执行一次抽奖。
      *
      * @param request 抽奖请求
      * @return 包含本次抽奖结果的统一响应
      * @throws com.lavyoung.marketforge.types.exception.BusinessException 请求不满足业务规则时抛出
      */
-    @Operation(operationId = "raffle", summary = "执行策略抽奖", description = """
-            根据用户标识与策略标识执行一次真实抽奖。
-            抽奖结果由服务端责任链和规则树共同决定。
+    @Operation(operationId = "raffle", summary = "执行活动抽奖", description = """
+            根据用户标识、活动标识与活动 SKU 执行一次真实抽奖。
+            活动域负责参与资格与订单，策略域负责命中奖品，中奖域负责记录与消息任务。
             """)
     @ApiResponses({@ApiResponse(responseCode = "200", description = "抽奖成功"), @ApiResponse(responseCode = "400", description = "请求体缺失、格式错误或字段校验失败"), @ApiResponse(responseCode = "422", description = "未满足抽奖业务规则"), @ApiResponse(responseCode = "500", description = "系统内部错误")})
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)

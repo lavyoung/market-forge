@@ -6,6 +6,7 @@ import com.lavyoung.marketforge.domain.activity.model.entity.ActivityOrderEntity
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivitySkuEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.PartakeRaffleActivityEntity;
 import com.lavyoung.marketforge.domain.activity.model.vo.ActivityStateVO;
+import com.lavyoung.marketforge.domain.activity.model.vo.UserRaffleOrderStateVO;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityPartakeService;
 import com.lavyoung.marketforge.types.exception.BusinessException;
@@ -77,7 +78,7 @@ public abstract class AbstractRaffleActivityPartakeService implements IRaffleAct
                     userId, activityId, now, activityEntity.beginDateTime(), activityEntity.endDateTime());
         }
         // 查询未使用的活动订单
-        ActivityOrderEntity activityOrder = activityRepository.queryNotUsedRaffleOrder(partakeRaffleActivity);
+        ActivityOrderEntity activityOrder = activityRepository.queryNotUsedRaffleOrder(partakeRaffleActivity).orElse(null);
         if (activityOrder != null) {
             log.info("创建抽奖参与订单【已存在未消费】 userId={} activityId={} activityOrder={}", userId, activityId, activityOrder);
             return activityOrder;
@@ -90,6 +91,31 @@ public abstract class AbstractRaffleActivityPartakeService implements IRaffleAct
         // 保存订单
         activityRepository.saveCreatePartakeOrderAggregate(createPartakeOrderAggregate, activityOrderEntity);
         return activityOrderEntity;
+    }
+
+    /**
+     * 消费抽奖参与订单。
+     *
+     * @param userId  用户标识，同时作为分片路由键
+     * @param orderId 抽奖参与订单号
+     * @throws BusinessException 当订单不存在、状态不为创建或状态更新失败时抛出
+     */
+    @Override
+    public void consumeRaffleOrder(String userId, String orderId) {
+        if (ObjectUtils.anyNull(userId, orderId) || userId.isBlank() || orderId.isBlank()) {
+            log.error("消费抽奖参与订单：入参错误 userId={} orderId={}", userId, orderId);
+            throw BusinessException.of(CommonResponseCode.PARAM_INVALID, userId, orderId);
+        }
+        boolean updated = activityRepository.updateRaffleOrderState(
+                userId,
+                orderId,
+                UserRaffleOrderStateVO.CREATE.getCode(),
+                UserRaffleOrderStateVO.USED.getCode()
+        );
+        if (!updated) {
+            log.warn("消费抽奖参与订单失败 userId={} orderId={}", userId, orderId);
+            throw BusinessException.of(BusinessResponseCode.ACTIVITY_PARTAKE_ORDER_STATE_ERROR, userId, orderId);
+        }
     }
 
     /**

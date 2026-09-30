@@ -24,6 +24,9 @@ import java.util.Optional;
 
 /**
  * 本地消息任务仓储实现。
+ * <p>
+ * 单条任务查询和状态变更按 userId 路由到用户所在分片；补偿扫描需要遍历所有托管数据源，
+ * 再按发生时间归并裁剪，避免某个分片的待投递任务长期滞留。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0

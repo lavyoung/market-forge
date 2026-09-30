@@ -16,6 +16,12 @@ public final class MdcTaskDecorator {
     private MdcTaskDecorator() {
     }
 
+    /**
+     * 包装异步任务并透传当前线程的 MDC 上下文。
+     *
+     * @param task 原始任务
+     * @return 带 MDC 上下文恢复和清理逻辑的任务
+     */
     public static Runnable decorate(Runnable task) {
         Map<String, String> contextMap = MDC.getCopyOfContextMap();
         return () -> {

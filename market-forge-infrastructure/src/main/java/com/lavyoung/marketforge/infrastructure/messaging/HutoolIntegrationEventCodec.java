@@ -14,7 +14,10 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 
 /**
- *
+ * 基于 Hutool JSON 的集成事件编解码器。
+ * <p>
+ * 本地消息任务表只保存事件类型和 JSON 字符串，投递补偿时通过该组件还原为运行期事件对象。
+ * 新增可靠消息事件时，应在 {@link #deserialize(String, String)} 中显式注册事件类型。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -24,11 +27,17 @@ import java.time.Instant;
 @Slf4j
 public class HutoolIntegrationEventCodec implements IntegrationEventCodec {
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String serialize(IntegrationEvent event) {
         return JSONUtil.toJsonStr(event);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public IntegrationEvent deserialize(String eventType, String messageBody) {
         return switch (eventType) {

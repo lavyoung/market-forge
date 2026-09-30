@@ -11,8 +11,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- *
  * 线程池基础设施配置。
+ * <p>
+ * 启动时根据配置创建并注册业务线程池，应用关闭时统一执行优雅停机，避免异步任务执行器泄漏。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -30,6 +31,11 @@ public class ThreadPoolConfiguration implements DisposableBean {
         this.properties = properties;
     }
 
+    /**
+     * 创建并注册所有配置中的业务线程池。
+     *
+     * @return 命名线程池注册表
+     */
     @Bean
     public ThreadPoolRegistry threadPoolRegistry() {
         ThreadPoolRegistry threadPoolRegistry = new ThreadPoolRegistry();
@@ -41,6 +47,11 @@ public class ThreadPoolConfiguration implements DisposableBean {
     }
 
 
+    /**
+     * Spring 容器销毁时关闭所有注册线程池。
+     *
+     * @throws Exception 关闭过程发生异常时抛出
+     */
     @Override
     public void destroy() throws Exception {
         if (registry == null) {

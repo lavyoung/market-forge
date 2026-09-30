@@ -2,8 +2,8 @@ package com.lavyoung.marketforge.trigger.assembler;
 
 import com.lavyoung.marketforge.api.strategy.request.StrategyRaffleRequest;
 import com.lavyoung.marketforge.api.strategy.response.StrategyRaffleResponse;
-import com.lavyoung.marketforge.application.strategy.model.RaffleCommand;
-import com.lavyoung.marketforge.application.strategy.model.RaffleResult;
+import com.lavyoung.marketforge.application.activity.model.ActivityRaffleCommand;
+import com.lavyoung.marketforge.application.activity.model.ActivityRaffleResult;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
@@ -24,15 +24,16 @@ class StrategyRaffleResponseAssemblerTest {
     @Test
     void shouldConvertRequestToCommand() {
         // Given
-        StrategyRaffleRequest request = new StrategyRaffleRequest("user-001", 100_001L);
+        StrategyRaffleRequest request = new StrategyRaffleRequest("user-001", 100_301L, 9_011L);
 
         // When
-        RaffleCommand command = ASSEMBLER.toCommand(request);
+        ActivityRaffleCommand command = ASSEMBLER.toCommand(request);
 
         // Then
         assertAll(
                 () -> assertEquals(request.userId(), command.userId()),
-                () -> assertEquals(request.strategyId(), command.strategyId())
+                () -> assertEquals(request.activityId(), command.activityId()),
+                () -> assertEquals(request.sku(), command.sku())
         );
     }
 
@@ -42,14 +43,16 @@ class StrategyRaffleResponseAssemblerTest {
     @Test
     void shouldConvertResultToResponse() {
         // Given
-        RaffleResult result = new RaffleResult(
-                100_001L, 100_011L, "random_ore", "quantity=1", "随机矿石");
+        ActivityRaffleResult result = new ActivityRaffleResult(
+                "RO1003010001", 100_301L, 100_001L, 100_011L, "random_ore", "quantity=1", "随机矿石");
 
         // When
         StrategyRaffleResponse response = ASSEMBLER.toResponse(result);
 
         // Then
         assertAll(
+                () -> assertEquals(result.orderId(), response.orderId()),
+                () -> assertEquals(result.activityId(), response.activityId()),
                 () -> assertEquals(result.strategyId(), response.strategyId()),
                 () -> assertEquals(result.awardId(), response.awardId()),
                 () -> assertEquals(result.awardKey(), response.awardKey()),

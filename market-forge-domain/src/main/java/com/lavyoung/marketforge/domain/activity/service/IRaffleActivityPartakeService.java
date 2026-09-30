@@ -26,4 +26,16 @@ public interface IRaffleActivityPartakeService {
      * @throws com.lavyoung.marketforge.types.exception.BusinessException 当参数非法、活动不可用、SKU 不匹配或账户额度不足时抛出
      */
     ActivityOrderEntity createRaffleOrder(PartakeRaffleActivityEntity partakeRaffleActivity);
+
+    /**
+     * 消费一笔抽奖参与订单。
+     * <p>
+     * 该方法用于策略抽奖完成后的结算阶段，只允许将当前处于创建状态的参与订单推进为已使用。
+     * 实现方应通过条件更新保证重复结算或异常状态不会被静默覆盖。
+     *
+     * @param userId  用户标识，同时作为分片路由键
+     * @param orderId 抽奖参与订单号
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 参与订单不存在或状态无法推进时抛出
+     */
+    void consumeRaffleOrder(String userId, String orderId);
 }

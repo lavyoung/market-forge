@@ -29,6 +29,8 @@ export type StrategyAward = {
  * 奖品规则及说明字段允许为空。
  */
 export type RaffleResult = {
+    orderId: string;
+    activityId: number;
     strategyId: number;
     awardId: number;
     awardKey: string;

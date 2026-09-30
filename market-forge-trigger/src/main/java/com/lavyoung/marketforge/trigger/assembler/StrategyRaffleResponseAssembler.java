@@ -2,8 +2,8 @@ package com.lavyoung.marketforge.trigger.assembler;
 
 import com.lavyoung.marketforge.api.strategy.request.StrategyRaffleRequest;
 import com.lavyoung.marketforge.api.strategy.response.StrategyRaffleResponse;
-import com.lavyoung.marketforge.application.strategy.model.RaffleCommand;
-import com.lavyoung.marketforge.application.strategy.model.RaffleResult;
+import com.lavyoung.marketforge.application.activity.model.ActivityRaffleCommand;
+import com.lavyoung.marketforge.application.activity.model.ActivityRaffleResult;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingConstants;
 import org.mapstruct.ReportingPolicy;
@@ -25,18 +25,18 @@ import org.mapstruct.ReportingPolicy;
 public interface StrategyRaffleResponseAssembler {
 
     /**
-     * 将抽奖 API 请求转换为应用层命令。
+     * 将抽奖 API 请求转换为活动抽奖命令。
      *
      * @param request 已通过协议层校验的抽奖请求
-     * @return 应用层抽奖命令
+     * @return 活动抽奖命令
      */
-    RaffleCommand toCommand(StrategyRaffleRequest request);
+    ActivityRaffleCommand toCommand(StrategyRaffleRequest request);
 
     /**
-     * 将应用层抽奖结果转换为 API 响应。
+     * 将活动抽奖结果转换为 API 响应。
      *
-     * @param result 应用层抽奖结果
+     * @param result 活动抽奖结果
      * @return 对外抽奖响应
      */
-    StrategyRaffleResponse toResponse(RaffleResult result);
+    StrategyRaffleResponse toResponse(ActivityRaffleResult result);
 }

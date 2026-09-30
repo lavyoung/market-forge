@@ -27,7 +27,10 @@ import java.time.ZoneId;
 import java.util.Optional;
 
 /**
- *
+ * 用户中奖记录仓储实现。
+ * <p>
+ * 负责将中奖记录写入用户分片表，并在同一事务上下文中写入可靠消息任务表。
+ * 该仓储只处理持久化和状态条件更新，不直接发布 MQ。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0

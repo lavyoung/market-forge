@@ -260,15 +260,16 @@ public class ActivityRepository implements IActivityRepository {
      * 查询用户当前未使用的抽奖参与订单。
      *
      * @param partakeRaffleActivity 用户参与活动入参
-     * @return 未使用的参与订单；不存在时返回 {@code null}
+     * @return 未使用的参与订单；不存在时返回空
      */
     @Override
-    public ActivityOrderEntity queryNotUsedRaffleOrder(PartakeRaffleActivityEntity partakeRaffleActivity) {
-        return activityOrderAssembler.toEntity(activityOrderDao.selectOne(Wrappers.lambdaQuery(ActivityOrderPO.class)
+    public Optional<ActivityOrderEntity> queryNotUsedRaffleOrder(PartakeRaffleActivityEntity partakeRaffleActivity) {
+        ActivityOrderPO activityOrderPO = activityOrderDao.selectOne(Wrappers.lambdaQuery(ActivityOrderPO.class)
                 .eq(ActivityOrderPO::getUserId, partakeRaffleActivity.userId())
                 .eq(ActivityOrderPO::getActivityId, partakeRaffleActivity.activityId())
                 .eq(ActivityOrderPO::getState, UserRaffleOrderStateVO.CREATE.getCode())
-        ));
+        );
+        return Optional.ofNullable(activityOrderAssembler.toEntity(activityOrderPO));
     }
 
     /**
@@ -333,6 +334,7 @@ public class ActivityRepository implements IActivityRepository {
      * @throws BusinessException 当额度不足或订单创建失败时抛出
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void saveCreatePartakeOrderAggregate(CreatePartakeOrderAggregate createPartakeOrderAggregate, ActivityOrderEntity activityOrderEntity) {
         String userId = createPartakeOrderAggregate.userId();
         Long activityId = createPartakeOrderAggregate.activityId();
@@ -412,6 +414,26 @@ public class ActivityRepository implements IActivityRepository {
             throw BusinessException.of(BusinessResponseCode.ACTIVITY_ORDER_CREATE_FAILED,
                     userId, activityId, order.sku(), order.orderId());
         }
+    }
+
+    /**
+     * 条件更新抽奖参与订单状态。
+     *
+     * @param userId       用户标识，同时作为分片路由键
+     * @param orderId      抽奖参与订单号
+     * @param currentState 当前期望状态
+     * @param targetState  目标状态
+     * @return 状态更新成功返回 {@code true}；订单不存在或状态不匹配返回 {@code false}
+     */
+    @Override
+    public boolean updateRaffleOrderState(String userId, String orderId, String currentState, String targetState) {
+        int updateCount = activityOrderDao.update(null, Wrappers.lambdaUpdate(ActivityOrderPO.class)
+                .set(ActivityOrderPO::getState, targetState)
+                .eq(ActivityOrderPO::getUserId, userId)
+                .eq(ActivityOrderPO::getOrderId, orderId)
+                .eq(ActivityOrderPO::getState, currentState)
+        );
+        return updateCount == 1;
     }
 
     /**

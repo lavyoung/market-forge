@@ -8,6 +8,7 @@ import com.lavyoung.marketforge.domain.activity.model.vo.ActivitySkuStockKeyVO;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.util.Optional;
 
 /**
  * 活动域仓储端口。
@@ -96,9 +97,9 @@ public interface IActivityRepository {
      * 查询用户当前未使用的抽奖参与订单。
      *
      * @param partakeRaffleActivity 用户参与活动入参
-     * @return 未使用的抽奖订单；不存在时返回 null
+     * @return 未使用的抽奖订单；不存在时返回空
      */
-    ActivityOrderEntity queryNotUsedRaffleOrder(PartakeRaffleActivityEntity partakeRaffleActivity);
+    Optional<ActivityOrderEntity> queryNotUsedRaffleOrder(PartakeRaffleActivityEntity partakeRaffleActivity);
 
     /**
      * 查询用户活动总账户。
@@ -139,6 +140,17 @@ public interface IActivityRepository {
      * @throws com.lavyoung.marketforge.types.exception.BusinessException 当额度不足、账户扣减失败或订单创建失败时抛出
      */
     void saveCreatePartakeOrderAggregate(CreatePartakeOrderAggregate createPartakeOrderAggregate, ActivityOrderEntity activityOrderEntity);
+
+    /**
+     * 按当前状态条件更新抽奖参与订单状态。
+     *
+     * @param userId       用户标识，同时作为分片路由键
+     * @param orderId      抽奖参与订单号
+     * @param currentState 当前期望状态
+     * @param targetState  目标状态
+     * @return 状态更新成功返回 {@code true}；订单不存在或状态不匹配返回 {@code false}
+     */
+    boolean updateRaffleOrderState(String userId, String orderId, String currentState, String targetState);
 
     /**
      * 从活动 SKU 库存延迟队列获取一条待同步消息。

@@ -1,8 +1,9 @@
 package com.lavyoung.marketforge.types.concurrent;
 
 /**
- *
- * 线程池拒绝策略
+ * 线程池拒绝策略。
+ * <p>
+ * 作为配置层枚举，屏蔽 JDK 拒绝策略实现类，便于不同业务线程池用统一配置表达背压行为。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0

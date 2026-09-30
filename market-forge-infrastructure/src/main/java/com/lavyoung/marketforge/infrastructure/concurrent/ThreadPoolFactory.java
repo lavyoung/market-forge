@@ -8,8 +8,10 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
- *
  * 线程池创建工厂。
+ * <p>
+ * 根据统一配置创建携带 MDC 透传能力的 {@link ThreadPoolExecutor}。业务代码只应通过
+ * {@link ThreadPoolRegistry} 或 {@code NamedExecutorProvider} 获取线程池，避免直接创建线程。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -21,6 +23,14 @@ public final class ThreadPoolFactory {
 
     }
 
+    /**
+     * 按业务名称和配置创建线程池。
+     *
+     * @param name 线程池业务名称
+     * @param pool 线程池参数配置
+     * @return 可透传 MDC 的线程池执行器
+     * @throws IllegalArgumentException 线程池名称为空、核心参数非法或拒绝策略缺失时抛出
+     */
     public static ThreadPoolExecutor create(String name, ThreadPoolProperties.Pool pool) {
         validate(name, pool);
         return new MdcThreadPoolExecutor(
@@ -49,6 +59,13 @@ public final class ThreadPoolFactory {
         }
     }
 
+    /**
+     * 将配置枚举转换为 JDK 拒绝策略实现。
+     *
+     * @param policy 拒绝策略配置
+     * @return JDK 线程池拒绝策略
+     * @throws NullPointerException 拒绝策略为空时抛出
+     */
     private static RejectedExecutionHandler rejectedExecutionHandler(RejectedPolicy policy) {
         return switch (policy) {
             case ABORT -> new ThreadPoolExecutor.AbortPolicy();

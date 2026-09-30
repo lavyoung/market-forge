@@ -4,8 +4,9 @@ import com.lavyoung.marketforge.api.strategy.IStrategyRaffleApi;
 import com.lavyoung.marketforge.api.strategy.request.StrategyRaffleRequest;
 import com.lavyoung.marketforge.api.strategy.response.StrategyAwardResponse;
 import com.lavyoung.marketforge.api.strategy.response.StrategyRaffleResponse;
-import com.lavyoung.marketforge.application.strategy.model.RaffleCommand;
-import com.lavyoung.marketforge.application.strategy.model.RaffleResult;
+import com.lavyoung.marketforge.application.activity.model.ActivityRaffleCommand;
+import com.lavyoung.marketforge.application.activity.model.ActivityRaffleResult;
+import com.lavyoung.marketforge.application.activity.service.IActivityRaffleApplicationService;
 import com.lavyoung.marketforge.application.strategy.service.IStrategyRaffleService;
 import com.lavyoung.marketforge.trigger.assembler.StrategyAwardResponseAssembler;
 import com.lavyoung.marketforge.trigger.assembler.StrategyRaffleResponseAssembler;
@@ -30,14 +31,15 @@ import java.util.Objects;
 public class StrategyRaffleController implements IStrategyRaffleApi {
 
     private final IStrategyRaffleService strategyRaffleService;
+    private final IActivityRaffleApplicationService activityRaffleApplicationService;
     private final StrategyRaffleResponseAssembler strategyRaffleResponseAssembler;
     private final StrategyAwardResponseAssembler strategyAwardResponseAssembler;
 
     @Override
     public Response<StrategyRaffleResponse> raffle(StrategyRaffleRequest request) {
         StrategyRaffleRequest validRequest = Objects.requireNonNull(request, "request must not be null");
-        RaffleCommand command = strategyRaffleResponseAssembler.toCommand(validRequest);
-        RaffleResult result = strategyRaffleService.raffle(command);
+        ActivityRaffleCommand command = strategyRaffleResponseAssembler.toCommand(validRequest);
+        ActivityRaffleResult result = activityRaffleApplicationService.raffle(command);
         return Response.success(strategyRaffleResponseAssembler.toResponse(result));
     }
 
