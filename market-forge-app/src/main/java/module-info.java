@@ -24,6 +24,9 @@
     requires market.forge.trigger;
     requires micrometer.tracing;
     requires org.apache.tomcat.embed.core;
+    requires spring.data.redis;
+    requires com.fasterxml.jackson.databind;
+    requires com.fasterxml.jackson.datatype.jsr310;
 
     opens com.lavyoung.marketforge.app;
     opens com.lavyoung.marketforge.app.config;
