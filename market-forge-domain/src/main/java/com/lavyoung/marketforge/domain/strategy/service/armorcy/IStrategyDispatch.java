@@ -1,5 +1,7 @@
 package com.lavyoung.marketforge.domain.strategy.service.armorcy;
 
+import java.time.LocalDateTime;
+
 /**
  * 抽奖策略调度接口。
  * <p>
@@ -33,9 +35,23 @@ public interface IStrategyDispatch {
     /**
      * 原子扣减指定策略奖品的一份 Redis 库存。
      *
+     * @param strategyId  策略标识
+     * @param awardId     奖品标识
+     * @param endDateTime 活动结束时间，用于计算库存锁租约；为空时使用默认短租约
+     * @return 库存充足并扣减成功返回 {@code true}
+     */
+    boolean subtractAwardStock(Long strategyId, Long awardId, LocalDateTime endDateTime);
+
+    /**
+     * 原子扣减指定策略奖品的一份 Redis 库存。
+     * <p>
+     * 兼容不携带活动结束时间的调用，下游会使用默认短租约保护 Redis 锁。
+     *
      * @param strategyId 策略标识
      * @param awardId    奖品标识
      * @return 库存充足并扣减成功返回 {@code true}
      */
-    boolean subtractAwardStock(Long strategyId, Long awardId);
+    default boolean subtractAwardStock(Long strategyId, Long awardId) {
+        return subtractAwardStock(strategyId, awardId, null);
+    }
 }

@@ -19,6 +19,7 @@ import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -56,7 +57,7 @@ public class DefaultRaffleStrategy extends AbstractRaffleStrategy implements IRa
      * @throws BusinessException 规则树配置缺失、无法完成组装时抛出
      */
     @Override
-    protected DefaultTreeFactory.StrategyAwardVO raffleLogicTree(String userId, Long strategyId, Long awardId) {
+    protected DefaultTreeFactory.StrategyAwardVO raffleLogicTree(String userId, Long strategyId, Long awardId, LocalDateTime endDateTime) {
         StrategyAwardRuleModelVO strategyAwardRuleModelVO = repository.queryStrategyAwardRuleModels(strategyId, awardId);
         // 组装规则树
         if (strategyAwardRuleModelVO == null) {
@@ -68,7 +69,9 @@ public class DefaultRaffleStrategy extends AbstractRaffleStrategy implements IRa
                             strategyAwardRuleModelVO.ruleModels());
                     return new BusinessException(BusinessResponseCode.STRATEGY_NOT_ASSEMBLED);
                 });
-        return defaultTreeFactory.openLogicTree(ruleTreeVO).process(userId, strategyId, awardId);
+        return endDateTime == null
+                ? defaultTreeFactory.openLogicTree(ruleTreeVO).process(userId, strategyId, awardId)
+                : defaultTreeFactory.openLogicTree(ruleTreeVO).process(userId, strategyId, awardId, endDateTime);
     }
 
     @Override

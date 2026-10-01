@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 /**
@@ -43,7 +44,7 @@ public class DecisionTreeEngine implements IDecisionTreeEngine {
      * @throws BusinessException 规则树缺少节点实现、节点结果无效、流转不匹配或存在循环时抛出
      */
     @Override
-    public DefaultTreeFactory.StrategyAwardVO process(String userId, Long strategyId, Long awardId) {
+    public DefaultTreeFactory.StrategyAwardVO process(String userId, Long strategyId, Long awardId, LocalDateTime endDateTime) {
         String rootRule = ruleTreeVO.treeRootRule();
         Map<String, RuleTreeNodeVO> treeNodeVOMap = ruleTreeVO.treeNodeVOMap();
         RuleTreeNodeVO nodeVO = treeNodeVOMap.get(rootRule);
@@ -60,7 +61,9 @@ public class DecisionTreeEngine implements IDecisionTreeEngine {
             if (treeNode == null) {
                 throw invalidTree("规则树节点未注册 ruleKey=" + nodeVO.ruleKey());
             }
-            DefaultTreeFactory.TreeActionEntity treeActionEntity = treeNode.logic(userId, strategyId, awardId, nodeVO.ruleValue());
+            DefaultTreeFactory.TreeActionEntity treeActionEntity = endDateTime == null
+                    ? treeNode.logic(userId, strategyId, awardId, nodeVO.ruleValue())
+                    : treeNode.logic(userId, strategyId, awardId, nodeVO.ruleValue(), endDateTime);
             if (treeActionEntity == null || treeActionEntity.ruleLogicCheckTypeVO() == null
                     || treeActionEntity.strategyAwardVO() == null) {
                 throw invalidTree("规则树节点返回结果不完整 ruleKey=" + nodeVO.ruleKey());

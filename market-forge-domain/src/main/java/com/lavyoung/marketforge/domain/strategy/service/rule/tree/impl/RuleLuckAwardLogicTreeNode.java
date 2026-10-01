@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+
 /**
  * 幸运奖兜底规则树节点。
  * <p>
@@ -28,7 +30,7 @@ public class RuleLuckAwardLogicTreeNode implements ILogicTreeNode {
      * {@inheritDoc}
      */
     @Override
-    public DefaultTreeFactory.TreeActionEntity logic(String userId, Long strategyId, Long awardId, String ruleValue) {
+    public DefaultTreeFactory.TreeActionEntity logic(String userId, Long strategyId, Long awardId, String ruleValue, LocalDateTime endDateTime) {
         if (StringUtils.isBlank(ruleValue)) {
             log.error("抽奖策略-规则树：策略绑定的幸运奖规则值为空 userId={} strategyId={} ruleModel={}",
                     userId, strategyId, ruleModel());

@@ -43,7 +43,7 @@ class ActivityEntityContractTest {
             ),
             ActivityOrderEntity.class, Set.of(
                     "userId", "activityId", "sku", "activityName", "strategyId", "orderId", "orderTime",
-                    "totalCount", "dayCount", "monthCount", "state", "outBusinessNo"
+                    "totalCount", "dayCount", "monthCount", "state", "outBusinessNo", "endDateTime"
             )
     );
 

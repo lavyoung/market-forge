@@ -34,4 +34,17 @@ public interface IRuleTreeNodeDao extends BaseMapper<RuleTreeNodePO> {
             ORDER BY id
             """)
     List<RuleTreeNodePO> queryByTreeId(@Param("treeId") String treeId);
+
+    /**
+     * 批量查询指定规则树中的次数锁节点。
+     * <p>
+     * 这里只查询 rule_key = rule_lock 的节点。
+     * 这些节点的 rule_value 表示“抽奖 N 次后解锁”。
+     *
+     * @param treeIds 规则树标识列表
+     * @param ruleKey 规则节点标识，固定传 rule_lock
+     * @return 次数锁节点列表；没有命中时返回空列表
+     */
+    List<RuleTreeNodePO> queryByTreeIdsAndRuleKey(@Param("treeIds") List<String> treeIds,
+                                                  @Param("ruleKey") String ruleKey);
 }

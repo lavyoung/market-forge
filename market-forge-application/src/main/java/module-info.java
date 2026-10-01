@@ -10,6 +10,7 @@ module market.forge.application {
     requires spring.context;
     requires spring.tx;
     requires static lombok;
+    requires org.apache.commons.lang3;
 
     exports com.lavyoung.marketforge.application.strategy.model;
     exports com.lavyoung.marketforge.application.strategy.service;

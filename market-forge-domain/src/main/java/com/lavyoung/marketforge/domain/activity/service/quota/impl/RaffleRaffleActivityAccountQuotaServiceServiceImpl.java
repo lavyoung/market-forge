@@ -61,6 +61,7 @@ public class RaffleRaffleActivityAccountQuotaServiceServiceImpl extends Abstract
                 .sku(skuRechargeEntity.sku())
                 .activityName(activityEntity.activityName())
                 .strategyId(activityEntity.strategyId())
+                .endDateTime(activityEntity.endDateTime())
                 .orderId(Constants.BusinessNoPrefix.RAFFLE_ORDER_PREFIX + IdGenerator.nextId())
                 .orderTime(DateUtil.now())
                 .totalCount(activityCountEntity.totalCount())

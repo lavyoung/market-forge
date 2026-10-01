@@ -28,6 +28,7 @@ public interface ActivityOrderAssembler {
      * @param activityOrderPO 活动订单持久化对象
      * @return 活动订单领域实体
      */
+    @Mapping(target = "endDateTime", ignore = true)
     ActivityOrderEntity toEntity(ActivityOrderPO activityOrderPO);
 
     /**

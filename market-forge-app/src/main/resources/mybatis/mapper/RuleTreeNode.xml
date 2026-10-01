@@ -5,4 +5,15 @@
 <mapper namespace="com.lavyoung.marketforge.infrastructure.persistent.dao.IRuleTreeNodeDao">
 
 
+    <select id="queryByTreeIdsAndRuleKey"
+            resultType="com.lavyoung.marketforge.infrastructure.persistent.po.RuleTreeNodePO">
+        SELECT id, tree_id, rule_key, rule_desc, rule_value,
+        create_time, update_time
+        FROM rule_tree_node
+        WHERE rule_key = #{ruleKey}
+        AND tree_id IN
+        <foreach collection="treeIds" item="treeId" open="(" separator="," close=")">
+            #{treeId}
+        </foreach>
+    </select>
 </mapper>

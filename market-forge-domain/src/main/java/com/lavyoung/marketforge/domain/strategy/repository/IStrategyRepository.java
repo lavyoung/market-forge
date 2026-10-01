@@ -6,6 +6,7 @@ import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -132,14 +133,29 @@ public interface IStrategyRepository {
     /**
      * 扣减策略奖品缓存库存。
      *
-     * @param strategyId 策略标识
-     * @param awardId    奖品标识
-     * @param stock      扣减数量，必须大于零
+     * @param strategyId  策略标识
+     * @param awardId     奖品标识
+     * @param stock       扣减数量，必须大于零
+     * @param endDateTime 活动结束时间，用于计算库存锁租约；为空时使用默认短租约
      * @return 库存充足且扣减成功返回 {@code true}
      * @throws NullPointerException     当策略标识或奖品标识为空时抛出
      * @throws IllegalArgumentException 当扣减数量小于等于零时抛出
      */
-    boolean subtractAwardStock(Long strategyId, Long awardId, int stock);
+    boolean subtractAwardStock(Long strategyId, Long awardId, int stock, LocalDateTime endDateTime);
+
+    /**
+     * 扣减策略奖品缓存库存。
+     * <p>
+     * 兼容不携带活动结束时间的调用，下游会使用默认短租约保护 Redis 锁。
+     *
+     * @param strategyId 策略标识
+     * @param awardId    奖品标识
+     * @param stock      扣减数量，必须大于零
+     * @return 库存充足且扣减成功返回 {@code true}
+     */
+    default boolean subtractAwardStock(Long strategyId, Long awardId, int stock) {
+        return subtractAwardStock(strategyId, awardId, stock, null);
+    }
 
     /**
      * 原子扣减数据库中的策略奖品剩余库存。

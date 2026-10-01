@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.*;
 
 /**
@@ -176,7 +177,7 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
     }
 
     @Override
-    public boolean subtractAwardStock(Long strategyId, Long awardId) {
-        return repository.subtractAwardStock(strategyId, awardId, 1);
+    public boolean subtractAwardStock(Long strategyId, Long awardId, LocalDateTime endDateTime) {
+        return repository.subtractAwardStock(strategyId, awardId, 1, endDateTime);
     }
 }

@@ -1,12 +1,19 @@
 package com.lavyoung.marketforge.api.activity;
 
+import com.lavyoung.marketforge.api.activity.request.ActivityAwardListRequest;
 import com.lavyoung.marketforge.api.activity.request.ActivityDrawRequest;
+import com.lavyoung.marketforge.api.activity.response.ActivityAwardResponse;
 import com.lavyoung.marketforge.api.activity.response.ActivityDrawResponse;
 import com.lavyoung.marketforge.types.model.Response;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 活动抽奖 REST API 契约。
@@ -49,4 +56,28 @@ public interface IActivityRaffleApi {
      */
     @PostMapping(path = "/draw", consumes = MediaType.APPLICATION_JSON_VALUE)
     Response<ActivityDrawResponse> draw(@Valid @RequestBody ActivityDrawRequest request);
+
+    /**
+     * 查询活动奖品列表。
+     * <p>
+     * 这个接口用于前端活动抽奖页展示奖品列表。
+     * 它会以用户和活动为查询入口，返回每个奖品的解锁状态。
+     *
+     * @param request 活动奖品列表查询请求
+     * @return 活动奖品展示列表
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 活动不存在、活动未绑定策略或规则配置异常时抛出
+     */
+    @Operation(
+            operationId = "queryActivityAwardList",
+            summary = "查询活动奖品列表",
+            description = "按用户和活动查询奖品展示信息，并返回次数锁解锁状态。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "查询成功"),
+            @ApiResponse(responseCode = "400", description = "请求体缺失、格式错误或字段校验失败"),
+            @ApiResponse(responseCode = "422", description = "活动不存在、活动未绑定策略或规则配置异常"),
+            @ApiResponse(responseCode = "500", description = "系统内部错误")
+    })
+    @PostMapping(path = "/awards", consumes = MediaType.APPLICATION_JSON_VALUE)
+    Response<List<ActivityAwardResponse>> queryAwardList(@Valid @RequestBody ActivityAwardListRequest request);
 }

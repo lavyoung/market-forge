@@ -50,6 +50,7 @@ public class StrategyStrategyRaffleServiceImpl implements IStrategyRaffleService
                 RaffleFactorEntity.builder()
                         .userId(validCommand.userId())
                         .strategyId(validCommand.strategyId())
+                        .endDateTime(validCommand.endDateTime())
                         .build()), "raffle result must not be null");
         // 查询具体策略奖品配置信息
         StrategyAwardEntity strategyAward = strategyRepository

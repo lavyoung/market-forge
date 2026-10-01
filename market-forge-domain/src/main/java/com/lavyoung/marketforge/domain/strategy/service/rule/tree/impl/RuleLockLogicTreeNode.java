@@ -12,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+
 /**
  * 奖品次数锁规则树节点。
  * <p>
@@ -35,7 +37,7 @@ public class RuleLockLogicTreeNode implements ILogicTreeNode {
      * {@inheritDoc}
      */
     @Override
-    public DefaultTreeFactory.TreeActionEntity logic(String userId, Long strategyId, Long awardId, String ruleValue) {
+    public DefaultTreeFactory.TreeActionEntity logic(String userId, Long strategyId, Long awardId, String ruleValue, LocalDateTime endDateTime) {
         String lockRuleValue = repository.queryStrategyRuleValue(strategyId, awardId, ruleModel().getCode());
         int requiredRaffleCount = parseRequiredRaffleCount(lockRuleValue, userId, strategyId, awardId);
         long userRaffleCount = repository.queryUserRaffleCount(userId, strategyId);

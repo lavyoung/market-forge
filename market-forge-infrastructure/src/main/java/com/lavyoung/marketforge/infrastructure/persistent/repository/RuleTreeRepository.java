@@ -14,6 +14,8 @@ import com.lavyoung.marketforge.infrastructure.persistent.po.RuleTreeNodeLinePO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.RuleTreeNodePO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.RuleTreePO;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
+import com.lavyoung.marketforge.types.exception.BusinessException;
+import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -81,6 +83,41 @@ public class RuleTreeRepository implements IRuleTreeRepository {
                 .findFirst();
         return rootRule.flatMap(ruleModel -> treeDao.queryByRootRuleKey(ruleModel.getCode()))
                 .map(this::assembleRuleTree);
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * 只读取每棵规则树的 {@code rule_lock} 节点。节点规则值必须是非负整数，
+     * 表示奖品在活动页展示时需要用户累计参与多少次后解锁。
+     */
+    @Override
+    public Map<String, Integer> queryAwardRuleLockCount(List<String> treeIds) {
+        if (treeIds == null || treeIds.isEmpty()) {
+            return Map.of();
+        }
+        List<RuleTreeNodePO> lockNodes = ruleTreeNodeDao.queryByTreeIdsAndRuleKey(treeIds, RuleModel.LOCK.getCode());
+        return lockNodes.stream().collect(Collectors.toUnmodifiableMap(RuleTreeNodePO::getTreeId, (node) -> {
+            String ruleValue = node.getRuleValue();
+            if (ruleValue == null || ruleValue.isBlank()) {
+                log.error("奖品次数锁规则值为空 treeId={} ruleKey={}", node.getTreeId(), node.getRuleKey());
+                throw BusinessException.of(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, node.getTreeId(), node.getRuleKey());
+            }
+            try {
+                int lockCount = Integer.parseInt(ruleValue);
+                if (lockCount < 0) {
+                    throw new NumberFormatException("negative lock count, " + node.getTreeId());
+                }
+                return lockCount;
+            } catch (NumberFormatException exception) {
+                log.error("奖品次数锁规则值非法 treeId={} ruleKey={} ruleValue={}",
+                        node.getTreeId(), node.getRuleKey(), ruleValue);
+                throw new BusinessException(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, exception);
+            }
+        }, (left, right) -> {
+            log.error("奖品次数锁规则重复配置 lockCountLeft={} lockCountRight={}", left, right);
+            throw BusinessException.of(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID);
+        }));
     }
 
     /**

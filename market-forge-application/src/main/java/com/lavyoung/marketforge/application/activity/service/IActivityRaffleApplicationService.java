@@ -1,7 +1,11 @@
 package com.lavyoung.marketforge.application.activity.service;
 
+import com.lavyoung.marketforge.application.activity.model.ActivityAwardListCommand;
+import com.lavyoung.marketforge.application.activity.model.ActivityAwardResult;
 import com.lavyoung.marketforge.application.activity.model.ActivityRaffleCommand;
 import com.lavyoung.marketforge.application.activity.model.ActivityRaffleResult;
+
+import java.util.List;
 
 /**
  * 活动抽奖应用用例入口。
@@ -33,4 +37,17 @@ public interface IActivityRaffleApplicationService {
      * @throws com.lavyoung.marketforge.types.exception.BusinessException 活动额度不足、策略抽奖失败或中奖记录保存失败时抛出
      */
     ActivityRaffleResult raffle(ActivityRaffleCommand command);
+
+    /**
+     * 查询活动奖品列表。
+     * <p>
+     * 该方法用于活动抽奖页展示奖品，不执行真实抽奖，也不扣减库存。
+     * 它会根据活动找到绑定策略，再聚合策略奖品、次数锁规则和用户参与次数，
+     * 最终计算每个奖品在当前用户视角下是否已经解锁。
+     *
+     * @param command 活动奖品列表查询命令
+     * @return 活动奖品展示结果列表
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 活动不存在、活动未绑定策略或规则配置异常时抛出
+     */
+    List<ActivityAwardResult> queryAwardList(ActivityAwardListCommand command);
 }

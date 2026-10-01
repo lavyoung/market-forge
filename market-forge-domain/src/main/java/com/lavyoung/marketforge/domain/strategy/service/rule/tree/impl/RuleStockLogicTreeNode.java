@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+
 /**
  * 奖品库存规则树节点。
  * <p>
@@ -39,8 +41,8 @@ public class RuleStockLogicTreeNode implements ILogicTreeNode {
      * {@inheritDoc}
      */
     @Override
-    public DefaultTreeFactory.TreeActionEntity logic(String userId, Long strategyId, Long awardId, String ruleValue) {
-        boolean status = strategyDispatch.subtractAwardStock(strategyId, awardId);
+    public DefaultTreeFactory.TreeActionEntity logic(String userId, Long strategyId, Long awardId, String ruleValue, LocalDateTime endDateTime) {
+        boolean status = strategyDispatch.subtractAwardStock(strategyId, awardId, endDateTime);
         if (status) {
             log.info("抽奖策略-规则树，获得奖，库存扣减 userId={} strategyId={} ruleModel={} ruleValue={}", userId, strategyId, ruleModel(), ruleValue);
             repository.send(StrategyAwardStockKeyVO.builder()

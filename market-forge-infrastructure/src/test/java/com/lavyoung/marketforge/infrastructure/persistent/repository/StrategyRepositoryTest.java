@@ -41,6 +41,7 @@ class StrategyRepositoryTest {
     private static final long AWARD_ID = 100_011L;
     private static final String STOCK_KEY = "strategy_award_stock:100001_100011";
     private static final String STOCK_LOCK_KEY = STOCK_KEY + ":lock";
+    private static final Duration DEFAULT_STOCK_LOCK_LEASE_TIME = Duration.ofSeconds(30);
 
     @Mock
     private IStrategyAwardDao strategyAwardDao;
@@ -85,8 +86,7 @@ class StrategyRepositoryTest {
                 redisService,
                 strategyAwardAssembler,
                 strategyAssembler,
-                strategyRuleAssembler,
-                messagePublisher
+                strategyRuleAssembler
         );
         stockMessageRepository = new StrategyAwardStockMessageRepository(redisService, messagePublisher);
     }
@@ -155,7 +155,7 @@ class StrategyRepositoryTest {
 
         // Then
         assertTrue(subtracted);
-        verify(redisService).lock(STOCK_LOCK_KEY);
+        verify(redisService).lock(STOCK_LOCK_KEY, DEFAULT_STOCK_LOCK_LEASE_TIME);
         verify(redisService).addAndGetAtomicLong(STOCK_KEY, -2L);
         verify(redisService).unlock(STOCK_LOCK_KEY);
     }
@@ -173,7 +173,7 @@ class StrategyRepositoryTest {
 
         // Then
         assertFalse(subtracted);
-        verify(redisService).lock(STOCK_LOCK_KEY);
+        verify(redisService).lock(STOCK_LOCK_KEY, DEFAULT_STOCK_LOCK_LEASE_TIME);
         verify(redisService, never()).addAndGetAtomicLong(STOCK_KEY, -2L);
         verify(redisService).unlock(STOCK_LOCK_KEY);
     }

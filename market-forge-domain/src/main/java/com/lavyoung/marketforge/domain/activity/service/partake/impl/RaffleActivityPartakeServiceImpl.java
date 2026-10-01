@@ -53,6 +53,7 @@ public class RaffleActivityPartakeServiceImpl extends AbstractRaffleActivityPart
                 .activityId(activityId)
                 .activityName(activityEntity.activityName())
                 .strategyId(activityEntity.strategyId())
+                .endDateTime(activityEntity.endDateTime())
                 .orderId(Constants.BusinessNoPrefix.RAFFLE_ORDER_PREFIX + IdGenerator.nextId())
                 .orderTime(now)
                 .state(UserRaffleOrderStateVO.CREATE.getCode())

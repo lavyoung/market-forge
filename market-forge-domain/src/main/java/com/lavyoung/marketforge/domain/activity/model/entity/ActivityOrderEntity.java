@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
  * @param sku           商品 SKU
  * @param activityName  下单时的活动名称快照
  * @param strategyId    活动关联的抽奖策略标识
+ * @param endDateTime   活动结束时间，用于策略库存锁计算过期时间
  * @param orderId       业务订单号
  * @param orderTime     业务下单时间
  * @param totalCount    订单授予的总抽奖次数
@@ -30,6 +31,7 @@ public record ActivityOrderEntity(
         Long sku,
         String activityName,
         Long strategyId,
+        LocalDateTime endDateTime,
         String orderId,
         LocalDateTime orderTime,
         Integer totalCount,

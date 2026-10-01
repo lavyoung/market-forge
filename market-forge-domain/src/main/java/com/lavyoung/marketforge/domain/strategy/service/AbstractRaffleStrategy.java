@@ -15,6 +15,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
@@ -67,7 +68,12 @@ public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
                     .build();
         }
         // 3. 默认兜底处理  继续执行-类似构建“解锁放行—库存接管—幸运奖兜底”的规则树
-        DefaultTreeFactory.StrategyAwardVO treeStrategyAwardVO = this.raffleLogicTree(userId, strategyId, chainStrategyAwardVO.awardId());
+        DefaultTreeFactory.StrategyAwardVO treeStrategyAwardVO = this.raffleLogicTree(
+                userId,
+                strategyId,
+                chainStrategyAwardVO.awardId(),
+                raffleFactorEntity.endDateTime()
+        );
         log.info("抽奖策略计算-规则树 userId={} strategyId={} awardId={} ruleModel={} ruleValue={}", userId, strategyId, treeStrategyAwardVO.awardId(),
                 treeStrategyAwardVO.ruleModel(), treeStrategyAwardVO.awardRuleValue());
         return RaffleAwardEntity.builder()
@@ -94,9 +100,10 @@ public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
      * @param userId     参与抽奖的用户标识
      * @param strategyId 抽奖策略标识
      * @param awardId    责任链随机命中的奖品标识
+     * @param endDateTime 活动结束时间，用于向库存规则节点透传 Redis 锁租约依据；为空时兼容旧调用
      * @return 规则树最终确定的奖品、命中规则及奖品规则配置
      * @throws BusinessException 规则树缺失或节点流转配置无效时抛出
      */
-    protected abstract DefaultTreeFactory.StrategyAwardVO raffleLogicTree(String userId, Long strategyId, Long awardId);
+    protected abstract DefaultTreeFactory.StrategyAwardVO raffleLogicTree(String userId, Long strategyId, Long awardId, LocalDateTime endDateTime);
 
 }

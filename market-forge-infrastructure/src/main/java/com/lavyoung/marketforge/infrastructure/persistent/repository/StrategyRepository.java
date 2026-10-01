@@ -19,12 +19,12 @@ import com.lavyoung.marketforge.infrastructure.persistent.po.UserAwardRecordPO;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
 import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
-import com.lavyoung.marketforge.types.messaging.MessagePublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -43,11 +43,6 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class StrategyRepository implements IStrategyRepository {
 
-    /**
-     * 库存扣减消息进入消费队列前的延迟，用于合并短时间内的库存变更并削峰。
-     */
-    private static final Duration AWARD_STOCK_QUEUE_DELAY = Duration.ofSeconds(3);
-
     private final IStrategyAwardDao strategyAwardDao;
     private final IStrategyDao strategyDao;
     private final IStrategyRuleDao strategyRuleDao;
@@ -58,8 +53,6 @@ public class StrategyRepository implements IStrategyRepository {
     private final StrategyAwardAssembler strategyAwardAssembler;
     private final StrategyAssembler strategyAssembler;
     private final StrategyRuleAssembler strategyRuleAssembler;
-
-    private final MessagePublisher messagePublisher;
 
     /**
      * {@inheritDoc}
@@ -217,7 +210,7 @@ public class StrategyRepository implements IStrategyRepository {
     }
 
     @Override
-    public boolean subtractAwardStock(Long strategyId, Long awardId, int stock) {
+    public boolean subtractAwardStock(Long strategyId, Long awardId, int stock, LocalDateTime endDateTime) {
         Objects.requireNonNull(strategyId, "strategyId must not be null");
         Objects.requireNonNull(awardId, "awardId must not be null");
         String key = Constants.RedisKeys.STRATEGY_AWARD_STOCK + strategyId + Constants.UNDERLINE + awardId;
@@ -228,7 +221,7 @@ public class StrategyRepository implements IStrategyRepository {
             throw new IllegalArgumentException("stock must be greater than zero");
         }
         String lockKey = key + Constants.COLON + "lock";
-        redisService.lock(lockKey);
+        redisService.lock(lockKey, stockLockLeaseTime(endDateTime));
         try {
             long currentStock = redisService.getAtomicLong(key);
             if (currentStock < stock) {
@@ -239,6 +232,26 @@ public class StrategyRepository implements IStrategyRepository {
         } finally {
             redisService.unlock(lockKey);
         }
+    }
+
+    /**
+     * 计算库存锁租约。
+     * <p>
+     * 活动未结束时，让锁的最长存活时间覆盖到活动结束后一日，避免服务宕机导致锁无限悬挂。
+     * 旧调用没有传入活动结束时间时，使用较短租约兼容策略维度的直接扣减。
+     *
+     * @param endDateTime 活动结束时间，可为空
+     * @return Redis 锁固定租约
+     */
+    private Duration stockLockLeaseTime(LocalDateTime endDateTime) {
+        if (endDateTime == null) {
+            return Duration.ofSeconds(30);
+        }
+        Duration leaseTime = Duration.between(LocalDateTime.now(), endDateTime.plusDays(1));
+        if (leaseTime.isZero() || leaseTime.isNegative()) {
+            return Duration.ofSeconds(1);
+        }
+        return leaseTime;
     }
 
     @Override

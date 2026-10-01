@@ -359,6 +359,7 @@ public class ActivityRepository implements IActivityRepository {
                 activityOrderEntity.sku(),
                 activityOrderEntity.activityName(),
                 activityOrderEntity.strategyId(),
+                activityOrderEntity.endDateTime(),
                 activityOrderEntity.orderId(),
                 activityOrderEntity.orderTime(),
                 1,
