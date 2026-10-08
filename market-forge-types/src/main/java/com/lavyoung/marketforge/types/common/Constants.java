@@ -44,6 +44,11 @@ public class Constants {
          * 抽奖活动订单前缀。
          */
         String RAFFLE_ORDER_PREFIX = "ROP";
+
+        /**
+         * 用户返利行为订单前缀
+         */
+        String REBATE_ORDER_PREFIX = "BRO";
     }
 
     /**

@@ -23,6 +23,11 @@ module market.forge.domain {
     exports com.lavyoung.marketforge.domain.message.model.valobj;
     exports com.lavyoung.marketforge.domain.message.repository;
     exports com.lavyoung.marketforge.domain.message.service;
+    exports com.lavyoung.marketforge.domain.behavior.repository;
+    exports com.lavyoung.marketforge.domain.behavior.model.entity;
+    exports com.lavyoung.marketforge.domain.behavior.model.vo;
+    exports com.lavyoung.marketforge.domain.behavior.service.impl;
+    exports com.lavyoung.marketforge.domain.behavior.service;
 
     requires spring.context;
     requires org.slf4j;
