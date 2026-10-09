@@ -223,6 +223,15 @@ public enum BusinessResponseCode implements IResponseCode {
     USER_AWARD_SETTLEMENT_FAILED(600_012_001, "user-award.settlement.failed", "奖品结算失败"),
     USER_AWARD_SETTLEMENT_STATE_ERROR(600_012_002, "user-award.settlement.state-error", "奖品结算状态异常"),
 
+    // 650 - 用户行为返利域
+    BEHAVIOR_REBATE_CONFIG_NOT_FOUND(650_001_001, "behavior-rebate.config.not-found", "用户行为返利配置不存在"),
+    BEHAVIOR_REBATE_CONFIG_INVALID(650_001_002, "behavior-rebate.config.invalid", "用户行为返利配置无效"),
+    BEHAVIOR_REBATE_ORDER_CREATE_FAILED(650_002_001, "behavior-rebate.order.create-failed", "用户行为返利订单创建失败"),
+    BEHAVIOR_REBATE_ORDER_DUPLICATED(650_002_002, "behavior-rebate.order.duplicated", "用户行为返利订单已存在"),
+    BEHAVIOR_REBATE_ORDER_NOT_FOUND(650_002_003, "behavior-rebate.order.not-found", "用户行为返利订单不存在"),
+    BEHAVIOR_REBATE_MESSAGE_SEND_FAILED(650_003_001, "behavior-rebate.message.send-failed", "用户行为返利消息发送失败"),
+    BEHAVIOR_REBATE_MESSAGE_CONSUME_FAILED(650_003_002, "behavior-rebate.message.consume-failed", "用户行为返利消息消费失败"),
+
     // 700 - 任务与消息事务域
     TASK_NOT_FOUND(700_001_001, "task.not-found", "任务不存在"),
     TASK_CREATE_FAILED(700_001_002, "task.create-failed", "任务创建失败"),

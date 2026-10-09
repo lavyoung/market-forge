@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lavyoung.marketforge.domain.activity.event.ActivitySkuStockDeductedEvent;
 import com.lavyoung.marketforge.domain.activity.event.ActivitySkuZeroStockEvent;
 import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
+import com.lavyoung.marketforge.domain.behavior.event.SendRebateEvent;
 import com.lavyoung.marketforge.domain.strategy.event.AwardStockDeductedEvent;
 import com.lavyoung.marketforge.infrastructure.messaging.AbstractMessageListenerAdapter;
 import com.lavyoung.marketforge.infrastructure.messaging.MessageConsumeTransaction;
@@ -38,11 +39,14 @@ public class RabbitMessageListenerAdapter extends AbstractMessageListenerAdapter
     };
     private static final TypeReference<MessageEnvelope<SendAwardRecordEvent>> USER_AWARD_SEND_TYPE = new TypeReference<>() {
     };
+    private static final TypeReference<MessageEnvelope<SendRebateEvent>> SEND_REBATE_TYPE = new TypeReference<>() {
+    };
 
     private final MessageHandler<AwardStockDeductedEvent> awardStockDeductedEventMessageHandler;
     private final MessageHandler<ActivitySkuStockDeductedEvent> activitySkuStockDeductedEventMessageHandler;
     private final MessageHandler<ActivitySkuZeroStockEvent> activitySkuStockZeroEventMessageHandler;
     private final MessageHandler<SendAwardRecordEvent> sendAwardRecordMessageHandler;
+    private final MessageHandler<SendRebateEvent> sendRebateMessageHandler;
 
     public RabbitMessageListenerAdapter(
             ObjectMapper objectMapper,
@@ -50,13 +54,15 @@ public class RabbitMessageListenerAdapter extends AbstractMessageListenerAdapter
             MessageHandler<AwardStockDeductedEvent> awardStockDeductedEventMessageHandler,
             MessageHandler<ActivitySkuStockDeductedEvent> activitySkuStockDeductedEventMessageHandler,
             MessageHandler<ActivitySkuZeroStockEvent> activitySkuStockZeroEventMessageHandler,
-            MessageHandler<SendAwardRecordEvent> sendAwardRecordMessageHandler
+            MessageHandler<SendAwardRecordEvent> sendAwardRecordMessageHandler,
+            MessageHandler<SendRebateEvent> sendRebateMessageHandler
     ) {
         super(objectMapper, messageConsumeTransaction);
         this.awardStockDeductedEventMessageHandler = awardStockDeductedEventMessageHandler;
         this.activitySkuStockDeductedEventMessageHandler = activitySkuStockDeductedEventMessageHandler;
         this.activitySkuStockZeroEventMessageHandler = activitySkuStockZeroEventMessageHandler;
         this.sendAwardRecordMessageHandler = sendAwardRecordMessageHandler;
+        this.sendRebateMessageHandler = sendRebateMessageHandler;
     }
 
     /**
@@ -102,5 +108,16 @@ public class RabbitMessageListenerAdapter extends AbstractMessageListenerAdapter
     @RabbitListener(queues = MqConstants.USER_AWARD_SEND_QUEUE)
     public void onUserAwardSend(Message message) throws Exception {
         consume(message, USER_AWARD_SEND_TYPE, sendAwardRecordMessageHandler);
+    }
+
+    /**
+     * 消费用户行为返利消息并转交应用处理器。
+     *
+     * @param message RabbitMQ 原始消息
+     * @throws Exception 消息反序列化或业务处理失败时抛出
+     */
+    @RabbitListener(queues = MqConstants.SEND_REBATE_QUEUE)
+    public void onSendRebate(Message message) throws Exception {
+        consume(message, SEND_REBATE_TYPE, sendRebateMessageHandler);
     }
 }

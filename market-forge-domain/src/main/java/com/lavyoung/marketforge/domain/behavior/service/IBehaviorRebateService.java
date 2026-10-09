@@ -1,8 +1,7 @@
 package com.lavyoung.marketforge.domain.behavior.service;
 
 import com.lavyoung.marketforge.domain.behavior.model.entity.BehaviorEntity;
-
-import java.util.List;
+import com.lavyoung.marketforge.domain.behavior.model.entity.BehaviorRebateOrderResult;
 
 /**
  * 用户行为返利领域服务。
@@ -24,8 +23,8 @@ public interface IBehaviorRebateService {
      * 如果该行为没有配置返利，则返回空集合。</p>
      *
      * @param behavior 用户行为实体，包含用户标识、行为类型和外部业务幂等号
-     * @return 创建成功的返利订单号集合；没有返利配置时返回空集合
+     * @return 返利订单创建结果，包含订单号和待投递事件标识；没有返利配置时返回空结果
      * @throws NullPointerException 当 {@code behavior} 或必要字段为空时抛出
      */
-    List<String> createOrder(BehaviorEntity behavior);
+    BehaviorRebateOrderResult createOrder(BehaviorEntity behavior);
 }

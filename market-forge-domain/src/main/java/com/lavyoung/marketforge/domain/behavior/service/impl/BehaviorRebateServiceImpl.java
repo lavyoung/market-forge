@@ -1,7 +1,10 @@
 package com.lavyoung.marketforge.domain.behavior.service.impl;
 
+import com.lavyoung.marketforge.domain.behavior.event.SendRebateEvent;
+import com.lavyoung.marketforge.domain.behavior.model.aggregate.UserBehaviorRebateAggregate;
 import com.lavyoung.marketforge.domain.behavior.model.entity.BehaviorEntity;
 import com.lavyoung.marketforge.domain.behavior.model.entity.BehaviorRebateConfigEntity;
+import com.lavyoung.marketforge.domain.behavior.model.entity.BehaviorRebateOrderResult;
 import com.lavyoung.marketforge.domain.behavior.model.entity.UserBehaviorRebateOrderEntity;
 import com.lavyoung.marketforge.domain.behavior.repository.IBehaviorRebateRepository;
 import com.lavyoung.marketforge.domain.behavior.service.IBehaviorRebateService;
@@ -34,18 +37,30 @@ public class BehaviorRebateServiceImpl implements IBehaviorRebateService {
     private final IBehaviorRebateRepository behaviorRebateRepository;
 
     @Override
-    public List<String> createOrder(BehaviorEntity behavior) {
+    public BehaviorRebateOrderResult createOrder(BehaviorEntity behavior) {
         BehaviorEntity validBehavior = Objects.requireNonNull(behavior, "behavior must not be null");
         List<BehaviorRebateConfigEntity> configs = behaviorRebateRepository.queryBehaviorRebateConfig(validBehavior.behaviorType());
 
         if (configs.isEmpty()) {
-            return List.of();
+            return new BehaviorRebateOrderResult(List.of(), List.of());
         }
 
         List<UserBehaviorRebateOrderEntity> rebateOrders = configs.stream()
                 .map(config -> buildRebateOrder(validBehavior, config))
                 .toList();
-        return behaviorRebateRepository.saveUserBehaviorRebateOrders(rebateOrders);
+
+        List<SendRebateEvent> events = rebateOrders.stream().map(order -> new SendRebateEvent(
+                order.userId(),
+                order.bizId(),
+                order.rebateType(),
+                order.rebateConfig()
+        )).toList();
+
+        return behaviorRebateRepository.saveUserBehaviorRebateAggregate(new UserBehaviorRebateAggregate(
+                validBehavior.userId(),
+                rebateOrders,
+                events
+        ));
     }
 
     private UserBehaviorRebateOrderEntity buildRebateOrder(BehaviorEntity behavior, BehaviorRebateConfigEntity config) {

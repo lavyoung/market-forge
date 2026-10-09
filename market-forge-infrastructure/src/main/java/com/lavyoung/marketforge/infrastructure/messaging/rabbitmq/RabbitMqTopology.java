@@ -46,7 +46,7 @@ import org.springframework.context.annotation.Configuration;
  *                                           v
  *                                       market-forge.dlq
  * </pre>
- *
+ * <p>
  * todo 所有失败消息应该区分一下
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
@@ -248,5 +248,50 @@ public class RabbitMqTopology {
         return BindingBuilder.bind(marketForgeDlq())
                 .to(marketForgeDlx())
                 .with(MqConstants.USER_AWARD_SEND_ROUTE_KEY);
+    }
+
+    /**
+     * 声明用户行为返利业务队列。
+     *
+     * <p>正常方向：主交换机 -> 用户行为返利队列；
+     * 失败方向：用户行为返利队列 -> 死信交换机。</p>
+     *
+     * @return 带死信参数的用户行为返利队列
+     */
+    @Bean
+    public Queue sendRebateQueue() {
+        return QueueBuilder.durable(MqConstants.SEND_REBATE_QUEUE)
+                .deadLetterExchange(MqConstants.DLX)
+                .deadLetterRoutingKey(MqConstants.SEND_REBATE_ROUTING_KEY)
+                .build();
+    }
+
+    /**
+     * 绑定用户行为返利路由。
+     *
+     * <p>将主交换机中的 {@code send.rebate} 消息路由到用户行为返利队列。</p>
+     *
+     * @return 用户行为返利业务绑定
+     */
+    @Bean
+    public Binding sendRebateBinding() {
+        return BindingBuilder.bind(sendRebateQueue())
+                .to(marketForgeExchange())
+                .with(MqConstants.SEND_REBATE_ROUTING_KEY);
+    }
+
+    /**
+     * 将用户行为返利死信路由到公共死信队列。
+     *
+     * <p>当用户行为返利消息消费失败并进入死信交换机时，
+     * 使用 {@code send.rebate} 路由键汇聚到公共死信队列，便于后续排查和补偿。</p>
+     *
+     * @return 用户行为返利死信绑定
+     */
+    @Bean
+    public Binding sendRebateDeadLetterBinding() {
+        return BindingBuilder.bind(marketForgeDlq())
+                .to(marketForgeDlx())
+                .with(MqConstants.SEND_REBATE_ROUTING_KEY);
     }
 }

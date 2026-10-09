@@ -3,6 +3,8 @@ package com.lavyoung.marketforge.domain.behavior.model.vo;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.util.Optional;
+
 /**
  * 用户行为类型。
  *
@@ -27,4 +29,12 @@ public enum BehaviorTypeVO {
     private final String desc;
 
 
+    public static Optional<BehaviorTypeVO> fromCode(String code) {
+        for (BehaviorTypeVO value : BehaviorTypeVO.values()) {
+            if (value.code.equals(code)) {
+                return Optional.of(value);
+            }
+        }
+        return Optional.empty();
+    }
 }

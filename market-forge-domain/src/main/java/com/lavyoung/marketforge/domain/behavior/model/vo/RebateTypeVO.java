@@ -3,6 +3,8 @@ package com.lavyoung.marketforge.domain.behavior.model.vo;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.util.Optional;
+
 /**
  * 行为返利类型。
  *
@@ -30,4 +32,13 @@ public enum RebateTypeVO {
     ;
     private final String code;
     private final String desc;
+
+    public static Optional<RebateTypeVO> fromCode(String code) {
+        for (RebateTypeVO value : RebateTypeVO.values()) {
+            if (value.code.equals(code)) {
+                return Optional.of(value);
+            }
+        }
+        return Optional.empty();
+    }
 }

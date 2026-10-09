@@ -45,4 +45,7 @@ module market.forge.infrastructure {
     opens com.lavyoung.marketforge.infrastructure.messaging;
     opens com.lavyoung.marketforge.infrastructure.messaging.rabbitmq;
     opens com.lavyoung.marketforge.infrastructure.concurrent;
+    opens com.lavyoung.marketforge.infrastructure.persistent.po.behavior;
+    opens com.lavyoung.marketforge.infrastructure.persistent.dao.behavior;
+    opens com.lavyoung.marketforge.infrastructure.persistent.assembler.behavior;
 }

@@ -8,7 +8,7 @@ server:
 
 mybatis-plus:
   mapper-locations:
-    - classpath*:/mybatis/mapper/*.xml
+    - classpath*:/mybatis/mapper/**/*.xml
   configuration:
     map-underscore-to-camel-case: true
     use-generated-keys: true

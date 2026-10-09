@@ -80,4 +80,14 @@ public final class MqConstants {
      * 用户中奖记录创建事件队列。
      */
     public static final String USER_AWARD_SEND_QUEUE = "user.award.send.queue";
+
+    /**
+     * 用户行为返利消息路由键。
+     */
+    public static final String SEND_REBATE_ROUTING_KEY = "send.rebate";
+
+    /**
+     * 用户行为返利消息队列。
+     */
+    public static final String SEND_REBATE_QUEUE = "send.rebate.queue";
 }

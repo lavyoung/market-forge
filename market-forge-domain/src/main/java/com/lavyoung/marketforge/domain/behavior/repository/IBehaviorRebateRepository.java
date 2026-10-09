@@ -1,7 +1,8 @@
 package com.lavyoung.marketforge.domain.behavior.repository;
 
+import com.lavyoung.marketforge.domain.behavior.model.aggregate.UserBehaviorRebateAggregate;
 import com.lavyoung.marketforge.domain.behavior.model.entity.BehaviorRebateConfigEntity;
-import com.lavyoung.marketforge.domain.behavior.model.entity.UserBehaviorRebateOrderEntity;
+import com.lavyoung.marketforge.domain.behavior.model.entity.BehaviorRebateOrderResult;
 import com.lavyoung.marketforge.domain.behavior.model.vo.BehaviorTypeVO;
 
 import java.util.List;
@@ -30,13 +31,13 @@ public interface IBehaviorRebateRepository {
     List<BehaviorRebateConfigEntity> queryBehaviorRebateConfig(BehaviorTypeVO behaviorType);
 
     /**
-     * 保存用户行为返利订单。
+     * 保存用户行为返利聚合。
      *
-     * <p>实现方应保证同一用户、同一外部业务号、同一返利类型不会重复入账。
-     * 后续接入可靠消息时，订单落库和 task 落库也应在同一事务内完成。</p>
+     * <p>实现方应保证返利订单和本地消息任务在同一事务内完成。
+     * 任一订单或任务写入失败，都应回滚整次入账。</p>
      *
-     * @param rebateOrders 用户行为返利订单集合
+     * @param aggregate 用户行为返利聚合
      * @return 保存成功的返利订单号集合；没有订单时返回空集合
      */
-    List<String> saveUserBehaviorRebateOrders(List<UserBehaviorRebateOrderEntity> rebateOrders);
+    BehaviorRebateOrderResult saveUserBehaviorRebateAggregate(UserBehaviorRebateAggregate aggregate);
 }

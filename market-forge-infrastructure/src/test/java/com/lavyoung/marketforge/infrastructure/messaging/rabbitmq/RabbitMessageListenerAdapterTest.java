@@ -6,6 +6,8 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.lavyoung.marketforge.domain.activity.event.ActivitySkuStockDeductedEvent;
 import com.lavyoung.marketforge.domain.activity.event.ActivitySkuZeroStockEvent;
 import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
+import com.lavyoung.marketforge.domain.behavior.event.SendRebateEvent;
+import com.lavyoung.marketforge.domain.behavior.model.vo.RebateTypeVO;
 import com.lavyoung.marketforge.domain.strategy.event.AwardStockDeductedEvent;
 import com.lavyoung.marketforge.infrastructure.messaging.MessageConsumeTransaction;
 import com.lavyoung.marketforge.infrastructure.persistent.repository.ProcessedMessageRepository;
@@ -57,6 +59,9 @@ class RabbitMessageListenerAdapterTest {
     @Mock
     private MessageHandler<SendAwardRecordEvent> sendAwardRecordMessageHandler;
 
+    @Mock
+    private MessageHandler<SendRebateEvent> sendRebateMessageHandler;
+
     private ObjectMapper objectMapper;
 
     private RabbitMessageListenerAdapter adapter;
@@ -77,7 +82,8 @@ class RabbitMessageListenerAdapterTest {
                 awardStockDeductedHandler,
                 activitySkuStockDeductedEventMessageHandler,
                 activitySkuZeroStockEventMessageHandler,
-                sendAwardRecordMessageHandler
+                sendAwardRecordMessageHandler,
+                sendRebateMessageHandler
         );
     }
 
@@ -191,6 +197,20 @@ class RabbitMessageListenerAdapterTest {
         adapter.onUserAwardSend(messageOf(event));
 
         verify(sendAwardRecordMessageHandler).handle(eq(event), any(MessageContext.class));
+        verify(processedMessageRepository).tryRecord(
+                eq(event.eventId()), eq(event.eventType()), any(LocalDateTime.class));
+    }
+
+    @Test
+    void shouldDispatchSendRebateEvent() throws Exception {
+        SendRebateEvent event = new SendRebateEvent(
+                USER_ID, "rebate-order-001", RebateTypeVO.INTEGRAL, "10");
+
+        allowFirstConsumption();
+
+        adapter.onSendRebate(messageOf(event));
+
+        verify(sendRebateMessageHandler).handle(eq(event), any(MessageContext.class));
         verify(processedMessageRepository).tryRecord(
                 eq(event.eventId()), eq(event.eventType()), any(LocalDateTime.class));
     }
