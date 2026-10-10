@@ -16,10 +16,17 @@ module market.forge.api {
     exports com.lavyoung.marketforge.api.strategy.request;
     exports com.lavyoung.marketforge.api.strategy.response;
     exports com.lavyoung.marketforge.api.strategy;
+    exports com.lavyoung.marketforge.api.activity.request;
+    exports com.lavyoung.marketforge.api.activity.response;
+    exports com.lavyoung.marketforge.api.activity;
+    exports com.lavyoung.marketforge.api.behavior;
+    exports com.lavyoung.marketforge.api.behavior.request;
+    exports com.lavyoung.marketforge.api.behavior.response;
 
+    opens com.lavyoung.marketforge.api.activity.request;
+    opens com.lavyoung.marketforge.api.activity.response;
     opens com.lavyoung.marketforge.api.strategy.request;
     opens com.lavyoung.marketforge.api.strategy.response;
-    exports com.lavyoung.marketforge.api.activity.response;
-    exports com.lavyoung.marketforge.api.activity.request;
-    exports com.lavyoung.marketforge.api.activity;
+    opens com.lavyoung.marketforge.api.behavior.request;
+    opens com.lavyoung.marketforge.api.behavior.response;
 }

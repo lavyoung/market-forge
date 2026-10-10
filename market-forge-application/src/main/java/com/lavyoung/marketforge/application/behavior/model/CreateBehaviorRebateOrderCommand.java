@@ -1,7 +1,5 @@
 package com.lavyoung.marketforge.application.behavior.model;
 
-import com.lavyoung.marketforge.domain.behavior.model.vo.BehaviorTypeVO;
-
 /**
  * 创建用户行为返利订单命令。
  *
@@ -17,7 +15,7 @@ import com.lavyoung.marketforge.domain.behavior.model.vo.BehaviorTypeVO;
  */
 public record CreateBehaviorRebateOrderCommand(
         String userId,
-        BehaviorTypeVO behaviorType,
+        String behaviorType,
         String outBusinessNo
 ) {
 }

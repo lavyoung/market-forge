@@ -15,7 +15,6 @@ module market.forge.trigger {
     requires org.mapstruct;
     requires org.slf4j;
     requires static lombok;
-    requires market.forge.domain;
 
     opens com.lavyoung.marketforge.trigger.assembler;
     opens com.lavyoung.marketforge.trigger.controller;
