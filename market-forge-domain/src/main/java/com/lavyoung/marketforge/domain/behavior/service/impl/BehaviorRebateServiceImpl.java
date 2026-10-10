@@ -63,6 +63,16 @@ public class BehaviorRebateServiceImpl implements IBehaviorRebateService {
         ));
     }
 
+    @Override
+    public boolean existsOrder(BehaviorEntity behavior) {
+        BehaviorEntity validBehavior = Objects.requireNonNull(behavior, "behavior must not be null");
+        return behaviorRebateRepository.existsUserBehaviorRebateOrder(
+                validBehavior.userId(),
+                validBehavior.behaviorType(),
+                validBehavior.outBusinessNo()
+        );
+    }
+
     private UserBehaviorRebateOrderEntity buildRebateOrder(BehaviorEntity behavior, BehaviorRebateConfigEntity config) {
         return new UserBehaviorRebateOrderEntity(
                 behavior.userId(),

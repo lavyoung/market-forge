@@ -12,9 +12,12 @@ import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
 
@@ -32,6 +35,16 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class BehaviorRebateApplicationServiceImpl implements IBehaviorRebateApplicationService {
+
+    /**
+     * 日历签到行为类型编码
+     */
+    private static final BehaviorTypeVO SIGN_BEHAVIOR_TYPE = BehaviorTypeVO.SIGN;
+
+    /**
+     * 日历签到外部业务号日期格式。
+     */
+    private static final DateTimeFormatter SIGN_DATE_FORMATTER = DateTimeFormatter.BASIC_ISO_DATE;
 
     private final IBehaviorRebateService behaviorRebateService;
     private final ApplicationEventPublisher eventPublisher;
@@ -57,4 +70,46 @@ public class BehaviorRebateApplicationServiceImpl implements IBehaviorRebateAppl
         });
         return new BehaviorRebateOrderCreateResult(result.orderIds(), result.eventIds());
     }
+
+    @Override
+    public BehaviorRebateOrderCreateResult calendarSignRebate(String userId) {
+        if (StringUtils.isBlank(userId)) {
+            throw BusinessException.of(BusinessResponseCode.BEHAVIOR_REBATE_CONFIG_INVALID, userId);
+        }
+
+        return createOrder(new CreateBehaviorRebateOrderCommand(
+                userId,
+                SIGN_BEHAVIOR_TYPE.getCode(),
+                buildCalendarSignOutBusinessNo(userId)
+        ));
+    }
+
+    @Override
+    public boolean isCalendarSignRebate(String userId) {
+        if (StringUtils.isBlank(userId)) {
+            throw BusinessException.of(BusinessResponseCode.BEHAVIOR_REBATE_CONFIG_INVALID, userId);
+        }
+
+        String outBusinessNo = buildCalendarSignOutBusinessNo(userId);
+        return behaviorRebateService.existsOrder(new BehaviorEntity(
+                userId,
+                SIGN_BEHAVIOR_TYPE,
+                outBusinessNo
+        ));
+    }
+
+    /**
+     * 构建日历签到外部业务幂等号。
+     *
+     * <p>幂等号由固定前缀、当前日期和用户标识组成：
+     * {@code sign-yyyyMMdd-userId}。同一用户同一天会生成相同编号，
+     * 因此可以用于创建签到订单和查询当天签到状态。</p>
+     *
+     * @param userId 用户标识
+     * @return 日历签到外部业务幂等号
+     */
+    private String buildCalendarSignOutBusinessNo(String userId) {
+        return "sign-" + LocalDate.now().format(SIGN_DATE_FORMATTER) + "-" + userId;
+    }
+
 }

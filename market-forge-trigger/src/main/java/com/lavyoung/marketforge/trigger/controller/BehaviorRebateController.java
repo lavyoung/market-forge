@@ -11,9 +11,6 @@ import com.lavyoung.marketforge.types.model.Response;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-
 /**
  * 用户行为返利 HTTP 适配器。
  * <p>
@@ -29,18 +26,6 @@ import java.time.format.DateTimeFormatter;
 @RequiredArgsConstructor
 public class BehaviorRebateController implements IBehaviorRebateApi {
 
-    /**
-     * 签到行为类型编码。
-     *
-     * <p>trigger 层不直接依赖 domain 层枚举，因此这里使用 API 入参约定中的字符串编码。</p>
-     */
-    private static final String SIGN_BEHAVIOR_TYPE = "sign";
-
-    /**
-     * 签到幂等号日期格式。
-     */
-    private static final DateTimeFormatter SIGN_DATE_FORMATTER = DateTimeFormatter.BASIC_ISO_DATE;
-
     private final IBehaviorRebateApplicationService behaviorRebateApplicationService;
 
     private final BehaviorRebateResponseAssembler behaviorRebateResponseAssembler;
@@ -54,13 +39,12 @@ public class BehaviorRebateController implements IBehaviorRebateApi {
 
     @Override
     public Response<BehaviorRebateResponse> calendarSignRebate(String userId) {
-        String outBusinessNo = "sign-" + LocalDate.now().format(SIGN_DATE_FORMATTER) + "-" + userId;
-        CreateBehaviorRebateOrderCommand command = new CreateBehaviorRebateOrderCommand(
-                userId,
-                SIGN_BEHAVIOR_TYPE,
-                outBusinessNo
-        );
-        BehaviorRebateOrderCreateResult result = behaviorRebateApplicationService.createOrder(command);
+        BehaviorRebateOrderCreateResult result = behaviorRebateApplicationService.calendarSignRebate(userId);
         return Response.success(behaviorRebateResponseAssembler.toResponse(result));
+    }
+
+    @Override
+    public Response<Boolean> isCalendarSignRebate(String userId) {
+        return Response.success(behaviorRebateApplicationService.isCalendarSignRebate(userId));
     }
 }

@@ -19,5 +19,12 @@
         <result column="update_time" property="updateTime"/>
     </resultMap>
 
-
+    <select id="existsByUserIdAndBehaviorTypeAndOutBusinessNo" resultType="boolean">
+        SELECT COUNT(1) > 0
+        FROM user_behavior_rebate_order
+        WHERE user_id = #{userId}
+        AND behavior_type = #{behaviorType}
+        AND out_business_no = #{outBusinessNo}
+        LIMIT 1
+    </select>
 </mapper>

@@ -27,4 +27,16 @@ public interface IBehaviorRebateService {
      * @throws NullPointerException 当 {@code behavior} 或必要字段为空时抛出
      */
     BehaviorRebateOrderResult createOrder(BehaviorEntity behavior);
+
+    /**
+     * 判断用户指定行为是否已经处理过指定外部业务号。
+     *
+     * <p>典型场景是查询“今日是否已签到”：
+     * application 层按当天日期生成签到幂等号，领域服务再判断该幂等号下是否已经存在返利订单。</p>
+     *
+     * @param behavior 用户行为实体，包含用户标识、行为类型和外部业务幂等号
+     * @return 已存在返利订单返回 {@code true}，否则返回 {@code false}
+     * @throws NullPointerException 当 {@code behavior} 或必要字段为空时抛出
+     */
+    boolean existsOrder(BehaviorEntity behavior);
 }

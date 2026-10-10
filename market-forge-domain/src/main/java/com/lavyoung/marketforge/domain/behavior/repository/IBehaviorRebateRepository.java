@@ -40,4 +40,18 @@ public interface IBehaviorRebateRepository {
      * @return 保存成功的返利订单号集合；没有订单时返回空集合
      */
     BehaviorRebateOrderResult saveUserBehaviorRebateAggregate(UserBehaviorRebateAggregate aggregate);
+
+    /**
+     * 判断用户指定行为和外部业务编号是否已经创建过返利订单。
+     *
+     * <p>该方法用于查询类场景，例如“今天是否已经签到”。
+     * 签到查询会使用固定的外部业务编号 {@code sign-yyyyMMdd-userId}，
+     * 只要存在任意返利订单，就说明该行为已经入账过。</p>
+     *
+     * @param userId        用户标识
+     * @param behaviorType  用户行为类型
+     * @param outBusinessNo 外部业务幂等号
+     * @return 已存在返利订单返回 {@code true}，否则返回 {@code false}
+     */
+    boolean existsUserBehaviorRebateOrder(String userId, BehaviorTypeVO behaviorType, String outBusinessNo);
 }

@@ -13,6 +13,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -94,6 +96,99 @@ class BehaviorRebateApplicationServiceImplTest {
         assertThrows(BusinessException.class, () -> applicationService.createOrder(
                 new CreateBehaviorRebateOrderCommand(USER_ID, "unknown", OUT_BUSINESS_NO)
         ));
+        verifyNoInteractions(behaviorRebateService, eventPublisher);
+    }
+
+    /**
+     * Given 用户标识，When 创建今日日历签到返利，Then 应生成当天签到幂等号并复用创建返利订单流程。
+     */
+    @Test
+    void shouldCreateCalendarSignRebateOrder() {
+        // Given
+        IBehaviorRebateService behaviorRebateService = mock(IBehaviorRebateService.class);
+        ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
+        when(behaviorRebateService.createOrder(any())).thenReturn(
+                new BehaviorRebateOrderResult(List.of(ORDER_ID), List.of(EVENT_ID))
+        );
+        BehaviorRebateApplicationServiceImpl applicationService =
+                new BehaviorRebateApplicationServiceImpl(behaviorRebateService, eventPublisher);
+
+        // When
+        BehaviorRebateOrderCreateResult result = applicationService.calendarSignRebate(USER_ID);
+
+        // Then
+        ArgumentCaptor<BehaviorEntity> behaviorCaptor = ArgumentCaptor.forClass(BehaviorEntity.class);
+        verify(behaviorRebateService).createOrder(behaviorCaptor.capture());
+        BehaviorEntity behavior = behaviorCaptor.getValue();
+        String today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+        assertAll(
+                () -> assertEquals(USER_ID, behavior.userId()),
+                () -> assertEquals(BehaviorTypeVO.SIGN, behavior.behaviorType()),
+                () -> assertEquals("sign-" + today + "-" + USER_ID, behavior.outBusinessNo()),
+                () -> assertEquals(List.of(ORDER_ID), result.orderIds()),
+                () -> assertEquals(List.of(EVENT_ID), result.eventIds())
+        );
+        verify(eventPublisher).publishEvent(new TaskCreatedEvent(USER_ID, EVENT_ID));
+    }
+
+    /**
+     * Given 用户标识为空白，When 创建今日日历签到返利，Then 抛出业务异常且不进入领域服务。
+     */
+    @Test
+    void shouldRejectBlankUserIdWhenCreatingCalendarSignRebate() {
+        // Given
+        IBehaviorRebateService behaviorRebateService = mock(IBehaviorRebateService.class);
+        ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
+        BehaviorRebateApplicationServiceImpl applicationService =
+                new BehaviorRebateApplicationServiceImpl(behaviorRebateService, eventPublisher);
+
+        // When & Then
+        assertThrows(BusinessException.class, () -> applicationService.calendarSignRebate(" "));
+        verifyNoInteractions(behaviorRebateService, eventPublisher);
+    }
+
+    /**
+     * Given 用户标识，When 查询今天是否已签到，Then 应生成当天签到幂等号并调用领域服务判断订单是否存在。
+     */
+    @Test
+    void shouldCheckCalendarSignRebateByTodayOutBusinessNo() {
+        // Given
+        IBehaviorRebateService behaviorRebateService = mock(IBehaviorRebateService.class);
+        ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
+        when(behaviorRebateService.existsOrder(any())).thenReturn(true);
+        BehaviorRebateApplicationServiceImpl applicationService =
+                new BehaviorRebateApplicationServiceImpl(behaviorRebateService, eventPublisher);
+
+        // When
+        boolean signed = applicationService.isCalendarSignRebate(USER_ID);
+
+        // Then
+        ArgumentCaptor<BehaviorEntity> behaviorCaptor = ArgumentCaptor.forClass(BehaviorEntity.class);
+        verify(behaviorRebateService).existsOrder(behaviorCaptor.capture());
+        BehaviorEntity behavior = behaviorCaptor.getValue();
+        String today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+        assertAll(
+                () -> assertTrue(signed),
+                () -> assertEquals(USER_ID, behavior.userId()),
+                () -> assertEquals(BehaviorTypeVO.SIGN, behavior.behaviorType()),
+                () -> assertEquals("sign-" + today + "-" + USER_ID, behavior.outBusinessNo())
+        );
+        verifyNoInteractions(eventPublisher);
+    }
+
+    /**
+     * Given 用户标识为空白，When 查询今天是否已签到，Then 抛出业务异常且不进入领域服务。
+     */
+    @Test
+    void shouldRejectBlankUserIdWhenCheckingCalendarSignRebate() {
+        // Given
+        IBehaviorRebateService behaviorRebateService = mock(IBehaviorRebateService.class);
+        ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
+        BehaviorRebateApplicationServiceImpl applicationService =
+                new BehaviorRebateApplicationServiceImpl(behaviorRebateService, eventPublisher);
+
+        // When & Then
+        assertThrows(BusinessException.class, () -> applicationService.isCalendarSignRebate(" "));
         verifyNoInteractions(behaviorRebateService, eventPublisher);
     }
 }

@@ -91,6 +91,17 @@ public class BehaviorRebateRepository implements IBehaviorRebateRepository {
         );
     }
 
+    @Override
+    public boolean existsUserBehaviorRebateOrder(String userId, BehaviorTypeVO behaviorType, String outBusinessNo) {
+        Objects.requireNonNull(behaviorType, "behaviorType must not be null");
+        // todo 这里应该放到缓存中 缓存到自然日结束及零点
+        return userBehaviorRebateOrderDao.existsByUserIdAndBehaviorTypeAndOutBusinessNo(
+                userId,
+                behaviorType.getCode(),
+                outBusinessNo
+        );
+    }
+
     /**
      * 保存用户行为返利事件对应的本地消息任务。
      *

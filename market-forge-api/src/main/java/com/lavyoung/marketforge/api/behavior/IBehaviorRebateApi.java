@@ -10,10 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 /**
  *
@@ -83,4 +80,27 @@ public interface IBehaviorRebateApi {
     })
     @PostMapping(path = "/calendar-sign")
     Response<BehaviorRebateResponse> calendarSignRebate(@NotBlank(message = "用户标识不能为空") @RequestParam("userId") String userId);
+
+    /**
+     * 查询用户今天是否已经完成日历签到返利。
+     *
+     * <p>该接口用于前端初始化签到按钮状态。
+     * 如果返回 {@code true}，说明用户今天已经签到，前端可以将签到按钮置灰或禁用。</p>
+     *
+     * @param userId 用户标识
+     * @return 今天已经签到返回 {@code true}，否则返回 {@code false}
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 用户标识为空时抛出
+     */
+    @Operation(
+            operationId = "isCalendarSignRebate",
+            summary = "查询今日是否已签到",
+            description = "查询指定用户今天是否已经完成日历签到返利。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "查询成功"),
+            @ApiResponse(responseCode = "400", description = "用户标识为空或格式错误"),
+            @ApiResponse(responseCode = "500", description = "系统内部错误")
+    })
+    @GetMapping(path = "/calendar-sign/status")
+    Response<Boolean> isCalendarSignRebate(@NotBlank(message = "用户标识不能为空") @RequestParam("userId") String userId);
 }
