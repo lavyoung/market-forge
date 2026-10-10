@@ -264,7 +264,28 @@ ON DUPLICATE KEY
 USE `market-forge-001`;
 
 -- ----------------------------------------------------------------------------
--- 数据校验：执行完脚本后应得到 1 个策略、9 个奖品、9 条策略规则、2 棵规则树。
+-- 用户行为返利配置：签到发放活动 SKU 和积分。
+-- ----------------------------------------------------------------------------
+INSERT INTO behavior_rebate_config
+    (behavior_type, rebate_type, rebate_config, rebate_desc)
+SELECT 'sign', 'sku', '9011', '签到返利：发放活动 SKU 9011'
+WHERE NOT EXISTS (SELECT 1
+                  FROM behavior_rebate_config
+                  WHERE behavior_type = 'sign'
+                    AND rebate_type = 'sku'
+                    AND rebate_config = '9011');
+
+INSERT INTO behavior_rebate_config
+    (behavior_type, rebate_type, rebate_config, rebate_desc)
+SELECT 'sign', 'integral', '10', '签到返利：发放 10 积分'
+WHERE NOT EXISTS (SELECT 1
+                  FROM behavior_rebate_config
+                  WHERE behavior_type = 'sign'
+                    AND rebate_type = 'integral'
+                    AND rebate_config = '10');
+
+-- ----------------------------------------------------------------------------
+-- 数据校验：执行完脚本后应得到 1 个策略、9 个奖品、9 条策略规则、2 棵规则树和 2 条签到返利配置。
 -- ----------------------------------------------------------------------------
 SELECT s.strategy_id,
        s.strategy_desc,
@@ -305,3 +326,11 @@ SELECT strategy_id,
 FROM strategy_award
 WHERE strategy_id = 900901001
 ORDER BY sort;
+
+SELECT behavior_type,
+       rebate_type,
+       rebate_config,
+       rebate_desc
+FROM behavior_rebate_config
+WHERE behavior_type = 'sign'
+ORDER BY rebate_type, rebate_config;

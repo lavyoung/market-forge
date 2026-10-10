@@ -81,6 +81,7 @@ lavshard:
       - raffle_activity_count
       - raffle_activity_sku
       - processed_message
+      - behavior_rebate_config
 
   data-sources:
     ds1:
@@ -134,4 +135,7 @@ lavshard:
       sharding-column: user_id
 
     task:
+      sharding-column: user_id
+
+    user_behavior_rebate_order:
       sharding-column: user_id
