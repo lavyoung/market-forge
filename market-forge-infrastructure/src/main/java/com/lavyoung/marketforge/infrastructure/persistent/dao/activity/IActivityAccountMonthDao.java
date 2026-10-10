@@ -41,4 +41,21 @@ public interface IActivityAccountMonthDao extends BaseMapper<ActivityAccountMont
             @Param("userId") String userId,
             @Param("activityId") Long activityId,
             @Param("month") String month);
+
+    /**
+     * 原子累加用户活动月账户额度。
+     *
+     * <p>SKU 返利入账时，如果用户当月账户已经存在，需要同时增加当月总额度和当月剩余额度。
+     * 该方法用一条 SQL 完成累加，避免先查再改导致并发入账时丢失次数。</p>
+     *
+     * @param userId     用户标识
+     * @param activityId 活动标识
+     * @param month      yyyy-MM 格式的账户归属月份
+     * @param monthCount 本次需要增加的月额度
+     * @return 成功累加时为 {@code 1}，账户不存在时为 {@code 0}
+     */
+    int incrementMonthCount(@Param("userId") String userId,
+                            @Param("activityId") Long activityId,
+                            @Param("month") String month,
+                            @Param("monthCount") Integer monthCount);
 }

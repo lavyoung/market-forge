@@ -42,4 +42,22 @@ public interface IActivityAccountDayDao extends BaseMapper<ActivityAccountDayPO>
             @Param("userId") String userId,
             @Param("activityId") Long activityId,
             @Param("day") LocalDate day);
+
+    /**
+     * 原子累加用户活动日账户额度。
+     *
+     * <p>SKU 返利入账时，如果用户当日账户已经存在，需要同时增加当日总额度和当日剩余额度。
+     * 该方法用一条 SQL 完成累加，避免先查再改导致并发入账时丢失次数。</p>
+     *
+     * @param userId     用户标识
+     * @param activityId 活动标识
+     * @param day        账户归属日期
+     * @param dayCount   本次需要增加的日额度
+     * @return 成功累加时为 {@code 1}，账户不存在时为 {@code 0}
+     */
+    int incrementDayCount(
+            @Param("userId") String userId,
+            @Param("activityId") Long activityId,
+            @Param("day") LocalDate day,
+            @Param("dayCount") Integer dayCount);
 }

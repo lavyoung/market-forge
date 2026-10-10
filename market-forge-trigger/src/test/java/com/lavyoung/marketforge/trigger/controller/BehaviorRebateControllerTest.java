@@ -17,10 +17,11 @@ import org.mapstruct.factory.Mappers;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -118,6 +119,74 @@ class BehaviorRebateControllerTest {
                 .andExpect(jsonPath("$.code").value(CommonResponseCode.SUCCESS.getCode()))
                 .andExpect(jsonPath("$.data.orderIds[0]").value(ORDER_ID))
                 .andExpect(jsonPath("$.data.eventIds[0]").value(EVENT_ID));
+    }
+
+    /**
+     * Given 签到用户标识，When 直接调用日历签到接口，Then 应自动生成签到行为命令和当天幂等号。
+     */
+    @Test
+    void shouldCreateCalendarSignRebateCommand() {
+        // Given
+        IBehaviorRebateApplicationService applicationService =
+                mock(IBehaviorRebateApplicationService.class);
+        when(applicationService.createOrder(org.mockito.ArgumentMatchers.any())).thenReturn(
+                new BehaviorRebateOrderCreateResult(List.of(ORDER_ID), List.of(EVENT_ID))
+        );
+        BehaviorRebateController controller =
+                new BehaviorRebateController(applicationService, ASSEMBLER);
+
+        // When
+        Response<BehaviorRebateResponse> result = controller.calendarSignRebate(USER_ID);
+
+        // Then
+        var commandCaptor = org.mockito.ArgumentCaptor.forClass(CreateBehaviorRebateOrderCommand.class);
+        verify(applicationService).createOrder(commandCaptor.capture());
+        CreateBehaviorRebateOrderCommand command = commandCaptor.getValue();
+        String today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+        assertAll(
+                () -> assertEquals(CommonResponseCode.SUCCESS.getCode(), result.code()),
+                () -> assertEquals(USER_ID, command.userId()),
+                () -> assertEquals("sign", command.behaviorType()),
+                () -> assertEquals("sign-" + today + "-" + USER_ID, command.outBusinessNo()),
+                () -> assertEquals(List.of(ORDER_ID), result.data().orderIds()),
+                () -> assertEquals(List.of(EVENT_ID), result.data().eventIds())
+        );
+    }
+
+    /**
+     * Given 合法用户标识，When 调用日历签到 HTTP 端点，Then 返回统一成功响应并生成签到命令。
+     *
+     * @throws Exception MockMvc 请求执行失败时抛出
+     */
+    @Test
+    void shouldExposeCalendarSignHttpContract() throws Exception {
+        // Given
+        IBehaviorRebateApplicationService applicationService =
+                mock(IBehaviorRebateApplicationService.class);
+        when(applicationService.createOrder(org.mockito.ArgumentMatchers.any())).thenReturn(
+                new BehaviorRebateOrderCreateResult(List.of(ORDER_ID), List.of(EVENT_ID))
+        );
+        MockMvc mockMvc = standaloneSetup(new BehaviorRebateController(applicationService, ASSEMBLER))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+
+        // When & Then
+        mockMvc.perform(post(IBehaviorRebateApi.BASE_PATH + "/calendar-sign")
+                        .param("userId", USER_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(CommonResponseCode.SUCCESS.getCode()))
+                .andExpect(jsonPath("$.data.orderIds[0]").value(ORDER_ID))
+                .andExpect(jsonPath("$.data.eventIds[0]").value(EVENT_ID));
+
+        var commandCaptor = org.mockito.ArgumentCaptor.forClass(CreateBehaviorRebateOrderCommand.class);
+        verify(applicationService).createOrder(commandCaptor.capture());
+        CreateBehaviorRebateOrderCommand command = commandCaptor.getValue();
+        assertAll(
+                () -> assertEquals(USER_ID, command.userId()),
+                () -> assertEquals("sign", command.behaviorType()),
+                () -> assertTrue(command.outBusinessNo().startsWith("sign-")),
+                () -> assertTrue(command.outBusinessNo().endsWith("-" + USER_ID))
+        );
     }
 
     /**

@@ -108,64 +108,158 @@ public class ActivityRepository implements IActivityRepository {
         });
     }
 
-    /**
-     * 保存 SKU 充值订单并累计用户活动账户额度。
-     * <p>
-     * 该方法在同一事务内写入活动订单，并根据用户活动账户是否已存在执行创建或累加。账户写入失败
-     * 时抛出业务异常，确保调用方感知入账失败。
-     *
-     * @param createQuotaOrderAggregate 创建额度订单聚合
-     * @return 活动额度订单号
-     * @throws BusinessException 当账户创建或更新失败时抛出
-     */
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public String saveOrderAggregate(CreateQuotaOrderAggregate createQuotaOrderAggregate) {
         ActivityOrderEntity activityOrderEntity = createQuotaOrderAggregate.activityOrder();
-        // PO对象
-        ActivityOrderPO assemblerPO = activityOrderAssembler.toPO(activityOrderEntity);
-        // 写入订单
-        activityOrderDao.insert(assemblerPO);
+        ActivityOrderPO activityOrderPO = activityOrderAssembler.toPO(activityOrderEntity);
 
-        Optional<ActivityAccountPO> accountPOPresent = activityAccountDao.queryByUserIdAndActivityId(createQuotaOrderAggregate.userId(), createQuotaOrderAggregate.activityId());
-        int res;
-        ActivityAccountPO activityAccountPO;
-        if (accountPOPresent.isPresent()) {
-            // 更新
-            activityAccountPO = accountPOPresent.get();
-            activityAccountPO.setTotalCount(createQuotaOrderAggregate.totalCount() + activityAccountPO.getTotalCount());
-            activityAccountPO.setTotalCountSurplus(createQuotaOrderAggregate.totalCount() + activityAccountPO.getTotalCountSurplus());
-            activityAccountPO.setDayCount(createQuotaOrderAggregate.dayCount() + activityAccountPO.getDayCount());
-            activityAccountPO.setDayCountSurplus(createQuotaOrderAggregate.dayCount() + activityAccountPO.getDayCountSurplus());
-            activityAccountPO.setMonthCount(createQuotaOrderAggregate.monthCount() + activityAccountPO.getMonthCount());
-            activityAccountPO.setMonthCountSurplus(createQuotaOrderAggregate.monthCount() + activityAccountPO.getMonthCountSurplus());
-            activityAccountPO.setVersion(activityAccountPO.getVersion() + 1);
-            res = activityAccountDao.updateById(activityAccountPO);
-        } else {
-            activityAccountPO = new ActivityAccountPO(
-                    null,
-                    createQuotaOrderAggregate.userId(),
-                    createQuotaOrderAggregate.activityId(),
-                    createQuotaOrderAggregate.totalCount(),
-                    createQuotaOrderAggregate.totalCount(),
-                    createQuotaOrderAggregate.dayCount(),
-                    createQuotaOrderAggregate.dayCount(),
-                    createQuotaOrderAggregate.monthCount(),
-                    createQuotaOrderAggregate.monthCount(),
-                    1
-            );
-            res = activityAccountDao.insert(activityAccountPO);
-        }
-
-        if (res <= 0) {
-            throw BusinessException.of(BusinessResponseCode.ACTIVITY_ACCOUNT_PROCESS_FAILED,
+        int insert = activityOrderDao.insert(activityOrderPO);
+        if (insert <= 0) {
+            throw BusinessException.of(
+                    BusinessResponseCode.ACTIVITY_ORDER_CREATE_FAILED,
                     createQuotaOrderAggregate.userId(),
                     createQuotaOrderAggregate.activityId(),
                     activityOrderEntity.sku(),
-                    activityOrderEntity.orderId(),
-                    activityOrderEntity.outBusinessNo());
+                    activityOrderEntity.orderId()
+            );
         }
-        return assemblerPO.getOrderId();
+        saveOrIncrementTotalAccount(createQuotaOrderAggregate, activityOrderEntity);
+        saveOrIncrementMonthAccount(createQuotaOrderAggregate, activityOrderEntity);
+        saveOrIncrementDayAccount(createQuotaOrderAggregate, activityOrderEntity);
+
+        return activityOrderPO.getOrderId();
+    }
+
+    /**
+     * 保存或累加用户活动总账户。
+     *
+     * @param aggregate           SKU 入账聚合
+     * @param activityOrderEntity 活动额度订单
+     * @throws BusinessException 当总账户创建或累加失败时抛出
+     */
+    private void saveOrIncrementTotalAccount(CreateQuotaOrderAggregate aggregate, ActivityOrderEntity activityOrderEntity) {
+        Optional<ActivityAccountPO> accountPO = activityAccountDao.queryByUserIdAndActivityId(aggregate.userId(), aggregate.activityId());
+        int result;
+        if (accountPO.isPresent()) {
+            result = activityAccountDao.incrementTotalCount(aggregate.userId(), aggregate.activityId(), aggregate.totalCount(), aggregate.dayCount(), aggregate.monthCount());
+        } else {
+            result = activityAccountDao.insert(new ActivityAccountPO(
+                    null,
+                    aggregate.userId(),
+                    aggregate.activityId(),
+                    aggregate.totalCount(),
+                    aggregate.totalCount(),
+                    aggregate.dayCount(),
+                    aggregate.dayCount(),
+                    aggregate.monthCount(),
+                    aggregate.monthCount(),
+                    1
+            ));
+        }
+
+        if (result <= 0) {
+            throw BusinessException.of(
+                    BusinessResponseCode.ACTIVITY_ACCOUNT_PROCESS_FAILED,
+                    aggregate.userId(),
+                    aggregate.activityId(),
+                    activityOrderEntity.sku(),
+                    activityOrderEntity.orderId(),
+                    activityOrderEntity.outBusinessNo()
+            );
+        }
+    }
+
+    /**
+     * 保存或累加用户活动月账户。
+     *
+     * @param aggregate           SKU 入账聚合
+     * @param activityOrderEntity 活动额度订单
+     * @throws BusinessException 当月账户创建或累加失败时抛出
+     */
+    private void saveOrIncrementMonthAccount(CreateQuotaOrderAggregate aggregate, ActivityOrderEntity activityOrderEntity) {
+        String month = YearMonth.from(activityOrderEntity.orderTime()).toString();
+        Optional<ActivityAccountMonthPO> account = activityAccountMonthDao.queryByUserIdAndActivityIdAndMonth(
+                aggregate.userId(),
+                aggregate.activityId(),
+                month
+        );
+
+        int result;
+        if (account.isPresent()) {
+            result = activityAccountMonthDao.incrementMonthCount(
+                    aggregate.userId(),
+                    aggregate.activityId(),
+                    month,
+                    aggregate.monthCount()
+            );
+        } else {
+            result = activityAccountMonthDao.insert(new ActivityAccountMonthPO(
+                    null,
+                    aggregate.userId(),
+                    aggregate.activityId(),
+                    aggregate.monthCount(),
+                    aggregate.monthCount(),
+                    month,
+                    1
+            ));
+        }
+
+        if (result <= 0) {
+            throw BusinessException.of(
+                    BusinessResponseCode.ACTIVITY_ACCOUNT_MONTH_CREATE_FAILED,
+                    aggregate.userId(),
+                    aggregate.activityId(),
+                    month,
+                    activityOrderEntity.orderId()
+            );
+        }
+    }
+
+    /**
+     * 保存或累加用户活动日账户。
+     *
+     * @param aggregate           SKU 入账聚合
+     * @param activityOrderEntity 活动额度订单
+     * @throws BusinessException 当日账户创建或累加失败时抛出
+     */
+    private void saveOrIncrementDayAccount(CreateQuotaOrderAggregate aggregate, ActivityOrderEntity activityOrderEntity) {
+        LocalDate day = activityOrderEntity.orderTime().toLocalDate();
+        Optional<ActivityAccountDayPO> account = activityAccountDayDao.queryByUserIdAndActivityIdAndDay(
+                aggregate.userId(),
+                aggregate.activityId(),
+                day
+        );
+
+        int result;
+        if (account.isPresent()) {
+            result = activityAccountDayDao.incrementDayCount(
+                    aggregate.userId(),
+                    aggregate.activityId(),
+                    day,
+                    aggregate.dayCount()
+            );
+        } else {
+            result = activityAccountDayDao.insert(new ActivityAccountDayPO(
+                    null,
+                    aggregate.userId(),
+                    aggregate.activityId(),
+                    aggregate.dayCount(),
+                    aggregate.dayCount(),
+                    day,
+                    1
+            ));
+        }
+
+        if (result <= 0) {
+            throw BusinessException.of(
+                    BusinessResponseCode.ACTIVITY_ACCOUNT_DAY_CREATE_FAILED,
+                    aggregate.userId(),
+                    aggregate.activityId(),
+                    day,
+                    activityOrderEntity.orderId()
+            );
+        }
     }
 
     @Override

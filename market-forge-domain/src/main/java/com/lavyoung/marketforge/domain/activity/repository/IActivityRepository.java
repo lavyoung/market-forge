@@ -3,6 +3,7 @@ package com.lavyoung.marketforge.domain.activity.repository;
 import com.lavyoung.marketforge.domain.activity.model.aggregate.CreatePartakeOrderAggregate;
 import com.lavyoung.marketforge.domain.activity.model.aggregate.CreateQuotaOrderAggregate;
 import com.lavyoung.marketforge.domain.activity.model.entity.*;
+import com.lavyoung.marketforge.types.exception.BusinessException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -47,13 +48,22 @@ public interface IActivityRepository {
     ActivityCountEntity queryRaffleActivityCountByActivityCountId(Long activityCountId);
 
     /**
-     * 保存额度充值订单并累计用户活动账户次数。
-     * <p>
-     * 实现方应保证订单创建和用户活动账户入账在同一事务内完成，避免订单与账户额度不一致。
+     * 保存 SKU 充值订单并累计用户活动账户额度。
+     *
+     * <p>该方法用于处理购买 SKU、签到返利等“给用户增加抽奖次数”的场景。
+     * 一次 SKU 入账需要在同一个事务里完成四件事：</p>
+     * <ol>
+     *     <li>写入活动额度订单，用于记录本次入账来源和幂等号。</li>
+     *     <li>累计用户活动总账户额度。</li>
+     *     <li>累计用户活动月账户额度。</li>
+     *     <li>累计用户活动日账户额度。</li>
+     * </ol>
+     *
+     * <p>如果任一账户写入失败，事务会整体回滚，避免出现“订单成功但额度没有到账”的不一致状态。</p>
      *
      * @param createQuotaOrderAggregate 创建额度订单聚合
      * @return 活动额度订单号
-     * @throws com.lavyoung.marketforge.types.exception.BusinessException 当订单创建、账户创建或账户更新失败时抛出
+     * @throws BusinessException 当订单创建或账户入账失败时抛出
      */
     String saveOrderAggregate(CreateQuotaOrderAggregate createQuotaOrderAggregate);
 

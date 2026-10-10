@@ -47,4 +47,18 @@
         AND month_count_surplus > 0
     </update>
 
+    <update id="incrementTotalCount">
+        UPDATE raffle_activity_account
+        SET total_count = total_count + #{totalCount},
+        total_count_surplus = total_count_surplus + #{totalCount},
+        day_count = day_count + #{dayCount},
+        day_count_surplus = day_count_surplus + #{dayCount},
+        month_count = month_count + #{monthCount},
+        month_count_surplus = month_count_surplus + #{monthCount},
+        version = version + 1,
+        update_time = NOW()
+        WHERE user_id = #{userId}
+        AND activity_id = #{activityId}
+    </update>
+
 </mapper>

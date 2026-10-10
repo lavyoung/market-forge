@@ -8,10 +8,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  *
@@ -56,4 +58,29 @@ public interface IBehaviorRebateApi {
     })
     @PostMapping(path = "/orders", consumes = MediaType.APPLICATION_JSON_VALUE)
     Response<BehaviorRebateResponse> createOrder(@Valid @RequestBody BehaviorRebateRequest request);
+
+    /**
+     * 创建日历签到返利订单。
+     *
+     * <p>该接口是签到场景的快捷入口。调用方只需要传入用户标识，
+     * 服务端会固定使用 {@code sign} 行为类型，并按当天日期生成签到幂等号。
+     * 因此同一用户在同一天重复调用该接口时，会命中同一个外部业务编号，避免重复入账。</p>
+     *
+     * @param userId 签到用户标识
+     * @return 本次签到创建的返利订单号和消息事件号
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 签到配置异常、重复入账或订单创建失败时抛出
+     */
+    @Operation(
+            operationId = "calendarSignRebate",
+            summary = "日历签到返利",
+            description = "用户完成日历签到后创建签到返利订单，并生成后续返利发放消息任务。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "签到入账成功"),
+            @ApiResponse(responseCode = "400", description = "用户标识为空或格式错误"),
+            @ApiResponse(responseCode = "422", description = "签到配置异常、重复入账或返利订单创建失败"),
+            @ApiResponse(responseCode = "500", description = "系统内部错误")
+    })
+    @PostMapping(path = "/calendar-sign")
+    Response<BehaviorRebateResponse> calendarSignRebate(@NotBlank(message = "用户标识不能为空") @RequestParam("userId") String userId);
 }

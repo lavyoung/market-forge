@@ -42,4 +42,15 @@
         AND day_count_surplus > 0
     </update>
 
+    <update id="incrementDayCount">
+        UPDATE raffle_activity_account_day
+        SET day_count = day_count + #{dayCount},
+        day_count_surplus = day_count_surplus + #{dayCount},
+        version = version + 1,
+        update_time = NOW()
+        WHERE user_id = #{userId}
+        AND activity_id = #{activityId}
+        AND day = #{day}
+    </update>
+
 </mapper>

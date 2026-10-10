@@ -40,4 +40,24 @@ public interface IActivityAccountDao extends BaseMapper<ActivityAccountPO> {
     int decrementTotalCountSurplus(
             @Param("userId") String userId,
             @Param("activityId") Long activityId);
+
+    /**
+     * 原子累加用户活动总账户额度。
+     *
+     * <p>SKU 返利入账时，如果用户活动总账户已经存在，需要同时增加总额度、日额度、月额度
+     * 以及对应剩余额度。该方法用一条 SQL 完成累加，避免并发入账时发生次数覆盖。</p>
+     *
+     * @param userId     用户标识
+     * @param activityId 活动标识
+     * @param totalCount 本次需要增加的总额度
+     * @param dayCount   本次需要增加的日额度
+     * @param monthCount 本次需要增加的月额度
+     * @return 成功累加时为 {@code 1}，账户不存在时为 {@code 0}
+     */
+    int incrementTotalCount(
+            @Param("userId") String userId,
+            @Param("activityId") Long activityId,
+            @Param("totalCount") Integer totalCount,
+            @Param("dayCount") Integer dayCount,
+            @Param("monthCount") Integer monthCount);
 }
