@@ -38,8 +38,8 @@ public class AwardApplicationServiceImpl implements IAwardApplicationService {
     @Transactional(rollbackFor = Exception.class)
     public void saveUserAwardRecord(SaveUserAwardRecordCommand command) {
         UserAwardRecordEntity record = toUserAwardRecord(command);
-        SendAwardRecordEvent event = new SendAwardRecordEvent(
-                record.userId(), record.orderId(), record.awardId(), record.awardTitle());
+        SendAwardRecordEvent event = new SendAwardRecordEvent(record.userId(),
+                record.orderId(), record.awardId(), command.awardKey(), command.awardConfig(), record.awardTitle());
 
         awardRepository.saveUserAwardRecord(new UserAwardRecordAggregate(record, event));
         eventPublisher.publishEvent(new TaskCreatedEvent(record.userId(), event.eventId()));

@@ -1,5 +1,6 @@
 package com.lavyoung.marketforge.domain.strategy.repository;
 
+import com.lavyoung.marketforge.domain.strategy.model.entity.AwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
@@ -174,4 +175,15 @@ public interface IStrategyRepository {
      * @return 已完成抽奖次数
      */
     long queryUserRaffleCount(String userId, Long strategyId);
+
+    /**
+     * 根据奖品标识查询奖品基础配置。
+     * <p>
+     * 抽奖流程只产出命中奖品 ID，应用层需要通过该方法补齐奖品业务键和发放配置，
+     * 后续发奖消费者会根据奖品业务键选择积分、实物或优惠券等不同发奖策略。
+     *
+     * @param awardId 奖品标识
+     * @return 匹配的奖品基础配置；不存在时返回空
+     */
+    Optional<AwardEntity> queryAwardEntity(Long awardId);
 }

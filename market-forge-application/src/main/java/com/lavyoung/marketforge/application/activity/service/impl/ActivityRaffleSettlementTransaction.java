@@ -44,6 +44,8 @@ public class ActivityRaffleSettlementTransaction {
                     raffleResult.strategyId(),
                     activityOrder.orderId(),
                     raffleResult.awardId(),
+                    raffleResult.awardKey(),
+                    raffleResult.awardConfig(),
                     Objects.requireNonNullElse(raffleResult.awardDesc(), String.valueOf(raffleResult.awardId())),
                     DateUtil.now()
             ));

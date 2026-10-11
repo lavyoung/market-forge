@@ -1,18 +1,18 @@
 package com.lavyoung.marketforge.infrastructure.persistent.repository;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.lavyoung.marketforge.domain.strategy.model.entity.AwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
+import com.lavyoung.marketforge.infrastructure.persistent.assembler.AwardAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyAwardAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyRuleAssembler;
-import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyAwardDao;
-import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyDao;
-import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyRuleDao;
-import com.lavyoung.marketforge.infrastructure.persistent.dao.IUserAwardRecordDao;
+import com.lavyoung.marketforge.infrastructure.persistent.dao.*;
+import com.lavyoung.marketforge.infrastructure.persistent.po.AwardPO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyAwardPO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyRulePO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.UserAwardRecordPO;
@@ -47,12 +47,14 @@ public class StrategyRepository implements IStrategyRepository {
     private final IStrategyDao strategyDao;
     private final IStrategyRuleDao strategyRuleDao;
     private final IUserAwardRecordDao userAwardRecordDao;
+    private final IAwardDao awardDao;
 
     private final IRedisService redisService;
 
     private final StrategyAwardAssembler strategyAwardAssembler;
     private final StrategyAssembler strategyAssembler;
     private final StrategyRuleAssembler strategyRuleAssembler;
+    private final AwardAssembler awardAssembler;
 
     /**
      * {@inheritDoc}
@@ -265,6 +267,12 @@ public class StrategyRepository implements IStrategyRepository {
         return userAwardRecordDao.selectCount(Wrappers.lambdaQuery(UserAwardRecordPO.class)
                 .eq(UserAwardRecordPO::getUserId, userId)
                 .eq(UserAwardRecordPO::getStrategyId, strategyId));
+    }
+
+    @Override
+    public Optional<AwardEntity> queryAwardEntity(Long awardId) {
+        return Optional.ofNullable(awardAssembler.toEntity(awardDao.selectOne(Wrappers.lambdaQuery(AwardPO.class)
+                .eq(AwardPO::getAwardId, awardId))));
     }
 
     /**

@@ -6,6 +6,7 @@ import com.lavyoung.marketforge.application.strategy.model.StrategyAwardResult;
 import com.lavyoung.marketforge.application.strategy.service.IStrategyRaffleService;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityEntity;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
+import com.lavyoung.marketforge.domain.strategy.model.entity.AwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
@@ -56,11 +57,12 @@ public class StrategyStrategyRaffleServiceImpl implements IStrategyRaffleService
         StrategyAwardEntity strategyAward = strategyRepository
                 .getStrategyAwardEntity(award.strategyId(), award.awardId())
                 .orElseThrow(() -> BusinessException.of(BusinessResponseCode.STRATEGY_NOT_FOUND, award.strategyId(), award.awardId()));
+        AwardEntity awardConfig = strategyRepository.queryAwardEntity(award.awardId()).orElseThrow(() -> BusinessException.of(BusinessResponseCode.AWARD_CONFIG_NOT_FOUND, award.awardId()));
         return new RaffleResult(
                 award.strategyId(),
                 award.awardId(),
                 award.awardKey(),
-                award.awardConfig(),
+                awardConfig.awardConfig(),
                 strategyAward.awardTitle(),
                 award.awardDesc()
         );

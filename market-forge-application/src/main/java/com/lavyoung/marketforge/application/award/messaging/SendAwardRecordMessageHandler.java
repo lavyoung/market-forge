@@ -27,7 +27,12 @@ public class SendAwardRecordMessageHandler implements MessageHandler<SendAwardRe
      */
     @Override
     public void handle(SendAwardRecordEvent event, MessageContext context) {
-        log.info("收到用户中奖记录事件 messageId={} userId={} orderId={} awardId={}",
-                context.messageId(), event.userId(), event.orderId(), event.awardId());
+        log.info("收到用户中奖记录事件 messageId={} userId={} orderId={} awardId={} awardKey={} awardConfig={}",
+                context.messageId(),
+                event.userId(),
+                event.orderId(),
+                event.awardId(),
+                event.awardKey(),
+                event.awardConfig());
     }
 }
