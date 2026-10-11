@@ -9,6 +9,7 @@ import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.domain.activity.repository.IActivitySkuStockMessageRepository;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityAccountQuotaService;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivitySkuStockService;
+import com.lavyoung.marketforge.domain.activity.service.quota.policy.ITradePolicy;
 import com.lavyoung.marketforge.domain.activity.service.quota.rule.IActionChain;
 import com.lavyoung.marketforge.domain.activity.service.quota.rule.factory.DefaultActivityChainFactory;
 import com.lavyoung.marketforge.types.exception.BusinessException;
@@ -16,6 +17,8 @@ import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import com.lavyoung.marketforge.types.model.CommonResponseCode;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+
+import java.util.Map;
 
 /**
  * 活动账户额度创建流程模板。
@@ -29,8 +32,22 @@ import org.apache.commons.lang3.StringUtils;
 @Slf4j
 public abstract class AbstractRaffleRaffleActivityAccountQuotaService extends RaffleActivitySupport implements IRaffleActivityAccountQuotaService, IRaffleActivitySkuStockService {
 
-    public AbstractRaffleRaffleActivityAccountQuotaService(IActivityRepository activityRepository, IActivitySkuStockMessageRepository activitySkuStockMessageRepository, DefaultActivityChainFactory activityChainFactory) {
+    /**
+     * 活动 SKU 订单交易策略集合。
+     *
+     * <p>Spring 会按 Bean 名称注入所有 {@link ITradePolicy} 实现。
+     * key 对应 {@code OrderTradeTypeVO#getCode()}，例如
+     * {@code rebate_no_pay_trade}、{@code credit_pay_trade}。</p>
+     */
+    private final Map<String, ITradePolicy> tradePolicyGroup;
+
+    public AbstractRaffleRaffleActivityAccountQuotaService(
+            IActivityRepository activityRepository,
+            IActivitySkuStockMessageRepository activitySkuStockMessageRepository,
+            DefaultActivityChainFactory activityChainFactory,
+            Map<String, ITradePolicy> tradePolicyGroup) {
         super(activityRepository, activitySkuStockMessageRepository, activityChainFactory);
+        this.tradePolicyGroup = tradePolicyGroup;
     }
 
     /**
@@ -81,22 +98,14 @@ public abstract class AbstractRaffleRaffleActivityAccountQuotaService extends Ra
         // 构建订单对象
         CreateQuotaOrderAggregate createQuotaOrderAggregate = buildOrderAggregate(skuRechargeEntity, activitySkuEntity, activityEntity, activityCountEntity);
         // 保存订单
-        doSaveOrder(createQuotaOrderAggregate);
+        ITradePolicy tradePolicy = tradePolicyGroup.get(skuRechargeEntity.orderTradeType().getCode());
+        if (tradePolicy == null) {
+            throw BusinessException.of(CommonResponseCode.PARAM_INVALID, skuRechargeEntity.orderTradeType());
+        }
+        tradePolicy.trade(createQuotaOrderAggregate);
         // 返回单号
         return createQuotaOrderAggregate.activityOrder().orderId();
     }
-
-    /**
-     * 保存活动 SKU 充值订单聚合。
-     * <p>
-     * 该扩展点负责完成“抽奖次数入账”侧的持久化：创建活动额度订单、更新或创建用户活动账户，
-     * 并记录外部业务单号的幂等结果。实现方应保证订单与账户变更在同一事务内完成，避免出现
-     * 订单创建成功但账户次数未增加，或账户次数增加但订单缺失的中间状态。
-     *
-     * @param createQuotaOrderAggregate 创建额度订单聚合，包含充值订单、用户、活动 SKU、次数配置和幂等号
-     * @throws BusinessException 当订单重复、账户入账失败或持久化状态不一致时抛出
-     */
-    protected abstract void doSaveOrder(CreateQuotaOrderAggregate createQuotaOrderAggregate);
 
     /**
      * 构建活动 SKU 充值订单聚合。

@@ -1,6 +1,7 @@
 package com.lavyoung.marketforge.application.behavior.messaging;
 
 import com.lavyoung.marketforge.domain.activity.model.entity.SkuRechargeEntity;
+import com.lavyoung.marketforge.domain.activity.model.vo.OrderTradeTypeVO;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityAccountQuotaService;
 import com.lavyoung.marketforge.domain.behavior.event.SendRebateEvent;
 import com.lavyoung.marketforge.domain.credit.model.vo.CreditAccountBusinessTypeVO;
@@ -79,7 +80,12 @@ public class SendRebateMessageHandler implements MessageHandler<SendRebateEvent>
         } catch (NumberFormatException e) {
             throw BusinessException.of(BusinessResponseCode.MESSAGE_FORMAT_INVALID, e, event.rebateConfig());
         }
-        String orderId = raffleActivityAccountQuotaService.createSkuRechargeOrder(new SkuRechargeEntity(event.userId(), sku, event.bizId()));
+        String orderId = raffleActivityAccountQuotaService.createSkuRechargeOrder(
+                new SkuRechargeEntity(event.userId(),
+                        sku,
+                        event.bizId(),
+                        OrderTradeTypeVO.REBATE_NO_PAY)
+        );
         log.info("用户行为 SKU 返利结算完成 messageId={} userId={} bizId={} sku={} orderId={}",
                 context.messageId(),
                 event.userId(),

@@ -16,6 +16,7 @@ import com.lavyoung.marketforge.types.messaging.MessagePublisher;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -129,6 +130,34 @@ public class ActivityRepository implements IActivityRepository {
         saveOrIncrementDayAccount(createQuotaOrderAggregate, activityOrderEntity);
 
         return activityOrderPO.getOrderId();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String saveCreditPayOrder(CreateQuotaOrderAggregate createQuotaOrderAggregate) {
+        ActivityOrderEntity activityOrder = createQuotaOrderAggregate.activityOrder();
+        ActivityOrderPO activityOrderPO = activityOrderAssembler.toPO(activityOrder);
+
+        try {
+            int rows = activityOrderDao.insert(activityOrderPO);
+            if (rows < 1) {
+                throw BusinessException.of(
+                        BusinessResponseCode.ACTIVITY_ORDER_CREATE_FAILED,
+                        createQuotaOrderAggregate.userId(),
+                        createQuotaOrderAggregate.activityId(),
+                        activityOrder.sku(),
+                        activityOrder.orderId()
+                );
+            }
+        } catch (DuplicateKeyException e) {
+            throw BusinessException.of(
+                    BusinessResponseCode.ACTIVITY_ORDER_OUT_BUSINESS_NO_DUPLICATED,
+                    createQuotaOrderAggregate.userId(),
+                    createQuotaOrderAggregate.activityId(),
+                    activityOrder.sku(),
+                    activityOrder.orderId());
+        }
+        return activityOrder.orderId();
     }
 
     /**

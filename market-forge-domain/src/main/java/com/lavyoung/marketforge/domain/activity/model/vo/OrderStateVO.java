@@ -17,7 +17,17 @@ import lombok.Getter;
 public enum OrderStateVO {
 
     /**
-     * 额度充值订单已完成。
+     * 待支付。
+     *
+     * <p>用户已创建积分兑换 SKU 订单，但积分尚未扣减成功，
+     * 此时不能给用户活动账户增加抽奖额度。</p>
+     */
+    WAIT_PAY("wait_pay", "待支付"),
+
+    /**
+     * 已完成。
+     *
+     * <p>订单已经完成发货，用户活动账户、月账户、日账户额度已经入账。</p>
      */
     COMPLETE("complete", "已完成"),
 

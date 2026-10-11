@@ -3,6 +3,7 @@ package com.lavyoung.marketforge.application.credit.service;
 import com.lavyoung.marketforge.application.credit.model.ExchangeCreditForSkuCommand;
 import com.lavyoung.marketforge.application.credit.service.impl.CreditExchangeApplicationServiceImpl;
 import com.lavyoung.marketforge.domain.activity.model.entity.SkuRechargeEntity;
+import com.lavyoung.marketforge.domain.activity.model.vo.OrderTradeTypeVO;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityAccountQuotaService;
 import com.lavyoung.marketforge.domain.credit.model.entity.CreditAdjustEntity;
 import com.lavyoung.marketforge.domain.credit.model.vo.CreditAccountBusinessTypeVO;
@@ -60,7 +61,8 @@ class CreditExchangeApplicationServiceImplTest {
                 () -> assertEquals(CreditAccountBusinessTypeVO.EXCHANGE, creditAdjust.businessType()),
                 () -> assertEquals(USER_ID, recharge.userId()),
                 () -> assertEquals(SKU, recharge.sku()),
-                () -> assertEquals(OUT_BUSINESS_NO, recharge.outBusinessNo())
+                () -> assertEquals(OUT_BUSINESS_NO, recharge.outBusinessNo()),
+                () -> assertEquals(OrderTradeTypeVO.CREDIT_PAY, recharge.orderTradeType())
         );
     }
 

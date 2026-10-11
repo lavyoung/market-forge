@@ -68,6 +68,19 @@ public interface IActivityRepository {
     String saveOrderAggregate(CreateQuotaOrderAggregate createQuotaOrderAggregate);
 
     /**
+     * 保存积分支付待支付订单。
+     *
+     * <p>该方法只创建活动 SKU 订单，不增加用户活动账户额度。
+     * 用于积分兑换 SKU 的下单阶段：订单创建后进入待支付状态，后续等待积分扣减成功消息，
+     * 再由发货流程完成订单状态变更和活动账户充值。</p>
+     *
+     * @param createQuotaOrderAggregate 创建额度订单聚合，订单状态应为 {@code wait_pay}
+     * @return 活动 SKU 订单号
+     * @throws BusinessException 当订单创建失败、订单重复或业务幂等号重复时抛出
+     */
+    String saveCreditPayOrder(CreateQuotaOrderAggregate createQuotaOrderAggregate);
+
+    /**
      * 缓存活动 SKU 库存数量。
      *
      * @param sku        活动 SKU

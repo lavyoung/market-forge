@@ -3,6 +3,7 @@ package com.lavyoung.marketforge.application.credit.service.impl;
 import com.lavyoung.marketforge.application.credit.model.ExchangeCreditForSkuCommand;
 import com.lavyoung.marketforge.application.credit.service.ICreditExchangeApplicationService;
 import com.lavyoung.marketforge.domain.activity.model.entity.SkuRechargeEntity;
+import com.lavyoung.marketforge.domain.activity.model.vo.OrderTradeTypeVO;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityAccountQuotaService;
 import com.lavyoung.marketforge.domain.credit.model.entity.CreditAdjustEntity;
 import com.lavyoung.marketforge.domain.credit.model.vo.CreditAccountBusinessTypeVO;
@@ -53,7 +54,8 @@ public class CreditExchangeApplicationServiceImpl implements ICreditExchangeAppl
         return raffleActivityAccountQuotaService.createSkuRechargeOrder(new SkuRechargeEntity(
                 validateCommand.userId(),
                 validateCommand.sku(),
-                validateCommand.outBusinessNo()
+                validateCommand.outBusinessNo(),
+                OrderTradeTypeVO.CREDIT_PAY
         ));
     }
 

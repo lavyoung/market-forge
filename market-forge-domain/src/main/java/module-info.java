@@ -12,6 +12,8 @@ module market.forge.domain {
     exports com.lavyoung.marketforge.domain.activity.model.aggregate;
     exports com.lavyoung.marketforge.domain.activity.service.quota.rule.factory;
     exports com.lavyoung.marketforge.domain.activity.service.quota.impl;
+    exports com.lavyoung.marketforge.domain.activity.service.quota.policy;
+    exports com.lavyoung.marketforge.domain.activity.service.quota.policy.impl;
     exports com.lavyoung.marketforge.domain.activity.service;
     exports com.lavyoung.marketforge.domain.activity.event;
     exports com.lavyoung.marketforge.domain.strategy.event;

@@ -7,11 +7,14 @@ import com.lavyoung.marketforge.domain.activity.model.vo.OrderStateVO;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.domain.activity.repository.IActivitySkuStockMessageRepository;
 import com.lavyoung.marketforge.domain.activity.service.quota.AbstractRaffleRaffleActivityAccountQuotaService;
+import com.lavyoung.marketforge.domain.activity.service.quota.policy.ITradePolicy;
 import com.lavyoung.marketforge.domain.activity.service.quota.rule.factory.DefaultActivityChainFactory;
 import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.utils.DateUtil;
 import com.lavyoung.marketforge.types.utils.IdGenerator;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
 
 /**
  * 默认活动账户额度服务实现。
@@ -25,20 +28,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class RaffleRaffleActivityAccountQuotaServiceServiceImpl extends AbstractRaffleRaffleActivityAccountQuotaService {
 
-    public RaffleRaffleActivityAccountQuotaServiceServiceImpl(IActivityRepository activityRepository, IActivitySkuStockMessageRepository activitySkuStockMessageRepository, DefaultActivityChainFactory activityChainFactory) {
-        super(activityRepository, activitySkuStockMessageRepository, activityChainFactory);
-    }
-
-    /**
-     * 保存活动 SKU 充值订单聚合。
-     * <p>
-     * 委托仓储在事务内创建充值订单并累计用户活动账户额度。
-     *
-     * @param createQuotaOrderAggregate 创建额度订单聚合
-     */
-    @Override
-    protected void doSaveOrder(CreateQuotaOrderAggregate createQuotaOrderAggregate) {
-        activityRepository.saveOrderAggregate(createQuotaOrderAggregate);
+    public RaffleRaffleActivityAccountQuotaServiceServiceImpl(IActivityRepository activityRepository, IActivitySkuStockMessageRepository activitySkuStockMessageRepository, DefaultActivityChainFactory activityChainFactory, Map<String, ITradePolicy> tradePolicyGroup) {
+        super(activityRepository, activitySkuStockMessageRepository, activityChainFactory, tradePolicyGroup);
     }
 
     /**
@@ -67,7 +58,7 @@ public class RaffleRaffleActivityAccountQuotaServiceServiceImpl extends Abstract
                 .totalCount(activityCountEntity.totalCount())
                 .dayCount(activityCountEntity.dayCount())
                 .monthCount(activityCountEntity.monthCount())
-                .state(OrderStateVO.COMPLETE.getCode())
+                .state(resolveOrderState(skuRechargeEntity).getCode())
                 .outBusinessNo(skuRechargeEntity.outBusinessNo())
                 .build();
         return CreateQuotaOrderAggregate.builder()
@@ -78,6 +69,22 @@ public class RaffleRaffleActivityAccountQuotaServiceServiceImpl extends Abstract
                 .monthCount(activityCountEntity.monthCount())
                 .activityOrder(activityOrderEntity)
                 .build();
+    }
+
+    /**
+     * 根据活动 SKU 订单交易类型解析初始订单状态。
+     *
+     * <p>无支付交易创建后即可完成；积分支付交易创建后必须等待积分扣减成功，
+     * 因此初始状态为待支付。</p>
+     *
+     * @param skuRechargeEntity 活动 SKU 下单请求
+     * @return 初始订单状态
+     */
+    private OrderStateVO resolveOrderState(SkuRechargeEntity skuRechargeEntity) {
+        return switch (skuRechargeEntity.orderTradeType()) {
+            case REBATE_NO_PAY -> OrderStateVO.COMPLETE;
+            case CREDIT_PAY -> OrderStateVO.WAIT_PAY;
+        };
     }
 
     /**

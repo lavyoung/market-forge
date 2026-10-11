@@ -1,6 +1,7 @@
 package com.lavyoung.marketforge.application.behavior.messaging;
 
 import com.lavyoung.marketforge.domain.activity.model.entity.SkuRechargeEntity;
+import com.lavyoung.marketforge.domain.activity.model.vo.OrderTradeTypeVO;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityAccountQuotaService;
 import com.lavyoung.marketforge.domain.behavior.event.SendRebateEvent;
 import com.lavyoung.marketforge.domain.behavior.model.vo.RebateTypeVO;
@@ -53,7 +54,8 @@ class SendRebateMessageHandlerTest {
         assertAll(
                 () -> assertEquals(USER_ID, skuRecharge.userId()),
                 () -> assertEquals(9011L, skuRecharge.sku()),
-                () -> assertEquals(BIZ_ID, skuRecharge.outBusinessNo())
+                () -> assertEquals(BIZ_ID, skuRecharge.outBusinessNo()),
+                () -> assertEquals(OrderTradeTypeVO.REBATE_NO_PAY, skuRecharge.orderTradeType())
         );
         verifyNoInteractions(creditAccountService);
     }
