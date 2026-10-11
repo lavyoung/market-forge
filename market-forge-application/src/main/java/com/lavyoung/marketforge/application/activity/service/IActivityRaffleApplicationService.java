@@ -1,9 +1,6 @@
 package com.lavyoung.marketforge.application.activity.service;
 
-import com.lavyoung.marketforge.application.activity.model.ActivityAwardListCommand;
-import com.lavyoung.marketforge.application.activity.model.ActivityAwardResult;
-import com.lavyoung.marketforge.application.activity.model.ActivityRaffleCommand;
-import com.lavyoung.marketforge.application.activity.model.ActivityRaffleResult;
+import com.lavyoung.marketforge.application.activity.model.*;
 
 import java.util.List;
 
@@ -50,4 +47,16 @@ public interface IActivityRaffleApplicationService {
      * @throws com.lavyoung.marketforge.types.exception.BusinessException 活动不存在、活动未绑定策略或规则配置异常时抛出
      */
     List<ActivityAwardResult> queryAwardList(ActivityAwardListCommand command);
+
+    /**
+     * 查询用户活动账户额度。
+     *
+     * <p>该方法用于前端活动抽奖页展示用户在当前活动下的总、日、月抽奖次数。
+     * 查询过程不创建订单、不扣减额度，只聚合账户展示数据。</p>
+     *
+     * @param command 活动奖品列表查询命令，复用其中的用户标识和活动标识
+     * @return 用户活动账户额度；没有账户时返回全 0
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 用户标识或活动标识非法时抛出
+     */
+    ActivityAccountResult queryActivityAccount(ActivityAwardListCommand command);
 }

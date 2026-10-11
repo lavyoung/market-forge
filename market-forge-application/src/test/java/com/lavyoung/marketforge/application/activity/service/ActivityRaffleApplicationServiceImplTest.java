@@ -1,18 +1,12 @@
 package com.lavyoung.marketforge.application.activity.service;
 
-import com.lavyoung.marketforge.application.activity.model.ActivityAwardListCommand;
-import com.lavyoung.marketforge.application.activity.model.ActivityAwardResult;
-import com.lavyoung.marketforge.application.activity.model.ActivityRaffleCommand;
-import com.lavyoung.marketforge.application.activity.model.ActivityRaffleResult;
+import com.lavyoung.marketforge.application.activity.model.*;
 import com.lavyoung.marketforge.application.activity.service.impl.ActivityRaffleApplicationServiceImpl;
 import com.lavyoung.marketforge.application.activity.service.impl.ActivityRaffleSettlementTransaction;
 import com.lavyoung.marketforge.application.strategy.model.RaffleCommand;
 import com.lavyoung.marketforge.application.strategy.model.RaffleResult;
 import com.lavyoung.marketforge.application.strategy.service.IStrategyRaffleService;
-import com.lavyoung.marketforge.domain.activity.model.entity.ActivityAccountDayEntity;
-import com.lavyoung.marketforge.domain.activity.model.entity.ActivityEntity;
-import com.lavyoung.marketforge.domain.activity.model.entity.ActivityOrderEntity;
-import com.lavyoung.marketforge.domain.activity.model.entity.PartakeRaffleActivityEntity;
+import com.lavyoung.marketforge.domain.activity.model.entity.*;
 import com.lavyoung.marketforge.domain.activity.model.vo.UserRaffleOrderStateVO;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityPartakeService;
@@ -29,6 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 
@@ -168,6 +163,105 @@ class ActivityRaffleApplicationServiceImplTest {
                 () -> assertEquals(2, results.get(1).awardRuleLockCount()),
                 () -> assertFalse(results.get(1).isAwardUnlock()),
                 () -> assertEquals(1, results.get(1).waitUnLockCount())
+        );
+    }
+
+    /**
+     * Given 用户没有活动账户，When 查询活动账户额度，Then 返回全 0 结果。
+     */
+    @Test
+    void shouldReturnZeroActivityAccountWhenAccountAbsent() {
+        // Given
+        when(activityRepository.queryActivityAccountByUserId(USER_ID, ACTIVITY_ID)).thenReturn(null);
+
+        // When
+        ActivityAccountResult result = newService().queryActivityAccount(new ActivityAwardListCommand(USER_ID, ACTIVITY_ID));
+
+        // Then
+        assertEquals(ActivityAccountResult.zero(), result);
+        verify(activityRepository).queryActivityAccountByUserId(USER_ID, ACTIVITY_ID);
+        verifyNoMoreInteractions(activityRepository);
+    }
+
+    /**
+     * Given 用户有总账户但没有当前日/月账户，When 查询活动账户额度，Then 使用总账户中的日/月额度兜底。
+     */
+    @Test
+    void shouldFallbackToTotalAccountQuotaWhenPeriodAccountsAbsent() {
+        // Given
+        ActivityAccountEntity totalAccount = ActivityAccountEntity.builder()
+                .userId(USER_ID)
+                .activityId(ACTIVITY_ID)
+                .totalCount(10)
+                .totalCountSurplus(8)
+                .dayCount(3)
+                .dayCountSurplus(2)
+                .monthCount(7)
+                .monthCountSurplus(6)
+                .build();
+        when(activityRepository.queryActivityAccountByUserId(USER_ID, ACTIVITY_ID)).thenReturn(totalAccount);
+        when(activityRepository.queryActivityAccountMonthByUserId(USER_ID, ACTIVITY_ID, YearMonth.now())).thenReturn(null);
+        when(activityRepository.queryActivityAccountDayByUserId(USER_ID, ACTIVITY_ID, LocalDate.now())).thenReturn(null);
+
+        // When
+        ActivityAccountResult result = newService().queryActivityAccount(new ActivityAwardListCommand(USER_ID, ACTIVITY_ID));
+
+        // Then
+        assertAll(
+                () -> assertEquals(10, result.totalCount()),
+                () -> assertEquals(8, result.totalCountSurplus()),
+                () -> assertEquals(3, result.dayCount()),
+                () -> assertEquals(2, result.dayCountSurplus()),
+                () -> assertEquals(7, result.monthCount()),
+                () -> assertEquals(6, result.monthCountSurplus())
+        );
+    }
+
+    /**
+     * Given 用户存在总账户和当前日/月账户，When 查询活动账户额度，Then 优先返回当前日/月账户中的额度。
+     */
+    @Test
+    void shouldUsePeriodAccountsWhenTheyExist() {
+        // Given
+        ActivityAccountEntity totalAccount = ActivityAccountEntity.builder()
+                .userId(USER_ID)
+                .activityId(ACTIVITY_ID)
+                .totalCount(10)
+                .totalCountSurplus(8)
+                .dayCount(3)
+                .dayCountSurplus(3)
+                .monthCount(7)
+                .monthCountSurplus(7)
+                .build();
+        ActivityAccountMonthEntity monthAccount = ActivityAccountMonthEntity.builder()
+                .userId(USER_ID)
+                .activityId(ACTIVITY_ID)
+                .month(YearMonth.now())
+                .monthCount(5)
+                .monthCountSurplus(4)
+                .build();
+        ActivityAccountDayEntity dayAccount = ActivityAccountDayEntity.builder()
+                .userId(USER_ID)
+                .activityId(ACTIVITY_ID)
+                .day(LocalDate.now())
+                .dayCount(2)
+                .dayCountSurplus(1)
+                .build();
+        when(activityRepository.queryActivityAccountByUserId(USER_ID, ACTIVITY_ID)).thenReturn(totalAccount);
+        when(activityRepository.queryActivityAccountMonthByUserId(USER_ID, ACTIVITY_ID, YearMonth.now())).thenReturn(monthAccount);
+        when(activityRepository.queryActivityAccountDayByUserId(USER_ID, ACTIVITY_ID, LocalDate.now())).thenReturn(dayAccount);
+
+        // When
+        ActivityAccountResult result = newService().queryActivityAccount(new ActivityAwardListCommand(USER_ID, ACTIVITY_ID));
+
+        // Then
+        assertAll(
+                () -> assertEquals(10, result.totalCount()),
+                () -> assertEquals(8, result.totalCountSurplus()),
+                () -> assertEquals(2, result.dayCount()),
+                () -> assertEquals(1, result.dayCountSurplus()),
+                () -> assertEquals(5, result.monthCount()),
+                () -> assertEquals(4, result.monthCountSurplus())
         );
     }
 

@@ -1,17 +1,11 @@
 package com.lavyoung.marketforge.application.activity.service.impl;
 
-import com.lavyoung.marketforge.application.activity.model.ActivityAwardListCommand;
-import com.lavyoung.marketforge.application.activity.model.ActivityAwardResult;
-import com.lavyoung.marketforge.application.activity.model.ActivityRaffleCommand;
-import com.lavyoung.marketforge.application.activity.model.ActivityRaffleResult;
+import com.lavyoung.marketforge.application.activity.model.*;
 import com.lavyoung.marketforge.application.activity.service.IActivityRaffleApplicationService;
 import com.lavyoung.marketforge.application.strategy.model.RaffleCommand;
 import com.lavyoung.marketforge.application.strategy.model.RaffleResult;
 import com.lavyoung.marketforge.application.strategy.service.IStrategyRaffleService;
-import com.lavyoung.marketforge.domain.activity.model.entity.ActivityAccountDayEntity;
-import com.lavyoung.marketforge.domain.activity.model.entity.ActivityEntity;
-import com.lavyoung.marketforge.domain.activity.model.entity.ActivityOrderEntity;
-import com.lavyoung.marketforge.domain.activity.model.entity.PartakeRaffleActivityEntity;
+import com.lavyoung.marketforge.domain.activity.model.entity.*;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityPartakeService;
 import com.lavyoung.marketforge.domain.activity.service.armory.IActivityArmory;
@@ -25,6 +19,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -109,6 +104,34 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
         return awardEntities.stream()
                 .map(award -> toActivityAwardResult(award, ruleLockCountMap, dayPartakeCount))
                 .toList();
+    }
+
+    @Override
+    public ActivityAccountResult queryActivityAccount(ActivityAwardListCommand command) {
+        ActivityAwardListCommand validCommand = Objects.requireNonNull(command, "command must not be null");
+        String userId = validCommand.userId();
+        Long activityId = validCommand.activityId();
+
+        ActivityAccountEntity totalAccount = activityRepository.queryActivityAccountByUserId(userId, activityId);
+        if (totalAccount == null) {
+            return ActivityAccountResult.zero();
+        }
+
+        ActivityAccountMonthEntity monthAccount = activityRepository.queryActivityAccountMonthByUserId(userId, activityId, YearMonth.now());
+        ActivityAccountDayEntity dayAccount = activityRepository.queryActivityAccountDayByUserId(userId, activityId, LocalDate.now());
+
+        return new ActivityAccountResult(
+                Objects.requireNonNullElse(totalAccount.totalCount(), 0),
+                Objects.requireNonNullElse(totalAccount.totalCountSurplus(), 0),
+                dayAccount == null ? Objects.requireNonNullElse(totalAccount.dayCount(), 0)
+                        : Objects.requireNonNullElse(dayAccount.dayCount(), 0),
+                dayAccount == null ? Objects.requireNonNullElse(totalAccount.dayCountSurplus(), 0)
+                        : Objects.requireNonNullElse(dayAccount.dayCountSurplus(), 0),
+                monthAccount == null ? Objects.requireNonNullElse(totalAccount.monthCount(), 0)
+                        : Objects.requireNonNullElse(monthAccount.monthCount(), 0),
+                monthAccount == null ? Objects.requireNonNullElse(totalAccount.monthCountSurplus(), 0)
+                        : Objects.requireNonNullElse(monthAccount.monthCountSurplus(), 0)
+        );
     }
 
 

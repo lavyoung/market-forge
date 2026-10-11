@@ -3,12 +3,10 @@ package com.lavyoung.marketforge.trigger.controller;
 import com.lavyoung.marketforge.api.activity.IActivityRaffleApi;
 import com.lavyoung.marketforge.api.activity.request.ActivityAwardListRequest;
 import com.lavyoung.marketforge.api.activity.request.ActivityDrawRequest;
+import com.lavyoung.marketforge.api.activity.response.ActivityAccountResponse;
 import com.lavyoung.marketforge.api.activity.response.ActivityAwardResponse;
 import com.lavyoung.marketforge.api.activity.response.ActivityDrawResponse;
-import com.lavyoung.marketforge.application.activity.model.ActivityAwardListCommand;
-import com.lavyoung.marketforge.application.activity.model.ActivityAwardResult;
-import com.lavyoung.marketforge.application.activity.model.ActivityRaffleCommand;
-import com.lavyoung.marketforge.application.activity.model.ActivityRaffleResult;
+import com.lavyoung.marketforge.application.activity.model.*;
 import com.lavyoung.marketforge.application.activity.service.IActivityRaffleApplicationService;
 import com.lavyoung.marketforge.trigger.assembler.ActivityRaffleResponseAssembler;
 import com.lavyoung.marketforge.types.model.Response;
@@ -34,18 +32,12 @@ public class ActivityRaffleController implements IActivityRaffleApi {
     private final IActivityRaffleApplicationService activityRaffleApplicationService;
     private final ActivityRaffleResponseAssembler activityRaffleResponseAssembler;
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Response<Void> armory(Long activityId) {
         activityRaffleApplicationService.armory(activityId);
         return Response.success();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Response<ActivityDrawResponse> draw(ActivityDrawRequest request) {
         ActivityRaffleCommand command = activityRaffleResponseAssembler.toCommand(request);
@@ -53,13 +45,17 @@ public class ActivityRaffleController implements IActivityRaffleApi {
         return Response.success(activityRaffleResponseAssembler.toResponse(raffle));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Response<List<ActivityAwardResponse>> queryAwardList(ActivityAwardListRequest request) {
         ActivityAwardListCommand command = activityRaffleResponseAssembler.toCommand(request);
         List<ActivityAwardResult> results = activityRaffleApplicationService.queryAwardList(command);
         return Response.success(activityRaffleResponseAssembler.toAwardResponses(results));
+    }
+
+    @Override
+    public Response<ActivityAccountResponse> queryActivityAccount(ActivityAwardListRequest request) {
+        ActivityAwardListCommand command = activityRaffleResponseAssembler.toCommand(request);
+        ActivityAccountResult accountResult = activityRaffleApplicationService.queryActivityAccount(command);
+        return Response.success(activityRaffleResponseAssembler.toResponse(accountResult));
     }
 }

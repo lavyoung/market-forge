@@ -2,12 +2,10 @@ package com.lavyoung.marketforge.trigger.assembler;
 
 import com.lavyoung.marketforge.api.activity.request.ActivityAwardListRequest;
 import com.lavyoung.marketforge.api.activity.request.ActivityDrawRequest;
+import com.lavyoung.marketforge.api.activity.response.ActivityAccountResponse;
 import com.lavyoung.marketforge.api.activity.response.ActivityAwardResponse;
 import com.lavyoung.marketforge.api.activity.response.ActivityDrawResponse;
-import com.lavyoung.marketforge.application.activity.model.ActivityAwardListCommand;
-import com.lavyoung.marketforge.application.activity.model.ActivityAwardResult;
-import com.lavyoung.marketforge.application.activity.model.ActivityRaffleCommand;
-import com.lavyoung.marketforge.application.activity.model.ActivityRaffleResult;
+import com.lavyoung.marketforge.application.activity.model.*;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingConstants;
 import org.mapstruct.ReportingPolicy;
@@ -75,4 +73,14 @@ public interface ActivityRaffleResponseAssembler {
      * @return 活动奖品 API 响应列表
      */
     List<ActivityAwardResponse> toAwardResponses(List<ActivityAwardResult> results);
+
+    /**
+     * 将活动账户应用查询结果转换为 API 响应。
+     * <p>
+     * 字段名保持一致，MapStruct 会自动完成 total/day/month 三组额度字段映射。
+     *
+     * @param result 活动账户应用查询结果
+     * @return 活动账户 API 响应
+     */
+    ActivityAccountResponse toResponse(ActivityAccountResult result);
 }

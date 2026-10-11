@@ -2,6 +2,7 @@ package com.lavyoung.marketforge.api.activity;
 
 import com.lavyoung.marketforge.api.activity.request.ActivityAwardListRequest;
 import com.lavyoung.marketforge.api.activity.request.ActivityDrawRequest;
+import com.lavyoung.marketforge.api.activity.response.ActivityAccountResponse;
 import com.lavyoung.marketforge.api.activity.response.ActivityAwardResponse;
 import com.lavyoung.marketforge.api.activity.response.ActivityDrawResponse;
 import com.lavyoung.marketforge.types.model.Response;
@@ -80,4 +81,26 @@ public interface IActivityRaffleApi {
     })
     @PostMapping(path = "/awards", consumes = MediaType.APPLICATION_JSON_VALUE)
     Response<List<ActivityAwardResponse>> queryAwardList(@Valid @RequestBody ActivityAwardListRequest request);
+
+    /**
+     * 查询用户活动账户额度。
+     * <p>
+     * 前端活动页进入时会调用该接口，展示用户在指定活动下的总抽奖次数、
+     * 当月抽奖次数、当日抽奖次数及各维度剩余额度。
+     *
+     * @param request 活动账户查询请求
+     * @return 用户活动账户额度
+     */
+    @Operation(
+            operationId = "queryActivityAccount",
+            summary = "查询用户活动账户额度",
+            description = "按用户和活动查询总、月、日三个维度的抽奖额度和剩余额度。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "查询成功"),
+            @ApiResponse(responseCode = "400", description = "请求体缺失、格式错误或字段校验失败"),
+            @ApiResponse(responseCode = "500", description = "系统内部错误")
+    })
+    @PostMapping(path = "/account", consumes = MediaType.APPLICATION_JSON_VALUE)
+    Response<ActivityAccountResponse> queryActivityAccount(@Valid @RequestBody ActivityAwardListRequest request);
 }
