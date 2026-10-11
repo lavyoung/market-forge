@@ -29,4 +29,8 @@ module market.forge.api {
     opens com.lavyoung.marketforge.api.strategy.response;
     opens com.lavyoung.marketforge.api.behavior.request;
     opens com.lavyoung.marketforge.api.behavior.response;
+    opens com.lavyoung.marketforge.api.credit.request;
+
+    exports com.lavyoung.marketforge.api.credit.request;
+    exports com.lavyoung.marketforge.api.credit;
 }

@@ -13,6 +13,7 @@ import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 
 /**
@@ -35,6 +36,7 @@ public class CreditAccountRepository implements ICreditAccountRepository {
     private final CreditAccountOrderAssembler creditAccountOrderAssembler;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void saveCreditAccountAdjust(CreditAccountAdjustAggregate aggregate) {
         CreditAccountOrderEntity order = aggregate.order();
 
