@@ -48,7 +48,7 @@ class RuleWeightLogicFilterTest {
     }
 
     /**
-     * Given 用户分值满足多档门槛，When 执行过滤，Then 命中不超过分值的最高权重档位。
+     * Given 用户分值满足多档门槛，When 执行过滤，Then 命中不超过分值的最高权重档位对应的奖池值。
      */
     @Test
     void shouldTakeOverWithHighestEligibleWeight() {
@@ -63,7 +63,7 @@ class RuleWeightLogicFilterTest {
         // Then
         assertEquals(RuleLogicCheckTypeVO.TAKE_OVER.getCode(), action.code());
         assertEquals(RuleModel.WEIGHT.getCode(), action.ruleModel());
-        assertEquals("5000", action.data().ruleWeightValueKey());
+        assertEquals("102/103/104", action.data().ruleWeightValueKey());
         assertEquals(STRATEGY_ID, action.data().strategyId());
     }
 

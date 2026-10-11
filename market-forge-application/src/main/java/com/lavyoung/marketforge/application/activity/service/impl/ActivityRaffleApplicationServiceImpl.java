@@ -10,8 +10,11 @@ import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityPartakeService;
 import com.lavyoung.marketforge.domain.activity.service.armory.IActivityArmory;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
+import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.repository.IRuleTreeRepository;
+import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.IRaffleAward;
+import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -45,6 +49,7 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
     private final IActivityRepository activityRepository;
     private final IRaffleAward raffleAward;
     private final IRuleTreeRepository ruleTreeRepository;
+    private final IStrategyRepository strategyRepository;
 
     /**
      * {@inheritDoc}
@@ -100,9 +105,12 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
 
         List<StrategyAwardEntity> awardEntities = raffleAward.queryRaffleStrategyAwardList(activityEntity.strategyId());
         Map<String, Integer> ruleLockCountMap = queryRuleLockCountMap(awardEntities);
+        Map<Long, Integer> ruleWeightCountMap = queryRuleWeightCountMap(activityEntity.strategyId());
         int dayPartakeCount = queryDayPartakeCount(userId, activityId);
+        long userRaffleCount = strategyRepository.queryUserRaffleCount(userId, activityEntity.strategyId());
+
         return awardEntities.stream()
-                .map(award -> toActivityAwardResult(award, ruleLockCountMap, dayPartakeCount))
+                .map(award -> toActivityAwardResult(award, ruleLockCountMap, dayPartakeCount, ruleWeightCountMap, userRaffleCount))
                 .toList();
     }
 
@@ -167,18 +175,28 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
     /**
      * 将策略奖品配置转换为活动页奖品展示结果。
      *
-     * @param award            策略奖品配置
-     * @param ruleLockCountMap 规则树标识到解锁次数的映射
-     * @param dayPartakeCount  用户当天已参与次数
+     * @param award              策略奖品配置
+     * @param ruleLockCountMap   规则树标识到解锁次数的映射
+     * @param dayPartakeCount    用户当天已参与次数
+     * @param ruleWeightCountMap 奖品标识到权重门槛的映射
+     * @param userRaffleCount    用户在当前策略下的累计抽奖次数
      * @return 活动奖品展示结果
      */
-    private ActivityAwardResult toActivityAwardResult(StrategyAwardEntity award, Map<String, Integer> ruleLockCountMap, int dayPartakeCount) {
+    private ActivityAwardResult toActivityAwardResult(StrategyAwardEntity award,
+                                                      Map<String, Integer> ruleLockCountMap,
+                                                      int dayPartakeCount,
+                                                      Map<Long, Integer> ruleWeightCountMap,
+                                                      long userRaffleCount) {
         Integer awardRuleLockCount = StringUtils.isBlank(award.ruleModels())
                 ? null
                 : ruleLockCountMap.get(award.ruleModels());
         boolean unlocked = awardRuleLockCount == null || dayPartakeCount >= awardRuleLockCount;
-
         int waitUnlockCount = unlocked ? 0 : awardRuleLockCount - dayPartakeCount;
+
+        Integer awardRuleWeightCount = ruleWeightCountMap.get(award.awardId());
+        boolean weightUnlocked = awardRuleWeightCount == null || userRaffleCount >= awardRuleWeightCount;
+        int waitAwardWeightCount = weightUnlocked ? 0 : Math.toIntExact(awardRuleWeightCount - userRaffleCount);
+
         return new ActivityAwardResult(
                 award.awardId(),
                 award.awardTitle(),
@@ -186,7 +204,10 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
                 award.sort(),
                 awardRuleLockCount,
                 unlocked,
-                waitUnlockCount
+                waitUnlockCount,
+                awardRuleWeightCount,
+                weightUnlocked,
+                waitAwardWeightCount
         );
     }
 
@@ -224,5 +245,31 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
             return 0;
         }
         return Math.max(0, dayAccount.dayCount() - dayAccount.dayCountSurplus());
+    }
+
+    /**
+     * 查询策略权重规则，并反向整理为“奖品标识 -> 最低权重门槛”。
+     * <p>
+     * 权重规则是策略级规则，配置格式示例：
+     * {@code 4000:100011/100012;5000:100013}。
+     * 前端奖品列表需要按奖品展示门槛，所以这里会把规则反转为：
+     * {@code 100011 -> 4000, 100012 -> 4000, 100013 -> 5000}。
+     * 如果同一个奖品出现在多个权重档位，取最低门槛，表示用户最早达到多少次后可进入包含该奖品的权重奖池。
+     *
+     * @param strategyId 策略标识
+     * @return 奖品标识到最低权重门槛的映射；没有权重规则时返回空 Map
+     */
+    private Map<Long, Integer> queryRuleWeightCountMap(Long strategyId) {
+        StrategyRuleEntity weightRule = strategyRepository.getStrategyRule(strategyId, RuleModel.WEIGHT);
+        if (weightRule == null) {
+            return Map.of();
+        }
+        Map<Long, Integer> awardWeightCountMap = new HashMap<>();
+        weightRule.ruleWeightValues().forEach((weightCount, awardIds) -> {
+            int parsedWeightCount = Integer.parseInt(weightCount);
+            awardIds.forEach(awardId -> awardWeightCountMap.merge(awardId, parsedWeightCount, Math::min));
+        });
+
+        return Map.copyOf(awardWeightCountMap);
     }
 }

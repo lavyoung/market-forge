@@ -10,13 +10,16 @@ import java.io.Serializable;
  * 这个对象是给前端活动抽奖页使用的。
  * 它不只包含奖品基础信息，还包含当前用户视角下的解锁状态。
  *
- * @param awardId            奖品标识
- * @param awardTitle         奖品标题
- * @param awardSubtitle      奖品副标题
- * @param sort               展示排序
- * @param awardRuleLockCount 奖品解锁所需抽奖次数
- * @param isAwardUnlock      当前用户是否已解锁
- * @param waitUnLockCount    距离解锁还差几次
+ * @param awardId              奖品标识
+ * @param awardTitle           奖品标题
+ * @param awardSubtitle        奖品副标题
+ * @param sort                 展示排序
+ * @param awardRuleLockCount   奖品解锁所需抽奖次数
+ * @param isAwardUnlock        当前用户是否已解锁
+ * @param waitUnLockCount      距离解锁还差几次
+ * @param awardRuleWeightCount 奖品进入权重奖池所需累计抽奖次数
+ * @param isAwardWeightUnlock  当前用户是否已满足权重奖池门槛
+ * @param waitAwardWeightCount 距离权重奖池门槛还差几次
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
  * @date 2026/10/01
@@ -42,7 +45,16 @@ public record ActivityAwardResponse(
         Boolean isAwardUnlock,
 
         @Schema(description = "距离解锁还需抽奖次数", example = "2")
-        Integer waitUnLockCount
+        Integer waitUnLockCount,
+
+        @Schema(description = "奖品进入权重奖池所需累计抽奖次数；未配置时为空", example = "4000")
+        Integer awardRuleWeightCount,
+
+        @Schema(description = "当前用户是否已满足权重奖池门槛", example = "false")
+        Boolean isAwardWeightUnlock,
+
+        @Schema(description = "距离权重奖池门槛还需抽奖次数", example = "3999")
+        Integer waitAwardWeightCount
 ) implements Serializable {
 
 }

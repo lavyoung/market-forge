@@ -2,8 +2,10 @@ package com.lavyoung.marketforge.trigger.assembler;
 
 import com.lavyoung.marketforge.api.activity.request.ActivityAwardListRequest;
 import com.lavyoung.marketforge.api.activity.response.ActivityAccountResponse;
+import com.lavyoung.marketforge.api.activity.response.ActivityAwardResponse;
 import com.lavyoung.marketforge.application.activity.model.ActivityAccountResult;
 import com.lavyoung.marketforge.application.activity.model.ActivityAwardListCommand;
+import com.lavyoung.marketforge.application.activity.model.ActivityAwardResult;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
@@ -55,6 +57,43 @@ class ActivityRaffleResponseAssemblerTest {
                 () -> assertEquals(result.dayCountSurplus(), response.dayCountSurplus()),
                 () -> assertEquals(result.monthCount(), response.monthCount()),
                 () -> assertEquals(result.monthCountSurplus(), response.monthCountSurplus())
+        );
+    }
+
+    /**
+     * Given 活动奖品应用结果，When 转换为 API 响应，Then 次数锁和权重奖池展示字段完整保留。
+     */
+    @Test
+    void shouldConvertActivityAwardResultToResponse() {
+        // Given
+        ActivityAwardResult result = new ActivityAwardResult(
+                108L,
+                "1等奖",
+                "抽奖2次后解锁",
+                8,
+                2,
+                false,
+                1,
+                4_000,
+                false,
+                3_999
+        );
+
+        // When
+        ActivityAwardResponse response = ASSEMBLER.toResponse(result);
+
+        // Then
+        assertAll(
+                () -> assertEquals(result.awardId(), response.awardId()),
+                () -> assertEquals(result.awardTitle(), response.awardTitle()),
+                () -> assertEquals(result.awardSubtitle(), response.awardSubtitle()),
+                () -> assertEquals(result.sort(), response.sort()),
+                () -> assertEquals(result.awardRuleLockCount(), response.awardRuleLockCount()),
+                () -> assertEquals(result.isAwardUnlock(), response.isAwardUnlock()),
+                () -> assertEquals(result.waitUnLockCount(), response.waitUnLockCount()),
+                () -> assertEquals(result.awardRuleWeightCount(), response.awardRuleWeightCount()),
+                () -> assertEquals(result.isAwardWeightUnlock(), response.isAwardWeightUnlock()),
+                () -> assertEquals(result.waitAwardWeightCount(), response.waitAwardWeightCount())
         );
     }
 }

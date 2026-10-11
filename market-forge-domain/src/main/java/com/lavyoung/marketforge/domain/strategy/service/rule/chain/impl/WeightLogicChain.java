@@ -18,8 +18,8 @@ import java.util.Map;
 /**
  * 权重抽奖责任链节点。
  * <p>
- * 根据用户分值匹配不高于当前分值的最高权重档位；命中时使用对应权重概率表抽奖，
- * 未命中或未配置规则时传递给后继节点。
+ * 根据用户在当前策略下的累计抽奖次数，匹配不高于当前次数的最高权重档位；
+ * 命中时使用该档位对应的权重奖池执行抽奖，未命中或未配置规则时传递给后继节点。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -41,12 +41,7 @@ public class WeightLogicChain extends AbstractLogicChain {
     private final IStrategyDispatch strategyDispatch;
 
     /**
-     * 当前用于规则判断的用户分值；后续应由真实用户账户数据替换。
-     */
-    private Long userScore = 4500L;
-
-    /**
-     * 按用户分值执行权重抽奖。
+     * 按用户累计抽奖次数执行权重抽奖。
      *
      * @param userId     参与抽奖的用户标识
      * @param strategyId 抽奖策略标识
@@ -63,14 +58,27 @@ public class WeightLogicChain extends AbstractLogicChain {
             return this.next().logic(userId, strategyId);
         }
         // 排序比对操作
+        long userRaffleCount = repository.queryUserRaffleCount(userId, strategyId);
         Long weightKey = ruleValueMap.keySet().stream()
-                .filter(weight -> weight <= userScore)
+                .filter(weight -> weight <= userRaffleCount)
                 .max(Long::compareTo)
                 .orElse(null);
         if (weightKey != null) {
-            long awardIdAndWeight = strategyDispatch.getRandomAwardIdAndWeight(strategyId, ruleValueMap.get(weightKey));
-            log.info("抽奖责任链-权重策略命中 userId={} strategyId={} ruleModel={} userScore={} weightKey={} awardId={}", userId, strategyId, ruleModel(), userScore, weightKey, awardIdAndWeight);
-            return DefaultChainFactory.StrategyAwardVO.builder().awardId(awardIdAndWeight).ruleModel(ruleModel()).build();
+            String ruleWeightValue = ruleValueMap.get(weightKey);
+            long awardIdAndWeight = strategyDispatch.getRandomAwardIdAndWeight(strategyId, ruleWeightValue);
+            log.info(
+                    "抽奖责任链-权重策略命中 userId={} strategyId={} ruleModel={} userRaffleCount={} weightKey={} ruleWeightValue={} awardId={}",
+                    userId,
+                    strategyId,
+                    ruleModel(),
+                    userRaffleCount,
+                    weightKey,
+                    ruleWeightValue,
+                    awardIdAndWeight);
+            return DefaultChainFactory.StrategyAwardVO.builder()
+                    .awardId(awardIdAndWeight)
+                    .ruleModel(ruleModel())
+                    .build();
         }
         return this.next().logic(userId, strategyId);
     }
@@ -104,7 +112,7 @@ public class WeightLogicChain extends AbstractLogicChain {
             if (split.length != 2) {
                 throw new IllegalArgumentException("rule weight rule invalid input format: " + ruleWeightGroup);
             }
-            ruleValueMap.put(Long.parseLong(split[0]), split[0]);
+            ruleValueMap.put(Long.parseLong(split[0]), split[1]);
         }
         return ruleValueMap;
     }

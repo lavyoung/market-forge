@@ -107,7 +107,7 @@ public class RuleWeightLogicFilter implements ILogicFilter<RuleActionEntity.Raff
             if (split.length != 2) {
                 throw new IllegalArgumentException("rule weight rule invalid input format: " + ruleWeightGroup);
             }
-            ruleValueMap.put(Long.parseLong(split[0]), split[0]);
+            ruleValueMap.put(Long.parseLong(split[0]), split[1]);
         }
         return ruleValueMap;
     }

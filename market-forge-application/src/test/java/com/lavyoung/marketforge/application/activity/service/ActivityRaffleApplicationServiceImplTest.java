@@ -12,8 +12,11 @@ import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityPartakeService;
 import com.lavyoung.marketforge.domain.activity.service.armory.IActivityArmory;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
+import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.repository.IRuleTreeRepository;
+import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.IRaffleAward;
+import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -63,6 +66,9 @@ class ActivityRaffleApplicationServiceImplTest {
 
     @Mock
     private IRuleTreeRepository ruleTreeRepository;
+
+    @Mock
+    private IStrategyRepository strategyRepository;
 
     /**
      * Given 活动订单与策略抽奖结果，When 执行活动抽奖，Then 使用订单中的策略并触发结算。
@@ -149,6 +155,12 @@ class ActivityRaffleApplicationServiceImplTest {
         when(raffleAward.queryRaffleStrategyAwardList(STRATEGY_ID)).thenReturn(List.of(unlockedAward, lockedAward));
         when(ruleTreeRepository.queryAwardRuleLockCount(List.of("tree_lock_2"))).thenReturn(Map.of("tree_lock_2", 2));
         when(activityRepository.queryActivityAccountDayByUserId(USER_ID, ACTIVITY_ID, LocalDate.now())).thenReturn(dayAccount);
+        when(strategyRepository.getStrategyRule(STRATEGY_ID, RuleModel.WEIGHT)).thenReturn(StrategyRuleEntity.builder()
+                .strategyId(STRATEGY_ID)
+                .ruleModel(RuleModel.WEIGHT.getCode())
+                .ruleValue("2:108")
+                .build());
+        when(strategyRepository.queryUserRaffleCount(USER_ID, STRATEGY_ID)).thenReturn(1L);
 
         // When
         List<ActivityAwardResult> results = newService().queryAwardList(new ActivityAwardListCommand(USER_ID, ACTIVITY_ID));
@@ -162,8 +174,15 @@ class ActivityRaffleApplicationServiceImplTest {
                 () -> assertEquals(108L, results.get(1).awardId()),
                 () -> assertEquals(2, results.get(1).awardRuleLockCount()),
                 () -> assertFalse(results.get(1).isAwardUnlock()),
-                () -> assertEquals(1, results.get(1).waitUnLockCount())
+                () -> assertEquals(1, results.get(1).waitUnLockCount()),
+                () -> assertNull(results.get(0).awardRuleWeightCount()),
+                () -> assertTrue(results.get(0).isAwardWeightUnlock()),
+                () -> assertEquals(0, results.get(0).waitAwardWeightCount()),
+                () -> assertEquals(2, results.get(1).awardRuleWeightCount()),
+                () -> assertFalse(results.get(1).isAwardWeightUnlock()),
+                () -> assertEquals(1, results.get(1).waitAwardWeightCount())
         );
+        verify(strategyRepository).queryUserRaffleCount(USER_ID, STRATEGY_ID);
     }
 
     /**
@@ -273,7 +292,8 @@ class ActivityRaffleApplicationServiceImplTest {
                 activityArmory,
                 activityRepository,
                 raffleAward,
-                ruleTreeRepository
+                ruleTreeRepository,
+                strategyRepository
         );
     }
 

@@ -18,9 +18,10 @@ class WeightLogicChainTest {
     private static final String USER_ID = "user-001";
     private static final Long STRATEGY_ID = 100_001L;
     private static final Long AWARD_ID = 100_011L;
+    private static final String RULE_WEIGHT_VALUE = "100011/100012";
 
     /**
-     * Given 默认用户分值达到多个档位，When 执行权重节点，Then 使用最高可用档位抽奖。
+     * Given 用户累计抽奖次数达到多个档位，When 执行权重节点，Then 使用最高可用档位对应的奖池值抽奖。
      */
     @Test
     void shouldDispatchWithHighestEligibleWeight() {
@@ -29,7 +30,8 @@ class WeightLogicChainTest {
         IStrategyDispatch dispatch = mock(IStrategyDispatch.class);
         when(repository.queryStrategyRuleValue(STRATEGY_ID, RuleModel.WEIGHT.getCode()))
                 .thenReturn("3000:100011;4000:100011/100012;5000:100011/100012/100013");
-        when(dispatch.getRandomAwardIdAndWeight(STRATEGY_ID, "4000")).thenReturn(AWARD_ID);
+        when(repository.queryUserRaffleCount(USER_ID, STRATEGY_ID)).thenReturn(4_500L);
+        when(dispatch.getRandomAwardIdAndWeight(STRATEGY_ID, RULE_WEIGHT_VALUE)).thenReturn(AWARD_ID);
         WeightLogicChain chain = new WeightLogicChain(repository, dispatch);
 
         // When
@@ -38,7 +40,8 @@ class WeightLogicChainTest {
         // Then
         assertEquals(AWARD_ID, result.awardId());
         assertEquals(RuleModel.WEIGHT, result.ruleModel());
-        verify(dispatch).getRandomAwardIdAndWeight(STRATEGY_ID, "4000");
+        verify(repository).queryUserRaffleCount(USER_ID, STRATEGY_ID);
+        verify(dispatch).getRandomAwardIdAndWeight(STRATEGY_ID, RULE_WEIGHT_VALUE);
     }
 
     /**
@@ -52,6 +55,7 @@ class WeightLogicChainTest {
         ILogicChain next = mock(ILogicChain.class);
         when(repository.queryStrategyRuleValue(STRATEGY_ID, RuleModel.WEIGHT.getCode()))
                 .thenReturn("5000:100011;6000:100012");
+        when(repository.queryUserRaffleCount(USER_ID, STRATEGY_ID)).thenReturn(4_999L);
         DefaultChainFactory.StrategyAwardVO nextResult = strategyAward();
         when(next.logic(USER_ID, STRATEGY_ID)).thenReturn(nextResult);
         WeightLogicChain chain = new WeightLogicChain(repository, dispatch);
@@ -62,6 +66,7 @@ class WeightLogicChainTest {
 
         // Then
         assertSame(nextResult, result);
+        verify(repository).queryUserRaffleCount(USER_ID, STRATEGY_ID);
         verify(next).logic(USER_ID, STRATEGY_ID);
         verifyNoInteractions(dispatch);
     }
