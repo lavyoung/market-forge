@@ -34,4 +34,23 @@ public interface IUserCreditAccountDao extends BaseMapper<UserCreditAccountPO> {
             WHERE user_id = #{userId}
             """)
     int incrementCreditAmount(@Param("userId") String userId, @Param("amount") Long amount);
+
+    /**
+     * 原子扣减用户积分账户可用余额。
+     *
+     * <p>支出场景必须在 SQL 层判断余额是否充足，避免并发扣减时把账户扣成负数。
+     * 该方法只扣减可用余额，不减少累计获得积分总额。</p>
+     *
+     * @param userId 用户标识
+     * @param amount 本次扣减的积分数量
+     * @return 成功扣减时返回 {@code 1}；账户不存在或余额不足时返回 {@code 0}
+     */
+    @Update("""
+            UPDATE user_credit_account
+            SET available_amount = available_amount - #{amount},
+                update_time = NOW()
+            WHERE user_id = #{userId}
+              AND available_amount >= #{amount}
+            """)
+    int decrementCreditAmount(@Param("userId") String userId, @Param("amount") Long amount);
 }

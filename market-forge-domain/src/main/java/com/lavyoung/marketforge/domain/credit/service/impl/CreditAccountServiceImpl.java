@@ -2,6 +2,7 @@ package com.lavyoung.marketforge.domain.credit.service.impl;
 
 import com.lavyoung.marketforge.domain.credit.model.aggregate.CreditAccountAdjustAggregate;
 import com.lavyoung.marketforge.domain.credit.model.entity.CreditAccountOrderEntity;
+import com.lavyoung.marketforge.domain.credit.model.entity.CreditAdjustEntity;
 import com.lavyoung.marketforge.domain.credit.model.vo.CreditAccountBusinessTypeVO;
 import com.lavyoung.marketforge.domain.credit.model.vo.CreditAccountOrderStateVO;
 import com.lavyoung.marketforge.domain.credit.model.vo.CreditAccountTradeTypeVO;
@@ -35,17 +36,28 @@ public class CreditAccountServiceImpl implements ICreditAccountService {
     private final ICreditAccountRepository creditAccountRepository;
 
     @Override
-    public void grantCredit(String userId, String bizId, Long amount, CreditAccountBusinessTypeVO businessType) {
-        log.info("积分入账：userId={} bizId={} amount={}", userId, bizId, amount);
+    public void adjustCredit(CreditAdjustEntity creditAdjust) {
+        String userId = creditAdjust.userId();
+        String bizId = creditAdjust.bizId();
+        Long amount = creditAdjust.amount();
+        CreditAccountBusinessTypeVO businessType = creditAdjust.businessType();
+        CreditAccountTradeTypeVO tradeType = creditAdjust.tradeType();
+        log.info("积分入账：userId={} bizId={} amount={} businessType={} tradeType={}", userId, bizId, amount, businessType, tradeType);
+        // 业务参数不合法
         if (StringUtils.isAnyBlank(userId, bizId) || amount == null || amount <= 0) {
-            throw BusinessException.of(BusinessResponseCode.POINTS_TRANSACTION_AMOUNT_INVALID, userId, bizId, amount);
+            throw BusinessException.of(BusinessResponseCode.POINTS_TRANSACTION_AMOUNT_INVALID, userId, bizId, amount, tradeType, businessType);
+        }
+
+        // 业务参数不完整
+        if (tradeType == null || businessType == null) {
+            throw BusinessException.of(BusinessResponseCode.POINTS_TRANSACTION_STATE_ERROR, userId, bizId);
         }
 
         CreditAccountOrderEntity orderEntity = new CreditAccountOrderEntity(
                 userId,
                 UUID.randomUUID().toString().replace("-", ""),
                 bizId,
-                CreditAccountTradeTypeVO.INCOME,
+                tradeType,
                 businessType,
                 amount,
                 CreditAccountOrderStateVO.COMPLETED,

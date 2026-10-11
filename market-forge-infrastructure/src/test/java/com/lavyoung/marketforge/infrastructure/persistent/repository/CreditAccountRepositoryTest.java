@@ -149,6 +149,54 @@ class CreditAccountRepositoryTest {
         verify(userCreditAccountDao, never()).insert(any(UserCreditAccountPO.class));
     }
 
+    /**
+     * Given 积分账户余额充足，When 保存积分支出聚合，Then 应插入账单并原子扣减账户可用余额。
+     */
+    @Test
+    void shouldInsertOrderAndDecrementAccountWhenExpenseHappens() {
+        // Given
+        CreditAccountRepository repository = repository();
+        CreditAccountOrderEntity order = expenseOrder();
+        UserCreditAccountOrderPO orderPO = new UserCreditAccountOrderPO();
+        when(creditAccountOrderAssembler.toPO(order)).thenReturn(orderPO);
+        when(userCreditAccountOrderDao.insert(orderPO)).thenReturn(1);
+        when(userCreditAccountDao.decrementCreditAmount(USER_ID, AMOUNT)).thenReturn(1);
+
+        // When
+        repository.saveCreditAccountAdjust(new CreditAccountAdjustAggregate(order));
+
+        // Then
+        verify(userCreditAccountOrderDao).insert(orderPO);
+        verify(userCreditAccountDao).decrementCreditAmount(USER_ID, AMOUNT);
+        verify(userCreditAccountDao, never()).incrementCreditAmount(USER_ID, AMOUNT);
+        verify(userCreditAccountDao, never()).insert(any(UserCreditAccountPO.class));
+    }
+
+    /**
+     * Given 积分账户不存在或余额不足，When 保存积分支出聚合，Then 应抛余额不足异常且不创建账户。
+     */
+    @Test
+    void shouldRejectExpenseWhenBalanceIsNotEnough() {
+        // Given
+        CreditAccountRepository repository = repository();
+        CreditAccountOrderEntity order = expenseOrder();
+        UserCreditAccountOrderPO orderPO = new UserCreditAccountOrderPO();
+        when(creditAccountOrderAssembler.toPO(order)).thenReturn(orderPO);
+        when(userCreditAccountOrderDao.insert(orderPO)).thenReturn(1);
+        when(userCreditAccountDao.decrementCreditAmount(USER_ID, AMOUNT)).thenReturn(0);
+
+        // When
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> repository.saveCreditAccountAdjust(new CreditAccountAdjustAggregate(order))
+        );
+
+        // Then
+        assertEquals(BusinessResponseCode.POINTS_BALANCE_NOT_ENOUGH, exception.getResponseCode());
+        verify(userCreditAccountDao).decrementCreditAmount(USER_ID, AMOUNT);
+        verify(userCreditAccountDao, never()).insert(any(UserCreditAccountPO.class));
+    }
+
     private CreditAccountRepository repository() {
         return new CreditAccountRepository(
                 userCreditAccountDao,
@@ -167,6 +215,19 @@ class CreditAccountRepositoryTest {
                 AMOUNT,
                 CreditAccountOrderStateVO.COMPLETED,
                 LocalDateTime.of(2026, 10, 11, 20, 0)
+        );
+    }
+
+    private CreditAccountOrderEntity expenseOrder() {
+        return new CreditAccountOrderEntity(
+                USER_ID,
+                "credit-order-002",
+                "exchange-order-001",
+                CreditAccountTradeTypeVO.EXPENSE,
+                CreditAccountBusinessTypeVO.EXCHANGE,
+                AMOUNT,
+                CreditAccountOrderStateVO.COMPLETED,
+                LocalDateTime.of(2026, 10, 11, 20, 30)
         );
     }
 }

@@ -39,7 +39,10 @@ public class CreditAccountRepository implements ICreditAccountRepository {
         CreditAccountOrderEntity order = aggregate.order();
 
         saveOrderIdempotently(order);
-        increaseOrCreateAccount(order.userId(), order.amount());
+        switch (order.tradeType()) {
+            case INCOME -> increaseOrCreateAccount(order.userId(), order.amount());
+            case EXPENSE -> decreaseAccount(order.userId(), order.amount());
+        }
     }
 
     private void saveOrderIdempotently(CreditAccountOrderEntity order) {
@@ -51,6 +54,13 @@ public class CreditAccountRepository implements ICreditAccountRepository {
             }
         } catch (DuplicateKeyException e) {
             throw BusinessException.of(BusinessResponseCode.POINTS_TRANSACTION_DUPLICATED, order.userId(), order.bizId());
+        }
+    }
+
+    private void decreaseAccount(String userId, Long amount) {
+        int rows = userCreditAccountDao.decrementCreditAmount(userId, amount);
+        if (rows != 1) {
+            throw BusinessException.of(BusinessResponseCode.POINTS_BALANCE_NOT_ENOUGH, userId, amount);
         }
     }
 
