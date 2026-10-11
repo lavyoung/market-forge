@@ -28,6 +28,18 @@ module market.forge.domain {
     exports com.lavyoung.marketforge.domain.behavior.model.vo;
     exports com.lavyoung.marketforge.domain.behavior.service.impl;
     exports com.lavyoung.marketforge.domain.behavior.service;
+    exports com.lavyoung.marketforge.domain.activity.service.quota;
+    exports com.lavyoung.marketforge.domain.award.model.entity;
+    exports com.lavyoung.marketforge.domain.award.model.valobj;
+    exports com.lavyoung.marketforge.domain.award.model.aggreate;
+    exports com.lavyoung.marketforge.domain.activity.service.armory;
+    exports com.lavyoung.marketforge.domain.behavior.model.aggregate;
+    exports com.lavyoung.marketforge.domain.behavior.event;
+    exports com.lavyoung.marketforge.domain.credit.model.vo;
+    exports com.lavyoung.marketforge.domain.credit.model.entity;
+    exports com.lavyoung.marketforge.domain.credit.repository;
+    exports com.lavyoung.marketforge.domain.credit.model.aggregate;
+    exports com.lavyoung.marketforge.domain.credit.service;
 
     requires spring.context;
     requires org.slf4j;
@@ -53,11 +65,5 @@ module market.forge.domain {
     opens com.lavyoung.marketforge.domain.activity.service.quota.rule.impl;
     opens com.lavyoung.marketforge.domain.activity.service.partake.impl;
     opens com.lavyoung.marketforge.domain.award.service.impl;
-    exports com.lavyoung.marketforge.domain.activity.service.quota;
-    exports com.lavyoung.marketforge.domain.award.model.entity;
-    exports com.lavyoung.marketforge.domain.award.model.valobj;
-    exports com.lavyoung.marketforge.domain.award.model.aggreate;
-    exports com.lavyoung.marketforge.domain.activity.service.armory;
-    exports com.lavyoung.marketforge.domain.behavior.model.aggregate;
-    exports com.lavyoung.marketforge.domain.behavior.event;
+
 }

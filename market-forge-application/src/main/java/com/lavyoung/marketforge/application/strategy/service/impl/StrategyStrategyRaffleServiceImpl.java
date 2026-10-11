@@ -57,14 +57,14 @@ public class StrategyStrategyRaffleServiceImpl implements IStrategyRaffleService
         StrategyAwardEntity strategyAward = strategyRepository
                 .getStrategyAwardEntity(award.strategyId(), award.awardId())
                 .orElseThrow(() -> BusinessException.of(BusinessResponseCode.STRATEGY_NOT_FOUND, award.strategyId(), award.awardId()));
-        AwardEntity awardConfig = strategyRepository.queryAwardEntity(award.awardId()).orElseThrow(() -> BusinessException.of(BusinessResponseCode.AWARD_CONFIG_NOT_FOUND, award.awardId()));
+        AwardEntity awardConfig = strategyRepository.queryAwardEntity(award.awardId()).orElseThrow(() -> BusinessException.of(BusinessResponseCode.AWARD_NOT_FOUND, award.awardId()));
         return new RaffleResult(
                 award.strategyId(),
                 award.awardId(),
-                award.awardKey(),
+                awardConfig.awardKey(),
                 awardConfig.awardConfig(),
                 strategyAward.awardTitle(),
-                award.awardDesc()
+                awardConfig.awardDesc()
         );
     }
 

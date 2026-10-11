@@ -144,7 +144,7 @@ CREATE TABLE `raffle_activity_account`
     `day_count_surplus`   int(8)              NOT NULL COMMENT '日次数-剩余',
     `month_count`         int(8)              NOT NULL COMMENT '月次数',
     `month_count_surplus` int(8)              NOT NULL COMMENT '月次数-剩余',
-    `version` int(11) NOT NULL DEFAULT 1 COMMENT '版本号',
+    `version`     int(11)  NOT NULL DEFAULT 1 COMMENT '版本号',
     `create_time`         datetime            NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
@@ -220,19 +220,19 @@ DROP TABLE IF EXISTS `task`;
 
 CREATE TABLE `task`
 (
-    `id`           int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-    `user_id`         varchar(32)   NOT NULL COMMENT '用户ID，同时作为分片键',
-    `topic`        varchar(32)      NOT NULL COMMENT '消息主题',
-    `event_id`     varchar(64)      NOT NULL COMMENT '消息ID',
-    `event_type`   varchar(512)     NOT NULL COMMENT '消息路由键',
-    `message_body` text             NOT NULL COMMENT '消息路由键',
-    `occurred_at`  datetime         NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '',
-    `state`           varchar(16)   NOT NULL DEFAULT 'create' COMMENT '任务状态；create-待投递、publishing-投递中、published-已投递、publish_failed-投递失败',
-    `retry_count`     int unsigned  NOT NULL DEFAULT 0 COMMENT '投递失败重试次数',
-    `next_retry_time` datetime      NULL COMMENT '下一次允许重试时间',
-    `last_error`      varchar(1024) NULL COMMENT '最近一次投递失败原因',
-    `create_time`  datetime         NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `update_time`  datetime         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `id`              int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `user_id`         varchar(32)      NOT NULL COMMENT '用户ID，同时作为分片键',
+    `topic`           varchar(32)      NOT NULL COMMENT '消息主题',
+    `event_id`        varchar(64)      NOT NULL COMMENT '消息ID',
+    `event_type`      varchar(512)     NOT NULL COMMENT '消息路由键',
+    `message_body`    text             NOT NULL COMMENT '消息路由键',
+    `occurred_at`     datetime         NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '',
+    `state`           varchar(16)      NOT NULL DEFAULT 'create' COMMENT '任务状态；create-待投递、publishing-投递中、published-已投递、publish_failed-投递失败',
+    `retry_count`     int unsigned     NOT NULL DEFAULT 0 COMMENT '投递失败重试次数',
+    `next_retry_time` datetime         NULL COMMENT '下一次允许重试时间',
+    `last_error`      varchar(1024)    NULL COMMENT '最近一次投递失败原因',
+    `create_time`     datetime         NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time`     datetime         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uq_event_id` (`event_id`),
     KEY `idx_task_publish` (`state`, `next_retry_time`, `create_time`)
@@ -347,5 +347,40 @@ CREATE TABLE user_behavior_rebate_order
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='用户行为返利订单表';
 
+-- 用户积分账户表
+CREATE TABLE IF NOT EXISTS user_credit_account
+(
+    id               bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    user_id          varchar(32)     NOT NULL COMMENT '用户ID',
+    total_amount     bigint          NOT NULL DEFAULT 0 COMMENT '累计获得积分总额',
+    available_amount bigint          NOT NULL DEFAULT 0 COMMENT '当前可用积分余额',
+    create_time      datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time      datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_user_id (user_id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='用户积分账户表';
+
+-- 用户积分账户订单表
+CREATE TABLE IF NOT EXISTS user_credit_account_order
+(
+    id            bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    user_id       varchar(32)     NOT NULL COMMENT '用户ID',
+    order_id      varchar(32)     NOT NULL COMMENT '积分账户订单号',
+    biz_id        varchar(128)    NOT NULL COMMENT '业务幂等号，例如抽奖订单号',
+    trade_type    varchar(32)     NOT NULL COMMENT '交易类型：income-收入、expense-支出',
+    business_type varchar(32)     NOT NULL COMMENT '业务类型：award_grant-中奖发奖、sign_rebate-签到返利、exchange-积分兑换',
+    amount        bigint          NOT NULL COMMENT '积分变动数量，必须为正数',
+    state         varchar(32)     NOT NULL COMMENT '订单状态：completed-完成、failed-失败',
+    order_time    datetime        NOT NULL COMMENT '订单时间',
+    create_time   datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time   datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_order_id (order_id),
+    UNIQUE KEY uq_biz_id (biz_id),
+    KEY idx_user_id (user_id),
+    KEY idx_user_order_time (user_id, order_time)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='用户积分账户订单表';
 
 

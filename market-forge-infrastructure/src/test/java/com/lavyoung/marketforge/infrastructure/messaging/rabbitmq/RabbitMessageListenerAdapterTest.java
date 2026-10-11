@@ -190,7 +190,7 @@ class RabbitMessageListenerAdapterTest {
     @Test
     void shouldDispatchUserAwardSendEvent() throws Exception {
         SendAwardRecordEvent event = new SendAwardRecordEvent(
-                USER_ID, "order-001", AWARD_ID, "测试奖品");
+                USER_ID, "order-001", AWARD_ID, "award_credit", "10", "测试奖品");
 
         allowFirstConsumption();
 

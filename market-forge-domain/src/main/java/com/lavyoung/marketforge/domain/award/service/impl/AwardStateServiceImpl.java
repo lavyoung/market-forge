@@ -41,6 +41,31 @@ public class AwardStateServiceImpl implements IAwardStateService {
         }
     }
 
+    @Override
+    public void completeGrant(String userId, String orderId) {
+        UserAwardRecordEntity record = queryRequiredRecord(userId, orderId);
+        if (record.awardState() == AwardStateVO.COMPLETED) {
+            return;
+        }
+        if (record.awardState() != AwardStateVO.CREATE) {
+            throw BusinessException.of(
+                    BusinessResponseCode.USER_AWARD_RECORD_STATE_ERROR,
+                    userId,
+                    orderId,
+                    record.awardState()
+            );
+        }
+        boolean updated = awardRepository.updateAwardState(userId, orderId, AwardStateVO.CREATE, AwardStateVO.COMPLETED);
+
+        if (!updated && queryRequiredRecord(userId, orderId).awardState() != AwardStateVO.COMPLETED) {
+            throw BusinessException.of(
+                    BusinessResponseCode.USER_AWARD_RECORD_UPDATE_FAILED,
+                    userId,
+                    orderId
+            );
+        }
+    }
+
     private UserAwardRecordEntity queryRequiredRecord(String userId, String orderId) {
         return awardRepository.queryUserAwardRecord(userId, orderId)
                 .orElseThrow(() -> BusinessException.of(

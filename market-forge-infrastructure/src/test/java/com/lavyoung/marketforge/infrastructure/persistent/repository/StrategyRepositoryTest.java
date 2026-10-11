@@ -4,13 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.lavyoung.marketforge.domain.strategy.event.AwardStockDeductedEvent;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardStockKeyVO;
+import com.lavyoung.marketforge.infrastructure.persistent.assembler.AwardAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyAwardAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyRuleAssembler;
-import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyAwardDao;
-import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyDao;
-import com.lavyoung.marketforge.infrastructure.persistent.dao.IStrategyRuleDao;
-import com.lavyoung.marketforge.infrastructure.persistent.dao.IUserAwardRecordDao;
+import com.lavyoung.marketforge.infrastructure.persistent.dao.*;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyAwardPO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyRulePO;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
@@ -56,6 +54,9 @@ class StrategyRepositoryTest {
     private IUserAwardRecordDao userAwardRecordDao;
 
     @Mock
+    private IAwardDao awardDao;
+
+    @Mock
     private IRedisService redisService;
 
     @Mock
@@ -66,6 +67,9 @@ class StrategyRepositoryTest {
 
     @Mock
     private StrategyRuleAssembler strategyRuleAssembler;
+
+    @Mock
+    private AwardAssembler awardAssembler;
 
     @Mock
     private MessagePublisher messagePublisher;
@@ -83,10 +87,12 @@ class StrategyRepositoryTest {
                 strategyDao,
                 strategyRuleDao,
                 userAwardRecordDao,
+                awardDao,
                 redisService,
                 strategyAwardAssembler,
                 strategyAssembler,
-                strategyRuleAssembler
+                strategyRuleAssembler,
+                awardAssembler
         );
         stockMessageRepository = new StrategyAwardStockMessageRepository(redisService, messagePublisher);
     }

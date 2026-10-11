@@ -57,6 +57,8 @@ public class HutoolIntegrationEventCodec implements IntegrationEventCodec {
                 .userId(jsonObject.getStr("userId"))
                 .orderId(jsonObject.getStr("orderId"))
                 .awardId(jsonObject.getLong("awardId"))
+                .awardKey(jsonObject.getStr("awardKey"))
+                .awardConfig(jsonObject.getStr("awardConfig"))
                 .awardTitle(jsonObject.getStr("awardTitle"))
                 .build();
     }

@@ -21,6 +21,7 @@ import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.messaging.IntegrationEventCodec;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -69,10 +70,7 @@ public class BehaviorRebateRepository implements IBehaviorRebateRepository {
         }
         rebateOrders.forEach(order -> {
             UserBehaviorRebateOrderPO orderPO = userBehaviorRebateOrderAssembler.toPO(order);
-            int rows = userBehaviorRebateOrderDao.insert(orderPO);
-            if (rows < 1) {
-                throw BusinessException.of(BusinessResponseCode.BEHAVIOR_REBATE_ORDER_CREATE_FAILED, order.bizId());
-            }
+            saveRebateOrder(order, orderPO);
         });
 
         if (validAggregate.events() == null || validAggregate.events().isEmpty()) {
@@ -100,6 +98,17 @@ public class BehaviorRebateRepository implements IBehaviorRebateRepository {
                 behaviorType.getCode(),
                 outBusinessNo
         );
+    }
+
+    private void saveRebateOrder(UserBehaviorRebateOrderEntity order, UserBehaviorRebateOrderPO orderPO) {
+        try {
+            int rows = userBehaviorRebateOrderDao.insert(orderPO);
+            if (rows < 1) {
+                throw BusinessException.of(BusinessResponseCode.BEHAVIOR_REBATE_ORDER_CREATE_FAILED, order.bizId());
+            }
+        } catch (DuplicateKeyException e) {
+            throw BusinessException.of(BusinessResponseCode.BEHAVIOR_REBATE_ORDER_DUPLICATED, order.userId(), order.bizId());
+        }
     }
 
     /**

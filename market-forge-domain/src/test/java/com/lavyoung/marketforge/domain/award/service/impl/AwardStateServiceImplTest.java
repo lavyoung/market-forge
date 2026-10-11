@@ -105,6 +105,77 @@ class AwardStateServiceImplTest {
         assertDoesNotThrow(() -> service.prepareClaim(USER_ID, ORDER_ID));
     }
 
+    /**
+     * 创建状态的中奖记录应通过带当前状态的条件更新推进到发奖完成。
+     */
+    @Test
+    void shouldAdvanceCreatedRecordToCompleted() {
+        // Given
+        AwardStateServiceImpl service = new AwardStateServiceImpl(awardRepository);
+        when(awardRepository.queryUserAwardRecord(USER_ID, ORDER_ID))
+                .thenReturn(Optional.of(record(AwardStateVO.CREATE)));
+        when(awardRepository.updateAwardState(
+                USER_ID, ORDER_ID, AwardStateVO.CREATE, AwardStateVO.COMPLETED))
+                .thenReturn(true);
+
+        // When
+        service.completeGrant(USER_ID, ORDER_ID);
+
+        // Then
+        verify(awardRepository).updateAwardState(
+                USER_ID, ORDER_ID, AwardStateVO.CREATE, AwardStateVO.COMPLETED);
+    }
+
+    /**
+     * 已完成发奖的重复消息应直接视为幂等成功。
+     */
+    @Test
+    void shouldIgnoreRecordThatAlreadyCompleted() {
+        // Given
+        AwardStateServiceImpl service = new AwardStateServiceImpl(awardRepository);
+        when(awardRepository.queryUserAwardRecord(USER_ID, ORDER_ID))
+                .thenReturn(Optional.of(record(AwardStateVO.COMPLETED)));
+
+        // When
+        service.completeGrant(USER_ID, ORDER_ID);
+
+        // Then
+        verify(awardRepository, never()).updateAwardState(
+                USER_ID, ORDER_ID, AwardStateVO.CREATE, AwardStateVO.COMPLETED);
+    }
+
+    /**
+     * 非创建且非完成状态不能直接推进为发奖完成。
+     */
+    @Test
+    void shouldFailWhenRecordStateCannotCompleteGrant() {
+        // Given
+        AwardStateServiceImpl service = new AwardStateServiceImpl(awardRepository);
+        when(awardRepository.queryUserAwardRecord(USER_ID, ORDER_ID))
+                .thenReturn(Optional.of(record(AwardStateVO.WAIT_CLAIM)));
+
+        // When / Then
+        assertThrows(BusinessException.class, () -> service.completeGrant(USER_ID, ORDER_ID));
+    }
+
+    /**
+     * CAS 失败后若发现状态已被并发请求推进到完成，则应视为幂等成功。
+     */
+    @Test
+    void shouldAcceptConcurrentSuccessfulCompleteGrant() {
+        // Given
+        AwardStateServiceImpl service = new AwardStateServiceImpl(awardRepository);
+        when(awardRepository.queryUserAwardRecord(USER_ID, ORDER_ID))
+                .thenReturn(Optional.of(record(AwardStateVO.CREATE)))
+                .thenReturn(Optional.of(record(AwardStateVO.COMPLETED)));
+        when(awardRepository.updateAwardState(
+                USER_ID, ORDER_ID, AwardStateVO.CREATE, AwardStateVO.COMPLETED))
+                .thenReturn(false);
+
+        // When / Then
+        assertDoesNotThrow(() -> service.completeGrant(USER_ID, ORDER_ID));
+    }
+
     private UserAwardRecordEntity record(AwardStateVO state) {
         return UserAwardRecordEntity.builder()
                 .userId(USER_ID)

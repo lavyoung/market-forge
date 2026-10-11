@@ -1,8 +1,11 @@
 package com.lavyoung.marketforge.application.award.messaging;
 
+import com.lavyoung.marketforge.application.award.model.GrantAwardCommand;
+import com.lavyoung.marketforge.application.award.service.IAwardApplicationService;
 import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
 import com.lavyoung.marketforge.types.messaging.MessageContext;
 import com.lavyoung.marketforge.types.messaging.MessageHandler;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -17,7 +20,10 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class SendAwardRecordMessageHandler implements MessageHandler<SendAwardRecordEvent> {
+
+    private final IAwardApplicationService awardApplicationService;
 
     /**
      * 处理用户中奖记录创建事件。
@@ -34,5 +40,13 @@ public class SendAwardRecordMessageHandler implements MessageHandler<SendAwardRe
                 event.awardId(),
                 event.awardKey(),
                 event.awardConfig());
+        awardApplicationService.grantAward(new GrantAwardCommand(
+                event.userId(),
+                event.orderId(),
+                event.awardId(),
+                event.awardKey(),
+                event.awardConfig(),
+                event.awardTitle()
+        ));
     }
 }

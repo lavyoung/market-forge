@@ -48,4 +48,7 @@ module market.forge.infrastructure {
     opens com.lavyoung.marketforge.infrastructure.persistent.po.behavior;
     opens com.lavyoung.marketforge.infrastructure.persistent.dao.behavior;
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler.behavior;
+    opens com.lavyoung.marketforge.infrastructure.persistent.po.credit;
+    opens com.lavyoung.marketforge.infrastructure.persistent.dao.credit;
+    opens com.lavyoung.marketforge.infrastructure.persistent.assembler.credit;
 }

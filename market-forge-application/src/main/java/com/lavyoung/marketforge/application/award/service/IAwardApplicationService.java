@@ -1,5 +1,6 @@
 package com.lavyoung.marketforge.application.award.service;
 
+import com.lavyoung.marketforge.application.award.model.GrantAwardCommand;
 import com.lavyoung.marketforge.application.award.model.SaveUserAwardRecordCommand;
 
 /**
@@ -29,4 +30,15 @@ public interface IAwardApplicationService {
      * @throws com.lavyoung.marketforge.types.exception.BusinessException 中奖记录不存在或状态更新失败时抛出
      */
     void prepareAwardClaim(String userId, String orderId);
+
+    /**
+     * 发放用户中奖奖品。
+     * <p>
+     * 应用层根据奖品业务键选择具体发奖方式。当前章节先支持积分奖品，
+     * 发奖成功后会推进用户中奖记录状态。
+     *
+     * @param command 发奖命令
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 奖品类型不支持、配置非法或发奖失败时抛出
+     */
+    void grantAward(GrantAwardCommand command);
 }

@@ -21,7 +21,7 @@ ALTER TABLE strategy_award
     MODIFY COLUMN award_rate DECIMAL(10, 5) DEFAULT 0.00000 NOT NULL COMMENT '奖品中奖概率';
 
 INSERT INTO award (id, award_key, award_config, award_desc)
-VALUES (900901011, 'random_ore', 'quantity=1', '随机矿石'),
+VALUES (900901011, 'integral', '10', '10 积分'),
        (900901012, 'course_coupon_50', 'discount=50', '课程 5 折兑换券'),
        (900901013, 'mentholatum_lip_balm', 'sku=MF-LIP-001', '曼秀雷敦唇膏'),
        (900901014, 'blind_box_4201', 'series=4201', '4201 随机盲盒'),
@@ -52,7 +52,7 @@ ON DUPLICATE KEY
 INSERT INTO strategy_award
 (id, strategy_id, award_id, award_title, award_subtitle, award_count,
  award_count_surplus, award_rate, rule_models, sort)
-VALUES (900902011, 900901001, 900901011, '随机矿石', '随机数量矿石', 100000, 100000, 0.30000, 'rule_stock', 1),
+VALUES (900902011, 900901001, 900901011, '10 积分', '自动入账积分账户', 100000, 100000, 0.30000, 'rule_stock', 1),
        (900902012, 900901001, 900901012, '课程 5 折兑换券', '指定课程可用', 20000, 20000, 0.20000, 'rule_stock', 2),
        (900902013, 900901001, 900901013, '曼秀雷敦唇膏', '实物奖品', 5000, 5000, 0.15000, 'rule_stock', 3),
        (900902014, 900901001, 900901014, '4201 随机盲盒', '无门槛次数锁，用于验证锁节点放行', 3000, 3000, 0.12000,
@@ -98,7 +98,7 @@ VALUES (900903001, 900901001, 900901014, 2, 'rule_lock', '0', '无门槛次数�
        (900903006, 900901001, 900901019, 2, 'rule_lock', '10', '累计抽奖 10 次后解锁 Apple AirPods'),
        (900903007, 900901001, NULL, 1, 'rule_blacklist',
         '900901011:blocked-user-001/blocked-user-002',
-        '命中黑名单时直接返回低价值随机矿石；开发用户 user-001 不在黑名单中'),
+        '命中黑名单时直接返回低价值 10 积分；开发用户 user-001 不在黑名单中'),
        (900903008, 900901001, NULL, 1, 'rule_weight',
         '40000:900901013/900901014/900901015/900901016;60000:900901017/900901018/900901019;',
         '用户分值达到 40000 或 60000 时，从对应权重奖品池抽奖；当前开发分值 4500 会继续走默认抽奖'),

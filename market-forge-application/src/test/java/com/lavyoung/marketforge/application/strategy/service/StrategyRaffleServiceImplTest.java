@@ -5,6 +5,7 @@ import com.lavyoung.marketforge.application.strategy.model.RaffleResult;
 import com.lavyoung.marketforge.application.strategy.model.StrategyAwardResult;
 import com.lavyoung.marketforge.application.strategy.service.impl.StrategyStrategyRaffleServiceImpl;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
+import com.lavyoung.marketforge.domain.strategy.model.entity.AwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
@@ -42,15 +43,22 @@ class StrategyRaffleServiceImplTest {
         when(raffleStrategy.performRaffle(factor)).thenReturn(RaffleAwardEntity.builder()
                 .strategyId(100_001L)
                 .awardId(100_011L)
-                .awardKey("random_ore")
-                .awardConfig("quantity=1")
-                .awardDesc("随机矿石")
+                .awardKey(null)
+                .awardConfig(null)
+                .awardDesc(null)
                 .build());
         when(strategyRepository.getStrategyAwardEntity(100_001L, 100_011L)).thenReturn(Optional.of(
                 StrategyAwardEntity.builder()
                         .strategyId(100_001L)
                         .awardId(100_011L)
                         .awardTitle("随机矿石")
+                        .build()));
+        when(strategyRepository.queryAwardEntity(100_011L)).thenReturn(Optional.of(
+                AwardEntity.builder()
+                        .awardId(100_011L)
+                        .awardKey("integral")
+                        .awardConfig("10")
+                        .awardDesc("10 积分")
                         .build()));
         StrategyStrategyRaffleServiceImpl service = new StrategyStrategyRaffleServiceImpl(
                 raffleStrategy, strategyArmory, mock(IActivityRepository.class), strategyRepository, mock(IRaffleAward.class));
@@ -62,11 +70,14 @@ class StrategyRaffleServiceImplTest {
         assertAll(
                 () -> assertEquals(100_001L, result.strategyId()),
                 () -> assertEquals(100_011L, result.awardId()),
-                () -> assertEquals("random_ore", result.awardKey()),
-                () -> assertEquals("随机矿石", result.awardTitle())
+                () -> assertEquals("integral", result.awardKey()),
+                () -> assertEquals("10", result.awardConfig()),
+                () -> assertEquals("随机矿石", result.awardTitle()),
+                () -> assertEquals("10 积分", result.awardDesc())
         );
         verify(raffleStrategy).performRaffle(factor);
         verify(strategyRepository).getStrategyAwardEntity(100_001L, 100_011L);
+        verify(strategyRepository).queryAwardEntity(100_011L);
     }
 
     /**
