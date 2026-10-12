@@ -7,6 +7,7 @@ import com.lavyoung.marketforge.domain.credit.model.vo.CreditAccountBusinessType
 import com.lavyoung.marketforge.domain.credit.model.vo.CreditAccountOrderStateVO;
 import com.lavyoung.marketforge.domain.credit.model.vo.CreditAccountTradeTypeVO;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.TaskAssembler;
+import com.lavyoung.marketforge.infrastructure.persistent.assembler.credit.CreditAccountAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.credit.CreditAccountOrderAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.credit.IUserCreditAccountDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.credit.IUserCreditAccountOrderDao;
@@ -51,6 +52,9 @@ class CreditAccountRepositoryTest {
 
     @Mock
     private IUserCreditAccountOrderDao userCreditAccountOrderDao;
+
+    @Mock
+    private CreditAccountAssembler creditAccountAssembler;
 
     @Mock
     private CreditAccountOrderAssembler creditAccountOrderAssembler;
@@ -237,6 +241,7 @@ class CreditAccountRepositoryTest {
                 userCreditAccountDao,
                 userCreditAccountOrderDao,
                 taskDao,
+                creditAccountAssembler,
                 creditAccountOrderAssembler,
                 taskAssembler,
                 eventCodec

@@ -11,12 +11,15 @@
         <result column="activity_id" property="activityId"/>
         <result column="activity_count_id" property="activityCountId"/>
         <result column="stock_count" property="stockCount"/>
+        <result column="stock_count_surplus" property="stockCountSurplus"/>
+        <result column="credit_amount" property="creditAmount"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
     </resultMap>
 
     <sql id="activitySkuColumns">
-        id, sku, activity_id, activity_count_id, stock_count, create_time, update_time
+        id, sku, activity_id, activity_count_id, stock_count, stock_count_surplus, credit_amount,
+        create_time, update_time
     </sql>
 
     <select id="queryBySku" resultMap="activitySkuResultMap">
@@ -31,11 +34,13 @@
     <update id="decrementStockCount">
         UPDATE raffle_activity_sku
         SET stock_count = stock_count - 1,
+        stock_count_surplus = stock_count_surplus - 1,
         update_time = CURRENT_TIMESTAMP
         WHERE sku = #{sku}
         AND activity_id = #{activityId}
         AND activity_count_id = #{activityCountId}
         AND stock_count &gt; 0
+        AND stock_count_surplus &gt; 0
     </update>
 
 </mapper>

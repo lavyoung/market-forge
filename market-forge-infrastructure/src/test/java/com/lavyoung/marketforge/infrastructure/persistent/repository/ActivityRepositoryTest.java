@@ -5,10 +5,7 @@ import com.lavyoung.marketforge.domain.activity.model.entity.DeliveryOrderEntity
 import com.lavyoung.marketforge.domain.activity.model.vo.OrderStateVO;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.activity.*;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.activity.*;
-import com.lavyoung.marketforge.infrastructure.persistent.po.activity.ActivityAccountDayPO;
-import com.lavyoung.marketforge.infrastructure.persistent.po.activity.ActivityAccountMonthPO;
-import com.lavyoung.marketforge.infrastructure.persistent.po.activity.ActivityAccountPO;
-import com.lavyoung.marketforge.infrastructure.persistent.po.activity.ActivityOrderPO;
+import com.lavyoung.marketforge.infrastructure.persistent.po.activity.*;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.messaging.MessagePublisher;
@@ -198,6 +195,50 @@ class ActivityRepositoryTest {
         verify(activityAccountDao, never()).incrementTotalCount(any(), any(), any(), any(), any());
         verify(activityAccountMonthDao, never()).incrementMonthCount(any(), any(), any(), any());
         verify(activityAccountDayDao, never()).incrementDayCount(any(), any(), any(), any());
+    }
+
+    /**
+     * Given SKU 存在，When 清空 SKU 库存，Then 初始库存和剩余库存都应清零并删除缓存。
+     */
+    @Test
+    void shouldClearInitialAndSurplusSkuStock() {
+        // Given
+        ActivityRepository repository = repository();
+        ActivitySkuPO skuPO = new ActivitySkuPO();
+        skuPO.setSku(SKU);
+        skuPO.setStockCount(100L);
+        skuPO.setStockCountSurplus(80L);
+        when(activitySkuDao.queryBySku(SKU)).thenReturn(Optional.of(skuPO));
+
+        // When
+        repository.clearActivitySkuStock(SKU);
+
+        // Then
+        assertEquals(0L, skuPO.getStockCount());
+        assertEquals(0L, skuPO.getStockCountSurplus());
+        verify(activitySkuDao).updateById(skuPO);
+        verify(redisService).delete(anyString());
+    }
+
+    /**
+     * Given SKU 不存在，When 清空 SKU 库存，Then 应返回 SKU 不存在异常且不操作缓存。
+     */
+    @Test
+    void shouldRejectClearingStockWhenSkuDoesNotExist() {
+        // Given
+        ActivityRepository repository = repository();
+        when(activitySkuDao.queryBySku(SKU)).thenReturn(Optional.empty());
+
+        // When
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> repository.clearActivitySkuStock(SKU)
+        );
+
+        // Then
+        assertEquals(BusinessResponseCode.ACTIVITY_SKU_NOT_FOUND, exception.getResponseCode());
+        verify(activitySkuDao, never()).updateById(any(ActivitySkuPO.class));
+        verifyNoInteractions(redisService);
     }
 
     private ActivityRepository repository() {

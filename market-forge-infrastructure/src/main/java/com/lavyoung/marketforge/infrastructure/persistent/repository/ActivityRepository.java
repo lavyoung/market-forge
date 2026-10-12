@@ -555,6 +555,7 @@ public class ActivityRepository implements IActivityRepository {
         ActivitySkuPO activitySkuPO = activitySkuDao.queryBySku(sku)
                 .orElseThrow(() -> BusinessException.of(BusinessResponseCode.ACTIVITY_SKU_NOT_FOUND, sku));
         activitySkuPO.setStockCount(0L);
+        activitySkuPO.setStockCountSurplus(0L);
         activitySkuDao.updateById(activitySkuPO);
         redisService.delete(Constants.RedisKeys.ACTIVITY_SKU_STOCK_COUNT_KEY + sku);
     }
