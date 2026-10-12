@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.lavyoung.marketforge.domain.activity.model.aggregate.CreatePartakeOrderAggregate;
 import com.lavyoung.marketforge.domain.activity.model.aggregate.CreateQuotaOrderAggregate;
 import com.lavyoung.marketforge.domain.activity.model.entity.*;
+import com.lavyoung.marketforge.domain.activity.model.vo.OrderStateVO;
 import com.lavyoung.marketforge.domain.activity.model.vo.UserRaffleOrderStateVO;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.activity.*;
@@ -563,5 +564,47 @@ public class ActivityRepository implements IActivityRepository {
         return activitySkuDao.selectList(Wrappers.lambdaQuery(ActivitySkuPO.class)
                         .eq(ActivitySkuPO::getActivityId, activityId))
                 .stream().map(activitySkuAssembler::toEntity).toList();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deliverCreditPayOrder(DeliveryOrderEntity deliveryOrderEntity) {
+        ActivityOrderPO activityOrderPO = activityOrderDao.queryByUserIdAndOutBusinessNo(deliveryOrderEntity.userId(), deliveryOrderEntity.outBusinessNo())
+                .orElseThrow(() -> BusinessException.of(
+                        BusinessResponseCode.ACTIVITY_ORDER_NOT_FOUND,
+                        deliveryOrderEntity.userId(),
+                        deliveryOrderEntity.outBusinessNo()
+                ));
+
+        ActivityOrderEntity activityOrderEntity = activityOrderAssembler.toEntity(activityOrderPO);
+
+        int updateCount = activityOrderDao.updateStateByOutBusinessNo(
+                deliveryOrderEntity.userId(),
+                deliveryOrderEntity.outBusinessNo(),
+                OrderStateVO.WAIT_PAY.getCode(),
+                OrderStateVO.COMPLETE.getCode()
+        );
+
+        if (updateCount != 1) {
+            throw BusinessException.of(
+                    BusinessResponseCode.ACTIVITY_ORDER_STATE_ERROR,
+                    deliveryOrderEntity.userId(),
+                    deliveryOrderEntity.outBusinessNo(),
+                    activityOrderEntity.state()
+            );
+        }
+
+        CreateQuotaOrderAggregate aggregate = CreateQuotaOrderAggregate.builder()
+                .userId(activityOrderEntity.userId())
+                .activityId(activityOrderEntity.activityId())
+                .totalCount(activityOrderEntity.totalCount())
+                .dayCount(activityOrderEntity.dayCount())
+                .monthCount(activityOrderEntity.monthCount())
+                .activityOrder(activityOrderEntity)
+                .build();
+
+        saveOrIncrementTotalAccount(aggregate, activityOrderEntity);
+        saveOrIncrementMonthAccount(aggregate, activityOrderEntity);
+        saveOrIncrementDayAccount(aggregate, activityOrderEntity);
     }
 }

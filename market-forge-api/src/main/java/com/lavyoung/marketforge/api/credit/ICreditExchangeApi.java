@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
  * 积分兑换 REST API 契约。
  *
  * <p>该接口用于承接外部用户的积分兑换请求。接口层只定义 HTTP 协议、
- * 参数校验和统一响应格式，不承载积分扣减、SKU 充值、事务控制等业务流程。</p>
+ * 参数校验和统一响应格式，不承载待支付下单、积分扣减、异步发货和事务控制等业务流程。</p>
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -36,10 +36,11 @@ public interface ICreditExchangeApi {
      * 使用积分兑换活动 SKU。
      *
      * <p>调用方传入用户、活动 SKU、消耗积分和外部业务幂等号。
-     * 服务端会先扣减用户积分，再创建活动 SKU 充值订单。</p>
+     * 服务端会先创建积分支付类型的待支付活动 SKU 订单，再扣减用户积分；
+     * 积分扣减成功后通过可靠消息异步完成发货入账。</p>
      *
      * @param request 积分兑换请求
-     * @return 活动 SKU 充值订单号
+     * @return 活动 SKU 订单号
      * @throws com.lavyoung.marketforge.types.exception.BusinessException 参数非法、积分不足、SKU 不可用或充值失败时抛出
      */
     @Operation(

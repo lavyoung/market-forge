@@ -183,4 +183,17 @@ public interface IActivityRepository {
      * @return 活动 SKU 集合；不存在时返回空集合
      */
     List<ActivitySkuEntity> queryActivitySkuListByActivityId(Long activityId);
+
+    /**
+     * 完成积分支付活动 SKU 订单发货。
+     *
+     * <p>该方法根据用户编号和外部业务幂等号定位待支付订单，先用状态条件更新把订单
+     * 从 {@code wait_pay} 推进到 {@code complete}，再累计用户活动总、月、日账户额度。
+     * 状态条件更新是发货幂等的核心：如果 MQ 重复消费，第二次更新不到 {@code wait_pay}
+     * 订单，就不会重复给账户加次数。</p>
+     *
+     * @param deliveryOrderEntity 活动 SKU 发货单
+     * @throws BusinessException 当订单不存在、订单状态不匹配或账户入账失败时抛出
+     */
+    void deliverCreditPayOrder(DeliveryOrderEntity deliveryOrderEntity);
 }

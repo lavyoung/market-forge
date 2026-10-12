@@ -126,6 +126,12 @@ lavshard:
     user_behavior_rebate_order:
       sharding-column: user_id
 
+    user_credit_account:
+      sharding-column: user_id
+
+    user_credit_account_order:
+      sharding-column: user_id
+
 springdoc:
   api-docs:
     enabled: true

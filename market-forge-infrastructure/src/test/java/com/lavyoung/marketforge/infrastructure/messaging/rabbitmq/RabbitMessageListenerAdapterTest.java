@@ -8,6 +8,7 @@ import com.lavyoung.marketforge.domain.activity.event.ActivitySkuZeroStockEvent;
 import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
 import com.lavyoung.marketforge.domain.behavior.event.SendRebateEvent;
 import com.lavyoung.marketforge.domain.behavior.model.vo.RebateTypeVO;
+import com.lavyoung.marketforge.domain.credit.event.CreditAdjustSuccessEvent;
 import com.lavyoung.marketforge.domain.strategy.event.AwardStockDeductedEvent;
 import com.lavyoung.marketforge.infrastructure.messaging.MessageConsumeTransaction;
 import com.lavyoung.marketforge.infrastructure.persistent.repository.ProcessedMessageRepository;
@@ -62,6 +63,9 @@ class RabbitMessageListenerAdapterTest {
     @Mock
     private MessageHandler<SendRebateEvent> sendRebateMessageHandler;
 
+    @Mock
+    private MessageHandler<CreditAdjustSuccessEvent> creditAdjustSuccessMessageHandler;
+
     private ObjectMapper objectMapper;
 
     private RabbitMessageListenerAdapter adapter;
@@ -83,7 +87,8 @@ class RabbitMessageListenerAdapterTest {
                 activitySkuStockDeductedEventMessageHandler,
                 activitySkuZeroStockEventMessageHandler,
                 sendAwardRecordMessageHandler,
-                sendRebateMessageHandler
+                sendRebateMessageHandler,
+                creditAdjustSuccessMessageHandler
         );
     }
 
@@ -211,6 +216,23 @@ class RabbitMessageListenerAdapterTest {
         adapter.onSendRebate(messageOf(event));
 
         verify(sendRebateMessageHandler).handle(eq(event), any(MessageContext.class));
+        verify(processedMessageRepository).tryRecord(
+                eq(event.eventId()), eq(event.eventType()), any(LocalDateTime.class));
+    }
+
+    /**
+     * 积分支出成功消息应被路由到积分调额成功处理器，后续由应用层完成活动订单发货。
+     */
+    @Test
+    void shouldDispatchCreditAdjustSuccessEvent() throws Exception {
+        CreditAdjustSuccessEvent event = new CreditAdjustSuccessEvent(
+                USER_ID, "credit-order-001", "exchange-order-001", 10L);
+
+        allowFirstConsumption();
+
+        adapter.onCreditAdjustSuccess(messageOf(event));
+
+        verify(creditAdjustSuccessMessageHandler).handle(eq(event), any(MessageContext.class));
         verify(processedMessageRepository).tryRecord(
                 eq(event.eventId()), eq(event.eventType()), any(LocalDateTime.class));
     }

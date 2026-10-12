@@ -37,7 +37,7 @@ class CreditExchangeControllerTest {
             Mappers.getMapper(CreditExchangeRequestAssembler.class);
 
     /**
-     * Given 合法积分兑换请求，When 直接调用 Controller，Then 应转换应用命令并包装充值订单号。
+     * Given 合法积分兑换请求，When 直接调用 Controller，Then 应转换应用命令并包装活动订单号。
      */
     @Test
     void shouldMapApiRequestAndWrapApplicationResult() {

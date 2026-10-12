@@ -67,5 +67,7 @@ module market.forge.domain {
     opens com.lavyoung.marketforge.domain.activity.service.quota.rule.impl;
     opens com.lavyoung.marketforge.domain.activity.service.partake.impl;
     opens com.lavyoung.marketforge.domain.award.service.impl;
+    opens com.lavyoung.marketforge.domain.credit.service.impl;
+    exports com.lavyoung.marketforge.domain.credit.event;
 
 }

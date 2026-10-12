@@ -1,16 +1,22 @@
 package com.lavyoung.marketforge.infrastructure.persistent.repository;
 
+import com.lavyoung.marketforge.domain.credit.event.CreditAdjustSuccessEvent;
 import com.lavyoung.marketforge.domain.credit.model.aggregate.CreditAccountAdjustAggregate;
 import com.lavyoung.marketforge.domain.credit.model.entity.CreditAccountOrderEntity;
 import com.lavyoung.marketforge.domain.credit.model.vo.CreditAccountBusinessTypeVO;
 import com.lavyoung.marketforge.domain.credit.model.vo.CreditAccountOrderStateVO;
 import com.lavyoung.marketforge.domain.credit.model.vo.CreditAccountTradeTypeVO;
+import com.lavyoung.marketforge.infrastructure.persistent.assembler.TaskAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.credit.CreditAccountOrderAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.credit.IUserCreditAccountDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.credit.IUserCreditAccountOrderDao;
+import com.lavyoung.marketforge.infrastructure.persistent.dao.mq.ITaskDao;
+import com.lavyoung.marketforge.infrastructure.persistent.po.TaskPO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.credit.UserCreditAccountOrderPO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.credit.UserCreditAccountPO;
 import com.lavyoung.marketforge.types.exception.BusinessException;
+import com.lavyoung.marketforge.types.messaging.IntegrationEventCodec;
+import com.lavyoung.marketforge.types.messaging.MqConstants;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,6 +55,15 @@ class CreditAccountRepositoryTest {
     @Mock
     private CreditAccountOrderAssembler creditAccountOrderAssembler;
 
+    @Mock
+    private ITaskDao taskDao;
+
+    @Mock
+    private TaskAssembler taskAssembler;
+
+    @Mock
+    private IntegrationEventCodec eventCodec;
+
     /**
      * Given 积分账户已存在，When 保存积分入账聚合，Then 应插入账单并原子累加账户余额。
      */
@@ -69,6 +84,7 @@ class CreditAccountRepositoryTest {
         verify(userCreditAccountOrderDao).insert(orderPO);
         verify(userCreditAccountDao).incrementCreditAmount(USER_ID, AMOUNT);
         verify(userCreditAccountDao, never()).insert(any(UserCreditAccountPO.class));
+        verifyNoInteractions(taskDao, taskAssembler, eventCodec);
     }
 
     /**
@@ -97,6 +113,7 @@ class CreditAccountRepositoryTest {
                 () -> assertEquals(AMOUNT, accountPO.getTotalAmount()),
                 () -> assertEquals(AMOUNT, accountPO.getAvailableAmount())
         );
+        verifyNoInteractions(taskDao, taskAssembler, eventCodec);
     }
 
     /**
@@ -122,6 +139,7 @@ class CreditAccountRepositoryTest {
         // Then
         verify(userCreditAccountDao).insert(any(UserCreditAccountPO.class));
         verify(userCreditAccountDao, org.mockito.Mockito.times(2)).incrementCreditAmount(USER_ID, AMOUNT);
+        verifyNoInteractions(taskDao, taskAssembler, eventCodec);
     }
 
     /**
@@ -147,6 +165,7 @@ class CreditAccountRepositoryTest {
         assertEquals(BusinessResponseCode.POINTS_TRANSACTION_DUPLICATED, exception.getResponseCode());
         verify(userCreditAccountDao, never()).incrementCreditAmount(USER_ID, AMOUNT);
         verify(userCreditAccountDao, never()).insert(any(UserCreditAccountPO.class));
+        verifyNoInteractions(taskDao, taskAssembler, eventCodec);
     }
 
     /**
@@ -158,18 +177,33 @@ class CreditAccountRepositoryTest {
         CreditAccountRepository repository = repository();
         CreditAccountOrderEntity order = expenseOrder();
         UserCreditAccountOrderPO orderPO = new UserCreditAccountOrderPO();
+        TaskPO taskPO = new TaskPO();
         when(creditAccountOrderAssembler.toPO(order)).thenReturn(orderPO);
         when(userCreditAccountOrderDao.insert(orderPO)).thenReturn(1);
         when(userCreditAccountDao.decrementCreditAmount(USER_ID, AMOUNT)).thenReturn(1);
+        when(eventCodec.serialize(any(CreditAdjustSuccessEvent.class))).thenReturn("message-body");
+        when(taskAssembler.toPO(any())).thenReturn(taskPO);
+        when(taskDao.insert(taskPO)).thenReturn(1);
 
         // When
         repository.saveCreditAccountAdjust(new CreditAccountAdjustAggregate(order));
 
         // Then
+        ArgumentCaptor<CreditAdjustSuccessEvent> eventCaptor = ArgumentCaptor.forClass(CreditAdjustSuccessEvent.class);
         verify(userCreditAccountOrderDao).insert(orderPO);
         verify(userCreditAccountDao).decrementCreditAmount(USER_ID, AMOUNT);
         verify(userCreditAccountDao, never()).incrementCreditAmount(USER_ID, AMOUNT);
         verify(userCreditAccountDao, never()).insert(any(UserCreditAccountPO.class));
+        verify(eventCodec).serialize(eventCaptor.capture());
+        verify(taskAssembler).toPO(any());
+        verify(taskDao).insert(taskPO);
+        assertAll(
+                () -> assertEquals(USER_ID, eventCaptor.getValue().userId()),
+                () -> assertEquals("credit-order-002", eventCaptor.getValue().orderId()),
+                () -> assertEquals("exchange-order-001", eventCaptor.getValue().outBusinessNo()),
+                () -> assertEquals(AMOUNT, eventCaptor.getValue().amount()),
+                () -> assertEquals(MqConstants.CREDIT_ADJUST_SUCCESS_ROUTING_KEY, eventCaptor.getValue().eventType())
+        );
     }
 
     /**
@@ -195,13 +229,17 @@ class CreditAccountRepositoryTest {
         assertEquals(BusinessResponseCode.POINTS_BALANCE_NOT_ENOUGH, exception.getResponseCode());
         verify(userCreditAccountDao).decrementCreditAmount(USER_ID, AMOUNT);
         verify(userCreditAccountDao, never()).insert(any(UserCreditAccountPO.class));
+        verifyNoInteractions(taskDao, taskAssembler, eventCodec);
     }
 
     private CreditAccountRepository repository() {
         return new CreditAccountRepository(
                 userCreditAccountDao,
                 userCreditAccountOrderDao,
-                creditAccountOrderAssembler
+                taskDao,
+                creditAccountOrderAssembler,
+                taskAssembler,
+                eventCodec
         );
     }
 

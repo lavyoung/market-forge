@@ -1,19 +1,29 @@
 package com.lavyoung.marketforge.infrastructure.persistent.repository;
 
+import com.lavyoung.marketforge.domain.credit.event.CreditAdjustSuccessEvent;
 import com.lavyoung.marketforge.domain.credit.model.aggregate.CreditAccountAdjustAggregate;
 import com.lavyoung.marketforge.domain.credit.model.entity.CreditAccountOrderEntity;
 import com.lavyoung.marketforge.domain.credit.repository.ICreditAccountRepository;
+import com.lavyoung.marketforge.domain.message.model.entity.TaskEntity;
+import com.lavyoung.marketforge.domain.message.model.valobj.TaskStateVO;
+import com.lavyoung.marketforge.infrastructure.persistent.assembler.TaskAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.credit.CreditAccountOrderAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.credit.IUserCreditAccountDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.credit.IUserCreditAccountOrderDao;
+import com.lavyoung.marketforge.infrastructure.persistent.dao.mq.ITaskDao;
+import com.lavyoung.marketforge.infrastructure.persistent.po.TaskPO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.credit.UserCreditAccountOrderPO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.credit.UserCreditAccountPO;
 import com.lavyoung.marketforge.types.exception.BusinessException;
+import com.lavyoung.marketforge.types.messaging.IntegrationEventCodec;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 
 /**
@@ -32,8 +42,12 @@ public class CreditAccountRepository implements ICreditAccountRepository {
 
     private final IUserCreditAccountDao userCreditAccountDao;
     private final IUserCreditAccountOrderDao userCreditAccountOrderDao;
+    private final ITaskDao taskDao;
 
     private final CreditAccountOrderAssembler creditAccountOrderAssembler;
+    private final TaskAssembler taskAssembler;
+
+    private final IntegrationEventCodec eventCodec;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -43,7 +57,10 @@ public class CreditAccountRepository implements ICreditAccountRepository {
         saveOrderIdempotently(order);
         switch (order.tradeType()) {
             case INCOME -> increaseOrCreateAccount(order.userId(), order.amount());
-            case EXPENSE -> decreaseAccount(order.userId(), order.amount());
+            case EXPENSE -> {
+                decreaseAccount(order.userId(), order.amount());
+                saveCreditAdjustSuccessTask(order);
+            }
         }
     }
 
@@ -86,6 +103,41 @@ public class CreditAccountRepository implements ICreditAccountRepository {
             if (retryUpdated != 1) {
                 throw BusinessException.of(BusinessResponseCode.POINTS_GRANT_FAILED, userId, amount);
             }
+        }
+    }
+
+    /**
+     * 保存积分调额成功可靠消息任务。
+     *
+     * <p>积分支出成功代表积分支付完成。这里在同一个事务中写入可靠消息任务，
+     * 后续由任务投递组件发送 MQ，消费者收到消息后完成活动 SKU 发货。</p>
+     *
+     * @param order 积分账户流水订单
+     * @throws BusinessException 当任务创建失败时抛出
+     */
+    private void saveCreditAdjustSuccessTask(CreditAccountOrderEntity order) {
+        CreditAdjustSuccessEvent event = new CreditAdjustSuccessEvent(
+                order.userId(),
+                order.orderId(),
+                order.bizId(),
+                order.amount()
+        );
+
+        TaskEntity taskEntity = TaskEntity.builder()
+                .userId(event.userId())
+                .eventId(event.eventId())
+                .topic(event.exchange())
+                .eventType(event.routingKey())
+                .messageBody(eventCodec.serialize(event))
+                .occurredAt(LocalDateTime.ofInstant(event.occurredAt(), ZoneId.systemDefault()))
+                .state(TaskStateVO.CREATE.getCode())
+                .retryCount(0)
+                .build();
+
+        TaskPO taskPO = taskAssembler.toPO(taskEntity);
+        int rows = taskDao.insert(taskPO);
+        if (rows < 1) {
+            throw BusinessException.of(BusinessResponseCode.TASK_CREATE_FAILED);
         }
     }
 }

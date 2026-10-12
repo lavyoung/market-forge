@@ -90,4 +90,14 @@ public final class MqConstants {
      * 用户行为返利消息队列。
      */
     public static final String SEND_REBATE_QUEUE = "send.rebate.queue";
+
+    /**
+     * 积分账户调额成功消息路由键。
+     */
+    public static final String CREDIT_ADJUST_SUCCESS_ROUTING_KEY = "credit.adjust.success";
+
+    /**
+     * 积分账户调额成功消息队列。
+     */
+    public static final String CREDIT_ADJUST_SUCCESS_QUEUE = "credit.adjust.success.queue";
 }

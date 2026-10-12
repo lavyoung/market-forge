@@ -5,6 +5,7 @@ import cn.hutool.json.JSONUtil;
 import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
 import com.lavyoung.marketforge.domain.behavior.event.SendRebateEvent;
 import com.lavyoung.marketforge.domain.behavior.model.vo.RebateTypeVO;
+import com.lavyoung.marketforge.domain.credit.event.CreditAdjustSuccessEvent;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.messaging.IntegrationEvent;
 import com.lavyoung.marketforge.types.messaging.IntegrationEventCodec;
@@ -45,8 +46,27 @@ public class HutoolIntegrationEventCodec implements IntegrationEventCodec {
         return switch (eventType) {
             case MqConstants.USER_AWARD_SEND_ROUTE_KEY -> deserializeSendAwardRecordEvent(messageBody);
             case MqConstants.SEND_REBATE_ROUTING_KEY -> deserializeSendRebateEvent(messageBody);
+            case MqConstants.CREDIT_ADJUST_SUCCESS_ROUTING_KEY -> deserializeCreditAdjustSuccessEvent(messageBody);
             default -> throw BusinessException.of(BusinessResponseCode.MESSAGE_FORMAT_INVALID, eventType);
         };
+    }
+
+    /**
+     * 反序列化积分账户调额成功事件。
+     *
+     * @param messageBody task 表中保存的事件 JSON
+     * @return 积分账户调额成功事件
+     */
+    private CreditAdjustSuccessEvent deserializeCreditAdjustSuccessEvent(String messageBody) {
+        JSONObject jsonObject = JSONUtil.parseObj(messageBody);
+        return CreditAdjustSuccessEvent.builder()
+                .eventId(jsonObject.getStr("eventId"))
+                .occurredAt(parseOccurredAt(jsonObject.getStr("occurredAt")))
+                .userId(jsonObject.getStr("userId"))
+                .orderId(jsonObject.getStr("orderId"))
+                .outBusinessNo(jsonObject.getStr("outBusinessNo"))
+                .amount(jsonObject.getLong("amount"))
+                .build();
     }
 
     private SendAwardRecordEvent deserializeSendAwardRecordEvent(String messageBody) {

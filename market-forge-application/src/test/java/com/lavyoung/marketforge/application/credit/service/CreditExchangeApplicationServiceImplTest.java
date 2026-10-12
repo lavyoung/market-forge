@@ -13,6 +13,7 @@ import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -21,7 +22,7 @@ import static org.mockito.Mockito.*;
  * 积分兑换应用服务测试。
  *
  * <p>该应用服务横跨积分账户和活动账户两个领域。测试重点验证编排顺序、幂等号透传、
- * 参数快速失败，以及前置扣积分失败时不会继续创建活动 SKU 充值订单。</p>
+ * 参数快速失败，以及活动 SKU 待支付订单创建失败时不会继续扣减用户积分。</p>
  */
 class CreditExchangeApplicationServiceImplTest {
 
@@ -31,10 +32,10 @@ class CreditExchangeApplicationServiceImplTest {
     private static final String OUT_BUSINESS_NO = "exchange-20261011-user-001-9011";
 
     /**
-     * Given 合法积分兑换命令，When 执行兑换，Then 应先扣积分再创建活动 SKU 充值订单。
+     * Given 合法积分兑换命令，When 执行兑换，Then 应先创建待支付 SKU 订单再扣减用户积分。
      */
     @Test
-    void shouldDeductCreditAndCreateSkuRechargeOrderWhenExchangeSucceeds() {
+    void shouldCreateWaitPaySkuOrderBeforeDeductingCreditWhenExchangeSucceeds() {
         // Given
         ICreditAccountService creditAccountService = mock(ICreditAccountService.class);
         IRaffleActivityAccountQuotaService quotaService = mock(IRaffleActivityAccountQuotaService.class);
@@ -50,6 +51,9 @@ class CreditExchangeApplicationServiceImplTest {
         ArgumentCaptor<SkuRechargeEntity> rechargeCaptor = ArgumentCaptor.forClass(SkuRechargeEntity.class);
         verify(creditAccountService).adjustCredit(creditCaptor.capture());
         verify(quotaService).createSkuRechargeOrder(rechargeCaptor.capture());
+        InOrder inOrder = inOrder(quotaService, creditAccountService);
+        inOrder.verify(quotaService).createSkuRechargeOrder(any());
+        inOrder.verify(creditAccountService).adjustCredit(any());
 
         CreditAdjustEntity creditAdjust = creditCaptor.getValue();
         SkuRechargeEntity recharge = rechargeCaptor.getValue();
@@ -67,16 +71,17 @@ class CreditExchangeApplicationServiceImplTest {
     }
 
     /**
-     * Given 积分余额不足，When 执行兑换，Then 应直接抛出积分异常且不创建活动 SKU 充值订单。
+     * Given 积分余额不足，When 执行兑换，Then 应先尝试创建待支付 SKU 订单再向上抛出积分异常。
      */
     @Test
-    void shouldNotCreateSkuRechargeOrderWhenCreditDeductionFails() {
+    void shouldCreateSkuOrderBeforePropagatingCreditDeductionFailure() {
         // Given
         ICreditAccountService creditAccountService = mock(ICreditAccountService.class);
         IRaffleActivityAccountQuotaService quotaService = mock(IRaffleActivityAccountQuotaService.class);
         doThrow(BusinessException.of(BusinessResponseCode.POINTS_BALANCE_NOT_ENOUGH, USER_ID, CREDIT_AMOUNT))
                 .when(creditAccountService)
                 .adjustCredit(any());
+        when(quotaService.createSkuRechargeOrder(any())).thenReturn("activity-order-001");
         CreditExchangeApplicationServiceImpl service = new CreditExchangeApplicationServiceImpl(creditAccountService, quotaService);
 
         // When
@@ -85,14 +90,14 @@ class CreditExchangeApplicationServiceImplTest {
         // Then
         assertEquals(BusinessResponseCode.POINTS_BALANCE_NOT_ENOUGH, exception.getResponseCode());
         verify(creditAccountService).adjustCredit(any());
-        verifyNoInteractions(quotaService);
+        verify(quotaService).createSkuRechargeOrder(any());
     }
 
     /**
-     * Given 活动 SKU 充值失败，When 执行兑换，Then 应向上抛出异常，让事务回滚积分扣减。
+     * Given 活动 SKU 待支付订单创建失败，When 执行兑换，Then 应向上抛出异常且不扣减用户积分。
      */
     @Test
-    void shouldPropagateExceptionWhenSkuRechargeFails() {
+    void shouldNotDeductCreditWhenSkuOrderCreationFails() {
         // Given
         ICreditAccountService creditAccountService = mock(ICreditAccountService.class);
         IRaffleActivityAccountQuotaService quotaService = mock(IRaffleActivityAccountQuotaService.class);
@@ -105,8 +110,8 @@ class CreditExchangeApplicationServiceImplTest {
 
         // Then
         assertEquals(BusinessResponseCode.ACTIVITY_ACCOUNT_QUOTA_RECHARGE_FAILED, exception.getResponseCode());
-        verify(creditAccountService).adjustCredit(any());
         verify(quotaService).createSkuRechargeOrder(any());
+        verifyNoInteractions(creditAccountService);
     }
 
     /**

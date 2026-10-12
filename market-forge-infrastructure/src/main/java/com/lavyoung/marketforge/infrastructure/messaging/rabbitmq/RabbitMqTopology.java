@@ -294,4 +294,49 @@ public class RabbitMqTopology {
                 .to(marketForgeDlx())
                 .with(MqConstants.SEND_REBATE_ROUTING_KEY);
     }
+
+    /**
+     * 声明积分调额成功业务队列。
+     *
+     * <p>正常方向：主交换机 -> 积分调额成功队列；
+     * 失败方向：积分调额成功队列 -> 死信交换机。</p>
+     *
+     * @return 带死信参数的积分调额成功队列
+     */
+    @Bean
+    public Queue creditAdjustSuccessQueue() {
+        return QueueBuilder.durable(MqConstants.CREDIT_ADJUST_SUCCESS_QUEUE)
+                .deadLetterExchange(MqConstants.DLX)
+                .deadLetterRoutingKey(MqConstants.CREDIT_ADJUST_SUCCESS_ROUTING_KEY)
+                .build();
+    }
+
+    /**
+     * 绑定积分调额成功路由。
+     *
+     * <p>将主交换机中的 {@code credit.adjust.success} 消息路由到积分调额成功队列。</p>
+     *
+     * @return 积分调额成功业务绑定
+     */
+    @Bean
+    public Binding creditAdjustSuccessBinding() {
+        return BindingBuilder.bind(creditAdjustSuccessQueue())
+                .to(marketForgeExchange())
+                .with(MqConstants.CREDIT_ADJUST_SUCCESS_ROUTING_KEY);
+    }
+
+    /**
+     * 将积分调额成功死信路由到公共死信队列。
+     *
+     * <p>当积分调额成功消息消费失败并进入死信交换机时，
+     * 使用 {@code credit.adjust.success} 路由键汇聚到公共死信队列，便于后续排查和补偿。</p>
+     *
+     * @return 积分调额成功死信绑定
+     */
+    @Bean
+    public Binding creditAdjustSuccessDeadLetterBinding() {
+        return BindingBuilder.bind(marketForgeDlq())
+                .to(marketForgeDlx())
+                .with(MqConstants.CREDIT_ADJUST_SUCCESS_ROUTING_KEY);
+    }
 }

@@ -28,8 +28,16 @@ import java.util.Map;
 @Service
 public class RaffleRaffleActivityAccountQuotaServiceServiceImpl extends AbstractRaffleRaffleActivityAccountQuotaService {
 
+    private final IActivityRepository activityRepository;
+
     public RaffleRaffleActivityAccountQuotaServiceServiceImpl(IActivityRepository activityRepository, IActivitySkuStockMessageRepository activitySkuStockMessageRepository, DefaultActivityChainFactory activityChainFactory, Map<String, ITradePolicy> tradePolicyGroup) {
         super(activityRepository, activitySkuStockMessageRepository, activityChainFactory, tradePolicyGroup);
+        this.activityRepository = activityRepository;
+    }
+
+    @Override
+    protected void doUpdateOrder(DeliveryOrderEntity deliveryOrderEntity) {
+        activityRepository.deliverCreditPayOrder(deliveryOrderEntity);
     }
 
     /**

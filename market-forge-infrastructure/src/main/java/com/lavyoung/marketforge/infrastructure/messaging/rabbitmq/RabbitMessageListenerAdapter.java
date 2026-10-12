@@ -6,6 +6,7 @@ import com.lavyoung.marketforge.domain.activity.event.ActivitySkuStockDeductedEv
 import com.lavyoung.marketforge.domain.activity.event.ActivitySkuZeroStockEvent;
 import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
 import com.lavyoung.marketforge.domain.behavior.event.SendRebateEvent;
+import com.lavyoung.marketforge.domain.credit.event.CreditAdjustSuccessEvent;
 import com.lavyoung.marketforge.domain.strategy.event.AwardStockDeductedEvent;
 import com.lavyoung.marketforge.infrastructure.messaging.AbstractMessageListenerAdapter;
 import com.lavyoung.marketforge.infrastructure.messaging.MessageConsumeTransaction;
@@ -41,12 +42,15 @@ public class RabbitMessageListenerAdapter extends AbstractMessageListenerAdapter
     };
     private static final TypeReference<MessageEnvelope<SendRebateEvent>> SEND_REBATE_TYPE = new TypeReference<>() {
     };
+    private static final TypeReference<MessageEnvelope<CreditAdjustSuccessEvent>> CREDIT_ADJUST_SUCCESS_TYPE = new TypeReference<>() {
+    };
 
     private final MessageHandler<AwardStockDeductedEvent> awardStockDeductedEventMessageHandler;
     private final MessageHandler<ActivitySkuStockDeductedEvent> activitySkuStockDeductedEventMessageHandler;
     private final MessageHandler<ActivitySkuZeroStockEvent> activitySkuStockZeroEventMessageHandler;
     private final MessageHandler<SendAwardRecordEvent> sendAwardRecordMessageHandler;
     private final MessageHandler<SendRebateEvent> sendRebateMessageHandler;
+    private final MessageHandler<CreditAdjustSuccessEvent> creditAdjustSuccessMessageHandler;
 
     public RabbitMessageListenerAdapter(
             ObjectMapper objectMapper,
@@ -55,7 +59,8 @@ public class RabbitMessageListenerAdapter extends AbstractMessageListenerAdapter
             MessageHandler<ActivitySkuStockDeductedEvent> activitySkuStockDeductedEventMessageHandler,
             MessageHandler<ActivitySkuZeroStockEvent> activitySkuStockZeroEventMessageHandler,
             MessageHandler<SendAwardRecordEvent> sendAwardRecordMessageHandler,
-            MessageHandler<SendRebateEvent> sendRebateMessageHandler
+            MessageHandler<SendRebateEvent> sendRebateMessageHandler,
+            MessageHandler<CreditAdjustSuccessEvent> creditAdjustSuccessMessageHandler
     ) {
         super(objectMapper, messageConsumeTransaction);
         this.awardStockDeductedEventMessageHandler = awardStockDeductedEventMessageHandler;
@@ -63,6 +68,7 @@ public class RabbitMessageListenerAdapter extends AbstractMessageListenerAdapter
         this.activitySkuStockZeroEventMessageHandler = activitySkuStockZeroEventMessageHandler;
         this.sendAwardRecordMessageHandler = sendAwardRecordMessageHandler;
         this.sendRebateMessageHandler = sendRebateMessageHandler;
+        this.creditAdjustSuccessMessageHandler = creditAdjustSuccessMessageHandler;
     }
 
     /**
@@ -119,5 +125,16 @@ public class RabbitMessageListenerAdapter extends AbstractMessageListenerAdapter
     @RabbitListener(queues = MqConstants.SEND_REBATE_QUEUE)
     public void onSendRebate(Message message) throws Exception {
         consume(message, SEND_REBATE_TYPE, sendRebateMessageHandler);
+    }
+
+    /**
+     * 消费积分账户调额成功消息并转交应用处理器。
+     *
+     * @param message RabbitMQ 原始消息
+     * @throws Exception 消息反序列化或业务处理失败时抛出
+     */
+    @RabbitListener(queues = MqConstants.CREDIT_ADJUST_SUCCESS_QUEUE)
+    public void onCreditAdjustSuccess(Message message) throws Exception {
+        consume(message, CREDIT_ADJUST_SUCCESS_TYPE, creditAdjustSuccessMessageHandler);
     }
 }

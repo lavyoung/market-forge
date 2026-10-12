@@ -1,10 +1,7 @@
 package com.lavyoung.marketforge.domain.activity.service.quota;
 
 import com.lavyoung.marketforge.domain.activity.model.aggregate.CreateQuotaOrderAggregate;
-import com.lavyoung.marketforge.domain.activity.model.entity.ActivityCountEntity;
-import com.lavyoung.marketforge.domain.activity.model.entity.ActivityEntity;
-import com.lavyoung.marketforge.domain.activity.model.entity.ActivitySkuEntity;
-import com.lavyoung.marketforge.domain.activity.model.entity.SkuRechargeEntity;
+import com.lavyoung.marketforge.domain.activity.model.entity.*;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.domain.activity.repository.IActivitySkuStockMessageRepository;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityAccountQuotaService;
@@ -106,6 +103,30 @@ public abstract class AbstractRaffleRaffleActivityAccountQuotaService extends Ra
         // 返回单号
         return createQuotaOrderAggregate.activityOrder().orderId();
     }
+
+    /**
+     * 支付成功后完成活动 SKU 订单发货。
+     *
+     * <p>模板层负责校验发货入参，具体发货落库由子类实现。</p>
+     *
+     * @param deliveryOrderEntity 活动 SKU 发货单
+     * @throws BusinessException 当发货单为空或关键字段为空时抛出
+     */
+    @Override
+    public void updateOrder(DeliveryOrderEntity deliveryOrderEntity) {
+        if (deliveryOrderEntity == null
+                || StringUtils.isAnyBlank(deliveryOrderEntity.userId(), deliveryOrderEntity.outBusinessNo())) {
+            throw BusinessException.of(CommonResponseCode.PARAM_INVALID, deliveryOrderEntity);
+        }
+        doUpdateOrder(deliveryOrderEntity);
+    }
+
+    /**
+     * 执行活动 SKU 订单发货。
+     *
+     * @param deliveryOrderEntity 活动 SKU 发货单
+     */
+    protected abstract void doUpdateOrder(DeliveryOrderEntity deliveryOrderEntity);
 
     /**
      * 构建活动 SKU 充值订单聚合。

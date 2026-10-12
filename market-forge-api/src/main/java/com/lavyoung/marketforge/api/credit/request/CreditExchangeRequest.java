@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Positive;
  * 积分兑换活动 SKU 请求。
  *
  * <p>用于承接外部客户端发起的积分兑换请求。接口层只表达协议入参，
- * 不承载业务编排逻辑；真正的积分扣减和 SKU 充值动作由 application 层完成。</p>
+ * 不承载业务编排逻辑；真正的待支付下单、积分扣减和异步发货动作由 application 层完成。</p>
  *
  * @param userId        用户编号
  * @param sku           活动 SKU，决定兑换后给哪个活动增加抽奖次数

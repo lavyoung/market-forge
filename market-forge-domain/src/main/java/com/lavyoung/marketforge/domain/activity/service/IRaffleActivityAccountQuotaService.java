@@ -1,5 +1,6 @@
 package com.lavyoung.marketforge.domain.activity.service;
 
+import com.lavyoung.marketforge.domain.activity.model.entity.DeliveryOrderEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.SkuRechargeEntity;
 
 /**
@@ -25,4 +26,19 @@ public interface IRaffleActivityAccountQuotaService {
      * @throws com.lavyoung.marketforge.types.exception.BusinessException 当参数非法、配置缺失、活动不可用、库存不足或入账失败时抛出
      */
     String createSkuRechargeOrder(SkuRechargeEntity skuRechargeEntity);
+
+    /**
+     * 支付成功后完成活动 SKU 订单发货。
+     *
+     * <p>该方法用于积分支付成功后的异步发货场景。服务会根据用户编号和外部业务幂等号
+     * 定位待支付活动 SKU 订单，将订单状态从 {@code wait_pay} 更新为 {@code complete}，
+     * 并给用户活动总账户、月账户、日账户增加对应抽奖额度。</p>
+     *
+     * <p>实现方必须保证订单状态变更和账户额度入账处于同一个事务中，避免出现
+     * “订单已完成但额度未到账”或“额度到账但订单仍待支付”的不一致状态。</p>
+     *
+     * @param deliveryOrderEntity 活动 SKU 发货单，包含用户编号和外部业务幂等号
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 当订单不存在、订单状态不匹配或账户入账失败时抛出
+     */
+    void updateOrder(DeliveryOrderEntity deliveryOrderEntity);
 }

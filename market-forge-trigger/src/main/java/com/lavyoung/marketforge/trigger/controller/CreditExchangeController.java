@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>该 Controller 实现积分兑换 REST 契约，只负责接收请求、
  * 转换 application 命令、调用应用服务并包装统一响应。
- * 积分扣减、余额校验、SKU 充值和事务一致性都不在 Controller 中处理。</p>
+ * 待支付下单、积分扣减、余额校验、异步发货和事务一致性都不在 Controller 中处理。</p>
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0

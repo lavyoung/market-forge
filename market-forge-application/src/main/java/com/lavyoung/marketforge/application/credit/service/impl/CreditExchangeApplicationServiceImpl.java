@@ -22,9 +22,9 @@ import java.util.Objects;
 /**
  * 积分兑换应用服务默认实现。
  *
- * <p>该实现负责完成“积分扣减 + 活动 SKU 充值”的跨领域编排。
- * 两个动作必须处于同一事务中：如果积分扣减成功但活动充值失败，本次兑换应整体回滚，
- * 避免用户被扣积分却没有获得抽奖次数。</p>
+ * <p>该实现负责完成“待支付活动 SKU 下单 + 积分支付”的跨领域编排。
+ * 积分支付成功后，积分账户仓储会写入可靠消息任务；消息消费者收到积分调额成功事件后，
+ * 再将待支付活动订单发货入账，给用户增加对应抽奖次数。</p>
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -42,7 +42,18 @@ public class CreditExchangeApplicationServiceImpl implements ICreditExchangeAppl
     @Transactional(rollbackFor = Exception.class)
     public String exchangeCreditForSku(ExchangeCreditForSkuCommand command) {
         ExchangeCreditForSkuCommand validateCommand = validateCommand(command);
-        // 扣积分
+        // 1. 先创建积分支付类型的活动 SKU 订单。
+        // CREDIT_PAY 交易不会立即给用户增加抽奖次数，而是先写入 WAIT_PAY 待支付订单。
+        String orderId = raffleActivityAccountQuotaService.createSkuRechargeOrder(new SkuRechargeEntity(
+                validateCommand.userId(),
+                validateCommand.sku(),
+                validateCommand.outBusinessNo(),
+                OrderTradeTypeVO.CREDIT_PAY
+        ));
+
+        // 2. 再扣减用户积分。
+        // 扣减成功后，积分仓储会写入 CreditAdjustSuccessEvent 可靠消息任务，
+        // 后续 MQ 消费者根据 userId + outBusinessNo 发货入账。
         creditAccountService.adjustCredit(new CreditAdjustEntity(
                 validateCommand.userId(),
                 validateCommand.outBusinessNo(),
@@ -50,13 +61,7 @@ public class CreditExchangeApplicationServiceImpl implements ICreditExchangeAppl
                 CreditAccountTradeTypeVO.EXPENSE,
                 CreditAccountBusinessTypeVO.EXCHANGE
         ));
-        // 生成充值订单
-        return raffleActivityAccountQuotaService.createSkuRechargeOrder(new SkuRechargeEntity(
-                validateCommand.userId(),
-                validateCommand.sku(),
-                validateCommand.outBusinessNo(),
-                OrderTradeTypeVO.CREDIT_PAY
-        ));
+        return orderId;
     }
 
     private ExchangeCreditForSkuCommand validateCommand(ExchangeCreditForSkuCommand command) {

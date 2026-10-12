@@ -45,6 +45,10 @@ module market.forge.application {
     opens com.lavyoung.marketforge.application.behavior.service;
     opens com.lavyoung.marketforge.application.behavior.service.impl;
     opens com.lavyoung.marketforge.application.behavior.messaging;
+    opens com.lavyoung.marketforge.application.credit.model;
+    opens com.lavyoung.marketforge.application.credit.service;
+    opens com.lavyoung.marketforge.application.credit.service.impl;
+    opens com.lavyoung.marketforge.application.credit.messaging;
     exports com.lavyoung.marketforge.application.credit.model;
     exports com.lavyoung.marketforge.application.credit.service;
 }

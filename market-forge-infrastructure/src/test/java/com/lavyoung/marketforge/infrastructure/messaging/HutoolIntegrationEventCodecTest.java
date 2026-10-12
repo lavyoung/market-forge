@@ -3,6 +3,7 @@ package com.lavyoung.marketforge.infrastructure.messaging;
 import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
 import com.lavyoung.marketforge.domain.behavior.event.SendRebateEvent;
 import com.lavyoung.marketforge.domain.behavior.model.vo.RebateTypeVO;
+import com.lavyoung.marketforge.domain.credit.event.CreditAdjustSuccessEvent;
 import com.lavyoung.marketforge.types.messaging.IntegrationEvent;
 import com.lavyoung.marketforge.types.messaging.MqConstants;
 import org.junit.jupiter.api.Test;
@@ -85,6 +86,38 @@ class HutoolIntegrationEventCodecTest {
                 () -> assertEquals(expected.bizId(), event.bizId()),
                 () -> assertEquals(expected.rebateType(), event.rebateType()),
                 () -> assertEquals(expected.rebateConfig(), event.rebateConfig())
+        );
+    }
+
+    /**
+     * Given 积分调额成功事件，When 经过 JSON 编解码，Then 异步发货所需字段应完整保留。
+     */
+    @Test
+    void shouldPreserveCreditAdjustSuccessFieldsWhenDeserializingCreditAdjustSuccessEvent() {
+        // Given
+        HutoolIntegrationEventCodec codec = new HutoolIntegrationEventCodec();
+        CreditAdjustSuccessEvent expected = CreditAdjustSuccessEvent.builder()
+                .eventId("event-003")
+                .occurredAt(Instant.parse("2026-10-11T13:40:00Z"))
+                .userId("user-001")
+                .orderId("credit-order-001")
+                .outBusinessNo("exchange-user-001-20261011-001")
+                .amount(100L)
+                .build();
+
+        // When
+        IntegrationEvent actual = codec.deserialize(MqConstants.CREDIT_ADJUST_SUCCESS_ROUTING_KEY, codec.serialize(expected));
+
+        // Then
+        assertInstanceOf(CreditAdjustSuccessEvent.class, actual);
+        CreditAdjustSuccessEvent event = (CreditAdjustSuccessEvent) actual;
+        assertAll(
+                () -> assertEquals(expected.eventId(), event.eventId()),
+                () -> assertEquals(expected.occurredAt(), event.occurredAt()),
+                () -> assertEquals(expected.userId(), event.userId()),
+                () -> assertEquals(expected.orderId(), event.orderId()),
+                () -> assertEquals(expected.outBusinessNo(), event.outBusinessNo()),
+                () -> assertEquals(expected.amount(), event.amount())
         );
     }
 }
