@@ -160,13 +160,15 @@ CREATE TABLE raffle_activity_count
 
 CREATE TABLE raffle_activity_sku
 (
-    id                bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-    sku               bigint          NOT NULL COMMENT '活动SKU',
-    activity_id       bigint          NOT NULL COMMENT '活动ID',
-    activity_count_id bigint          NOT NULL COMMENT '活动次数配置ID',
-    stock_count       bigint          NOT NULL COMMENT 'SKU库存',
-    create_time       datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time       datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    id                  bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    sku                 bigint          NOT NULL COMMENT '活动SKU',
+    activity_id         bigint          NOT NULL COMMENT '活动ID',
+    activity_count_id   bigint          NOT NULL COMMENT '活动次数配置ID',
+    stock_count         bigint          NOT NULL COMMENT 'SKU库存总量',
+    stock_count_surplus bigint          NOT NULL COMMENT 'SKU剩余库存',
+    credit_amount       bigint          NULL COMMENT '兑换所需积分；为空表示不支持积分兑换',
+    create_time         datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time         datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uq_sku_activity_count (sku, activity_id, activity_count_id)
 ) ENGINE = InnoDB

@@ -135,6 +135,7 @@ public enum BusinessResponseCode implements IResponseCode {
     ACTIVITY_SKU_STOCK_CLEAR_FAILED(500_003_008, "activity.sku.stock.clear-failed", "活动 SKU 库存清零失败"),
     ACTIVITY_SKU_STOCK_QUEUE_EMPTY(500_003_009, "activity.sku.stock.queue.empty", "活动 SKU 库存同步队列为空"),
     ACTIVITY_SKU_STOCK_MESSAGE_SEND_FAILED(500_003_010, "activity.sku.stock.message.send-failed", "活动 SKU 库存消息发送失败"),
+    ACTIVITY_SKU_CREDIT_AMOUNT_INVALID(500_003_011, "activity.sku.credit-amount.invalid", "活动 SKU 积分兑换价格无效"),
 
     ACTIVITY_ORDER_NOT_FOUND(500_004_001, "activity.order.not-found", "活动订单不存在"),
     ACTIVITY_ORDER_CREATE_FAILED(500_004_002, "activity.order.create-failed", "活动订单创建失败"),

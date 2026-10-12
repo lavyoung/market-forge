@@ -30,7 +30,6 @@ class CreditExchangeControllerTest {
 
     private static final String USER_ID = "user-001";
     private static final Long SKU = 9011L;
-    private static final Long CREDIT_AMOUNT = 100L;
     private static final String OUT_BUSINESS_NO = "exchange-user-001-20261011-001";
     private static final String RECHARGE_ORDER_ID = "activity-order-001";
     private static final CreditExchangeRequestAssembler ASSEMBLER =
@@ -45,7 +44,7 @@ class CreditExchangeControllerTest {
         ICreditExchangeApplicationService applicationService =
                 mock(ICreditExchangeApplicationService.class);
         ExchangeCreditForSkuCommand expectedCommand =
-                new ExchangeCreditForSkuCommand(USER_ID, SKU, CREDIT_AMOUNT, OUT_BUSINESS_NO);
+                new ExchangeCreditForSkuCommand(USER_ID, SKU, OUT_BUSINESS_NO);
         when(applicationService.exchangeCreditForSku(expectedCommand)).thenReturn(RECHARGE_ORDER_ID);
         CreditExchangeController controller =
                 new CreditExchangeController(applicationService, ASSEMBLER);
@@ -69,13 +68,13 @@ class CreditExchangeControllerTest {
         // Given
         try (var validatorFactory = Validation.buildDefaultValidatorFactory()) {
             Validator validator = validatorFactory.getValidator();
-            CreditExchangeRequest request = new CreditExchangeRequest(" ", null, 0L, " ");
+            CreditExchangeRequest request = new CreditExchangeRequest(" ", null, " ");
 
             // When
             var violations = validator.validate(request);
 
             // Then
-            assertEquals(4, violations.size());
+            assertEquals(3, violations.size());
         }
     }
 
@@ -90,7 +89,7 @@ class CreditExchangeControllerTest {
         ICreditExchangeApplicationService applicationService =
                 mock(ICreditExchangeApplicationService.class);
         when(applicationService.exchangeCreditForSku(new ExchangeCreditForSkuCommand(
-                USER_ID, SKU, CREDIT_AMOUNT, OUT_BUSINESS_NO))).thenReturn(RECHARGE_ORDER_ID);
+                USER_ID, SKU, OUT_BUSINESS_NO))).thenReturn(RECHARGE_ORDER_ID);
         MockMvc mockMvc = standaloneSetup(new CreditExchangeController(applicationService, ASSEMBLER))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -98,7 +97,6 @@ class CreditExchangeControllerTest {
                 {
                   "userId": "user-001",
                   "sku": 9011,
-                  "creditAmount": 100,
                   "outBusinessNo": "exchange-user-001-20261011-001"
                 }
                 """;
@@ -112,7 +110,7 @@ class CreditExchangeControllerTest {
                 .andExpect(jsonPath("$.data").value(RECHARGE_ORDER_ID));
 
         verify(applicationService).exchangeCreditForSku(
-                new ExchangeCreditForSkuCommand(USER_ID, SKU, CREDIT_AMOUNT, OUT_BUSINESS_NO));
+                new ExchangeCreditForSkuCommand(USER_ID, SKU, OUT_BUSINESS_NO));
     }
 
     /**
@@ -132,7 +130,6 @@ class CreditExchangeControllerTest {
                 {
                   "userId": " ",
                   "sku": null,
-                  "creditAmount": 0,
                   "outBusinessNo": " "
                 }
                 """;
@@ -149,6 +146,6 @@ class CreditExchangeControllerTest {
     }
 
     private static CreditExchangeRequest request() {
-        return new CreditExchangeRequest(USER_ID, SKU, CREDIT_AMOUNT, OUT_BUSINESS_NO);
+        return new CreditExchangeRequest(USER_ID, SKU, OUT_BUSINESS_NO);
     }
 }

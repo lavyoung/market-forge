@@ -8,13 +8,19 @@ import jakarta.validation.constraints.Positive;
 /**
  * 积分兑换活动 SKU 请求。
  *
- * <p>用于承接外部客户端发起的积分兑换请求。接口层只表达协议入参，
- * 不承载业务编排逻辑；真正的待支付下单、积分扣减和异步发货动作由 application 层完成。</p>
+ * <p>该请求只允许调用方指定“兑换什么商品”和“本次请求是谁发起的”。
+ * SKU 的积分兑换价格由服务端根据运营配置查询，客户端不能传入价格，
+ * 避免调用方篡改 {@code creditAmount} 后以低价兑换商品。</p>
+ *
+ * <p>接口层只表达 HTTP 协议和参数校验；待支付订单创建、服务端价格查询、
+ * 积分扣减与异步发货由 application 层负责。</p>
  *
  * @param userId        用户编号
  * @param sku           活动 SKU，决定兑换后给哪个活动增加抽奖次数
- * @param creditAmount  本次消耗的积分数量，必须为正数
- * @param outBusinessNo 外部业务幂等号，同一次兑换请求必须保持稳定
+ * @param outBusinessNo 外部业务幂等号；同一次兑换重试必须保持不变
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
+ * @version 1.0.0
+ * @date 2026/10/12
  */
 @Schema(description = "积分兑换活动 SKU 请求")
 public record CreditExchangeRequest(
@@ -28,12 +34,10 @@ public record CreditExchangeRequest(
         @Positive(message = "活动 SKU 必须为正数")
         Long sku,
 
-        @Schema(description = "消耗积分数量", example = "100")
-        @NotNull(message = "消耗积分数量不能为空")
-        @Positive(message = "消耗积分数量必须为正数")
-        Long creditAmount,
-
-        @Schema(description = "外部业务幂等号", example = "exchange-user-001-20261011-001")
+        @Schema(
+                description = "外部业务幂等号；相同业务重试时必须保持不变",
+                example = "exchange-user-001-20261012-001"
+        )
         @NotBlank(message = "外部业务幂等号不能为空")
         String outBusinessNo
 ) {

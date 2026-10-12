@@ -567,6 +567,18 @@ public class ActivityRepository implements IActivityRepository {
     }
 
     @Override
+    public List<ActivityCountEntity> queryRaffleActivityCountListByActivityIds(List<Long> activityCountIds) {
+        List<Long> ids = activityCountIds.stream().filter(Objects::nonNull).distinct().toList();
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return activityCountDao.selectList(Wrappers.lambdaQuery(ActivityCountPO.class)
+                        .in(ActivityCountPO::getActivityCountId, ids))
+                .stream().map(activityCountAssembler::toEntity)
+                .toList();
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void deliverCreditPayOrder(DeliveryOrderEntity deliveryOrderEntity) {
         ActivityOrderPO activityOrderPO = activityOrderDao.queryByUserIdAndOutBusinessNo(deliveryOrderEntity.userId(), deliveryOrderEntity.outBusinessNo())

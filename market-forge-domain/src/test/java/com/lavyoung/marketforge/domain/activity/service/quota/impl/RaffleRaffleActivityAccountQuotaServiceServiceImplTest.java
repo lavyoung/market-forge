@@ -147,7 +147,7 @@ class RaffleRaffleActivityAccountQuotaServiceServiceImplTest {
     }
 
     private static ActivitySkuEntity activitySku() {
-        return new ActivitySkuEntity(SKU, ACTIVITY_ID, ACTIVITY_COUNT_ID, 100);
+        return new ActivitySkuEntity(SKU, ACTIVITY_ID, ACTIVITY_COUNT_ID, 100, 100, 100L);
     }
 
     private static ActivityEntity activity() {

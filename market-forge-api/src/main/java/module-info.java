@@ -32,5 +32,6 @@ module market.forge.api {
     opens com.lavyoung.marketforge.api.credit.request;
 
     exports com.lavyoung.marketforge.api.credit.request;
+    exports com.lavyoung.marketforge.api.credit.response;
     exports com.lavyoung.marketforge.api.credit;
 }

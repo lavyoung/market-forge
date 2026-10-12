@@ -185,6 +185,21 @@ public interface IActivityRepository {
     List<ActivitySkuEntity> queryActivitySkuListByActivityId(Long activityId);
 
     /**
+     * 按活动次数配置标识批量查询次数配置。
+     *
+     * <p>该方法用于活动 SKU 商品列表查询。一个活动可以配置多个 SKU，
+     * 多个 SKU 又可能关联不同的次数配置。调用方必须一次传入所有
+     * {@code activityCountId}，由仓储通过单条 {@code IN} 查询加载配置，
+     * 避免遍历 SKU 后逐条查询次数配置产生 N+1 SQL。</p>
+     *
+     * <p>传入空集合或集合中没有有效标识时，返回空集合；未匹配到的配置不会出现在结果中。</p>
+     *
+     * @param activityCountIds 活动次数配置标识集合
+     * @return 已匹配的活动次数配置集合
+     */
+    List<ActivityCountEntity> queryRaffleActivityCountListByActivityIds(List<Long> activityCountIds);
+
+    /**
      * 完成积分支付活动 SKU 订单发货。
      *
      * <p>该方法根据用户编号和外部业务幂等号定位待支付订单，先用状态条件更新把订单

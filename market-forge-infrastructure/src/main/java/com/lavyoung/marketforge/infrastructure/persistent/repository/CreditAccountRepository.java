@@ -1,12 +1,15 @@
 package com.lavyoung.marketforge.infrastructure.persistent.repository;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.lavyoung.marketforge.domain.credit.event.CreditAdjustSuccessEvent;
 import com.lavyoung.marketforge.domain.credit.model.aggregate.CreditAccountAdjustAggregate;
+import com.lavyoung.marketforge.domain.credit.model.entity.CreditAccountEntity;
 import com.lavyoung.marketforge.domain.credit.model.entity.CreditAccountOrderEntity;
 import com.lavyoung.marketforge.domain.credit.repository.ICreditAccountRepository;
 import com.lavyoung.marketforge.domain.message.model.entity.TaskEntity;
 import com.lavyoung.marketforge.domain.message.model.valobj.TaskStateVO;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.TaskAssembler;
+import com.lavyoung.marketforge.infrastructure.persistent.assembler.credit.CreditAccountAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.credit.CreditAccountOrderAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.credit.IUserCreditAccountDao;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.credit.IUserCreditAccountOrderDao;
@@ -24,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Objects;
+import java.util.Optional;
 
 
 /**
@@ -44,10 +49,18 @@ public class CreditAccountRepository implements ICreditAccountRepository {
     private final IUserCreditAccountOrderDao userCreditAccountOrderDao;
     private final ITaskDao taskDao;
 
+    private final CreditAccountAssembler creditAccountAssembler;
     private final CreditAccountOrderAssembler creditAccountOrderAssembler;
     private final TaskAssembler taskAssembler;
 
     private final IntegrationEventCodec eventCodec;
+
+    @Override
+    public Optional<CreditAccountEntity> queryCreditAccountByUserId(String userId) {
+        Objects.requireNonNull(userId, "userId must not be null");
+        return Optional.ofNullable(userCreditAccountDao.selectOne(Wrappers.lambdaQuery(UserCreditAccountPO.class)
+                .eq(UserCreditAccountPO::getUserId, userId))).map(creditAccountAssembler::toEntity);
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
