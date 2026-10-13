@@ -1,6 +1,7 @@
 package com.lavyoung.marketforge.application.activity.service.impl;
 
 import com.lavyoung.marketforge.application.activity.model.*;
+import com.lavyoung.marketforge.application.activity.service.IActivityDegradeSwitch;
 import com.lavyoung.marketforge.application.activity.service.IActivityRaffleApplicationService;
 import com.lavyoung.marketforge.application.strategy.model.RaffleCommand;
 import com.lavyoung.marketforge.application.strategy.model.RaffleResult;
@@ -51,6 +52,7 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
     private final IRuleTreeRepository ruleTreeRepository;
     private final IStrategyRepository strategyRepository;
 
+    private final IActivityDegradeSwitch activityDegradeSwitch;
     /**
      * {@inheritDoc}
      * <p>
@@ -59,6 +61,9 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
      */
     @Override
     public ActivityRaffleResult raffle(ActivityRaffleCommand command) {
+        if (activityDegradeSwitch.isDegraded()) {
+            throw BusinessException.of(BusinessResponseCode.ACTIVITY_DEGRADED);
+        }
         ActivityRaffleCommand validCommand = Objects.requireNonNull(command, "command must not be null");
         ActivityOrderEntity activityOrder = activityPartakeService.createRaffleOrder(new PartakeRaffleActivityEntity(
                 validCommand.userId(),

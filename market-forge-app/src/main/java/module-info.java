@@ -32,6 +32,7 @@
     requires com.fasterxml.jackson.datatype.jsr310;
     requires java.prefs;
     requires org.checkerframework.checker.qual;
+    requires market.forge.application;
 
     opens com.lavyoung.marketforge.app;
     opens com.lavyoung.marketforge.app.config;

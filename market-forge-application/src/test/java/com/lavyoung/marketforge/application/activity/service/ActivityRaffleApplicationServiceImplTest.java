@@ -17,6 +17,8 @@ import com.lavyoung.marketforge.domain.strategy.repository.IRuleTreeRepository;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.IRaffleAward;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
+import com.lavyoung.marketforge.types.exception.BusinessException;
+import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -70,6 +72,9 @@ class ActivityRaffleApplicationServiceImplTest {
     @Mock
     private IStrategyRepository strategyRepository;
 
+    @Mock
+    private IActivityDegradeSwitch activityDegradeSwitch;
+
     /**
      * Given 活动订单与策略抽奖结果，When 执行活动抽奖，Then 使用订单中的策略并触发结算。
      */
@@ -100,6 +105,34 @@ class ActivityRaffleApplicationServiceImplTest {
                 () -> assertEquals(STRATEGY_ID, result.strategyId()),
                 () -> assertEquals(AWARD_ID, result.awardId()),
                 () -> assertEquals("随机矿石", result.awardTitle())
+        );
+    }
+
+    /**
+     * Given 活动处于动态降级状态，When 执行活动抽奖，Then 返回降级业务异常且不创建活动订单。
+     */
+    @Test
+    void shouldRejectRaffleWhenActivityIsDegraded() {
+        // Given
+        when(activityDegradeSwitch.isDegraded()).thenReturn(true);
+
+        // When
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> newService().raffle(
+                        new ActivityRaffleCommand(USER_ID, ACTIVITY_ID, SKU)
+                )
+        );
+
+        // Then
+        assertEquals(
+                BusinessResponseCode.ACTIVITY_DEGRADED.getCode(),
+                exception.getCode()
+        );
+        verifyNoInteractions(
+                activityPartakeService,
+                strategyRaffleService,
+                settlementTransaction
         );
     }
 
@@ -293,7 +326,8 @@ class ActivityRaffleApplicationServiceImplTest {
                 activityRepository,
                 raffleAward,
                 ruleTreeRepository,
-                strategyRepository
+                strategyRepository,
+                activityDegradeSwitch
         );
     }
 

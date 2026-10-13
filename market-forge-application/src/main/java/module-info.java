@@ -29,6 +29,8 @@ module market.forge.application {
     exports com.lavyoung.marketforge.application.behavior.service;
     exports com.lavyoung.marketforge.application.behavior.service.impl;
     exports com.lavyoung.marketforge.application.behavior.messaging;
+    exports com.lavyoung.marketforge.application.credit.model;
+    exports com.lavyoung.marketforge.application.credit.service;
 
     opens com.lavyoung.marketforge.application.strategy.service;
     opens com.lavyoung.marketforge.application.strategy.service.impl;
@@ -49,6 +51,5 @@ module market.forge.application {
     opens com.lavyoung.marketforge.application.credit.service;
     opens com.lavyoung.marketforge.application.credit.service.impl;
     opens com.lavyoung.marketforge.application.credit.messaging;
-    exports com.lavyoung.marketforge.application.credit.model;
-    exports com.lavyoung.marketforge.application.credit.service;
+
 }
