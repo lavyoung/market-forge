@@ -31,10 +31,13 @@
     requires com.fasterxml.jackson.databind;
     requires com.fasterxml.jackson.datatype.jsr310;
     requires java.prefs;
-    requires org.checkerframework.checker.qual;
     requires market.forge.application;
+    requires dynamic.config.center.core;
+    requires dynamic.config.center.zookeeper;
+    requires dynamic.config.center.spring.boot.starter;
 
     opens com.lavyoung.marketforge.app;
     opens com.lavyoung.marketforge.app.config;
     opens com.lavyoung.marketforge.app.interceptor to spring.beans;
+    opens com.lavyoung.marketforge.app.config.dcc;
 }

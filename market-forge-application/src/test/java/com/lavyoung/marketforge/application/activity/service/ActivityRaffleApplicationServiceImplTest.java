@@ -75,6 +75,9 @@ class ActivityRaffleApplicationServiceImplTest {
     @Mock
     private IActivityDegradeSwitch activityDegradeSwitch;
 
+    @Mock
+    private IActivityAccessPolicy activityAccessPolicy;
+
     /**
      * Given 活动订单与策略抽奖结果，When 执行活动抽奖，Then 使用订单中的策略并触发结算。
      */
@@ -83,6 +86,7 @@ class ActivityRaffleApplicationServiceImplTest {
         // Given
         ActivityOrderEntity order = newActivityOrder();
         RaffleResult raffleResult = new RaffleResult(STRATEGY_ID, AWARD_ID, "random_ore", "quantity=1", "随机矿石", "随机矿石");
+        when(activityAccessPolicy.isAllowed(USER_ID)).thenReturn(true);
         when(activityPartakeService.createRaffleOrder(any())).thenReturn(order);
         when(strategyRaffleService.raffle(new RaffleCommand(USER_ID, STRATEGY_ID))).thenReturn(raffleResult);
         ActivityRaffleApplicationServiceImpl service = newService();
@@ -94,6 +98,7 @@ class ActivityRaffleApplicationServiceImplTest {
         ArgumentCaptor<PartakeRaffleActivityEntity> partakeCaptor =
                 ArgumentCaptor.forClass(PartakeRaffleActivityEntity.class);
         verify(activityPartakeService).createRaffleOrder(partakeCaptor.capture());
+        verify(activityAccessPolicy).isAllowed(USER_ID);
         verify(strategyRaffleService).raffle(new RaffleCommand(USER_ID, STRATEGY_ID));
         verify(settlementTransaction).settle(order, raffleResult);
         assertAll(
@@ -129,6 +134,37 @@ class ActivityRaffleApplicationServiceImplTest {
                 BusinessResponseCode.ACTIVITY_DEGRADED.getCode(),
                 exception.getCode()
         );
+        verifyNoInteractions(
+                activityPartakeService,
+                strategyRaffleService,
+                settlementTransaction,
+                activityAccessPolicy
+        );
+    }
+
+    /**
+     * Given 用户未通过活动访问策略，When 执行活动抽奖，Then 返回访问拒绝异常且不创建参与订单。
+     *
+     * <p>目的：验证动态配置黑白名单已经接入活动抽奖入口，并且拦截点位于
+     * 活动参与订单创建之前，避免被拒绝用户消耗活动额度或进入策略抽奖链路。</p>
+     */
+    @Test
+    void shouldRejectRaffleWhenUserIsDeniedByActivityAccessPolicy() {
+        // Given
+        when(activityAccessPolicy.isAllowed(USER_ID)).thenReturn(false);
+
+        // When
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> newService().raffle(new ActivityRaffleCommand(USER_ID, ACTIVITY_ID, SKU))
+        );
+
+        // Then
+        assertAll(
+                () -> assertEquals(BusinessResponseCode.ACTIVITY_ACCESS_DENIED, exception.getResponseCode()),
+                () -> assertEquals(BusinessResponseCode.ACTIVITY_ACCESS_DENIED.getCode(), exception.getCode())
+        );
+        verify(activityAccessPolicy).isAllowed(USER_ID);
         verifyNoInteractions(
                 activityPartakeService,
                 strategyRaffleService,
@@ -327,7 +363,8 @@ class ActivityRaffleApplicationServiceImplTest {
                 raffleAward,
                 ruleTreeRepository,
                 strategyRepository,
-                activityDegradeSwitch
+                activityDegradeSwitch,
+                activityAccessPolicy
         );
     }
 

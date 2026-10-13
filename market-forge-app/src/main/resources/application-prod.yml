@@ -146,11 +146,9 @@ lavshard:
     user_credit_account_order:
       sharding-column: user_id
 
-zookeeper:
-  dcc:
-    connect-string: ${MARKET_FORGE_ZK_CONNECT_STRING:192.168.3.127:2181}
-    base-sleep-time-ms: ${MARKET_FORGE_ZK_BASE_SLEEP_TIME_MS:1000}
-    max-retries: ${MARKET_FORGE_ZK_MAX_RETRIES:3}
-    session-timeout-ms: ${MARKET_FORGE_ZK_SESSION_TIMEOUT_MS:18000}
-    connection-timeout-ms: ${MARKET_FORGE_ZK_CONNECTION_TIMEOUT_MS:30000}
-    root-path: ${MARKET_FORGE_ZK_ROOT_PATH:/market-forge-dcc/config}
+dcc:
+  enabled: true
+  connect-string: ${MARKET_FORGE_ZK_CONNECT_STRING:192.168.3.127:2181}
+  root-path: ${MARKET_FORGE_ZK_ROOT_PATH:/market-forge-dcc/config}
+  session-timeout-ms: ${MARKET_FORGE_ZK_SESSION_TIMEOUT_MS:18000}
+  connection-timeout-ms: ${MARKET_FORGE_ZK_CONNECTION_TIMEOUT_MS:30000}

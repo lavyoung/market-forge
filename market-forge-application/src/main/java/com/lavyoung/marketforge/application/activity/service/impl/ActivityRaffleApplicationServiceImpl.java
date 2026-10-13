@@ -1,6 +1,7 @@
 package com.lavyoung.marketforge.application.activity.service.impl;
 
 import com.lavyoung.marketforge.application.activity.model.*;
+import com.lavyoung.marketforge.application.activity.service.IActivityAccessPolicy;
 import com.lavyoung.marketforge.application.activity.service.IActivityDegradeSwitch;
 import com.lavyoung.marketforge.application.activity.service.IActivityRaffleApplicationService;
 import com.lavyoung.marketforge.application.strategy.model.RaffleCommand;
@@ -53,6 +54,7 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
     private final IStrategyRepository strategyRepository;
 
     private final IActivityDegradeSwitch activityDegradeSwitch;
+    private final IActivityAccessPolicy activityAccessPolicy;
     /**
      * {@inheritDoc}
      * <p>
@@ -65,6 +67,9 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
             throw BusinessException.of(BusinessResponseCode.ACTIVITY_DEGRADED);
         }
         ActivityRaffleCommand validCommand = Objects.requireNonNull(command, "command must not be null");
+        if (!activityAccessPolicy.isAllowed(validCommand.userId())) {
+            throw BusinessException.of(BusinessResponseCode.ACTIVITY_ACCESS_DENIED, validCommand.userId());
+        }
         ActivityOrderEntity activityOrder = activityPartakeService.createRaffleOrder(new PartakeRaffleActivityEntity(
                 validCommand.userId(),
                 validCommand.sku(),

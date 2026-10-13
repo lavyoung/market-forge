@@ -100,8 +100,7 @@
         <!-- dynamic-thread-pool-bom -->
         <dynamic-thread-pool-bom.version>0.1.1</dynamic-thread-pool-bom.version>
 
-        <!-- ZooKeeper 客户端 -->
-        <curator.version>5.6.0</curator.version>
+        <dynamic-config-center.version>0.1.0-SNAPSHOT</dynamic-config-center.version>
     </properties>
 
 
@@ -134,17 +133,10 @@
                 <scope>import</scope>
             </dependency>
 
-            <!-- Apache Curator ZooKeeper 客户端 -->
             <dependency>
-                <groupId>org.apache.curator</groupId>
-                <artifactId>curator-framework</artifactId>
-                <version>${curator.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.apache.curator</groupId>
-                <artifactId>curator-recipes</artifactId>
-                <version>${curator.version}</version>
+                <groupId>io.github.lavyoung</groupId>
+                <artifactId>dynamic-config-center-spring-boot-starter</artifactId>
+                <version>${dynamic-config-center.version}</version>
             </dependency>
 
             <dependency>
