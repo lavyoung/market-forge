@@ -18,7 +18,10 @@
     requires org.mybatis.spring;
     requires org.springdoc.openapi.ui;
     requires io.swagger.v3.oas.annotations;
-
+    requires curator.framework;
+    requires curator.recipes;
+    requires curator.client;
+    requires org.slf4j;
     requires market.forge.api;
     requires market.forge.infrastructure;
     requires market.forge.trigger;
@@ -27,6 +30,8 @@
     requires spring.data.redis;
     requires com.fasterxml.jackson.databind;
     requires com.fasterxml.jackson.datatype.jsr310;
+    requires java.prefs;
+    requires org.checkerframework.checker.qual;
 
     opens com.lavyoung.marketforge.app;
     opens com.lavyoung.marketforge.app.config;

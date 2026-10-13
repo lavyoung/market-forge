@@ -99,6 +99,9 @@
 
         <!-- dynamic-thread-pool-bom -->
         <dynamic-thread-pool-bom.version>0.1.1</dynamic-thread-pool-bom.version>
+
+        <!-- ZooKeeper 客户端 -->
+        <curator.version>5.6.0</curator.version>
     </properties>
 
 
@@ -129,6 +132,19 @@
                 <version>${dynamic-thread-pool-bom.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+
+            <!-- Apache Curator ZooKeeper 客户端 -->
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-framework</artifactId>
+                <version>${curator.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-recipes</artifactId>
+                <version>${curator.version}</version>
             </dependency>
 
             <dependency>
