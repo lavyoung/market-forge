@@ -99,8 +99,7 @@
 
         <!-- dynamic-thread-pool-bom -->
         <dynamic-thread-pool-bom.version>0.1.1</dynamic-thread-pool-bom.version>
-
-        <dynamic-config-center.version>0.1.0-SNAPSHOT</dynamic-config-center.version>
+        <dynamic-config-center-bom.version>0.2.1</dynamic-config-center-bom.version>
     </properties>
 
 
@@ -132,11 +131,12 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-
             <dependency>
                 <groupId>io.github.lavyoung</groupId>
-                <artifactId>dynamic-config-center-spring-boot-starter</artifactId>
-                <version>${dynamic-config-center.version}</version>
+                <artifactId>dynamic-config-center-bom</artifactId>
+                <version>${dynamic-config-center-bom.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
 
             <dependency>

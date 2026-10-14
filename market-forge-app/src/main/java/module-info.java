@@ -35,6 +35,7 @@
     requires dynamic.config.center.core;
     requires dynamic.config.center.zookeeper;
     requires dynamic.config.center.spring.boot.starter;
+    requires dynamic.config.center.rate.limiter.spring.boot.starter;
 
     opens com.lavyoung.marketforge.app;
     opens com.lavyoung.marketforge.app.config;

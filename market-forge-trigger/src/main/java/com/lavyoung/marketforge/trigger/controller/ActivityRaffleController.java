@@ -9,7 +9,9 @@ import com.lavyoung.marketforge.api.activity.response.ActivityDrawResponse;
 import com.lavyoung.marketforge.application.activity.model.*;
 import com.lavyoung.marketforge.application.activity.service.IActivityRaffleApplicationService;
 import com.lavyoung.marketforge.trigger.assembler.ActivityRaffleResponseAssembler;
+import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import com.lavyoung.marketforge.types.model.Response;
+import io.github.lavyoung.dcc.ratelimiter.annotation.DccRateLimiter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -38,11 +40,39 @@ public class ActivityRaffleController implements IActivityRaffleApi {
         return Response.success();
     }
 
+    /**
+     * 执行用户活动抽奖。
+     *
+     * <p>以用户标识作为限流键，防止同一用户在短时间内重复发起抽奖。
+     * 当请求超过许可速率时，限流组件不会进入 application 层，
+     * 而是调用 {@link #drawRateLimiterFallback(ActivityDrawRequest)}
+     * 返回统一的风控失败响应。</p>
+     *
+     * @param request 活动抽奖请求，包含用户、活动和活动 SKU
+     * @return 抽奖成功结果；超过限流阈值时返回请求过于频繁
+     */
     @Override
+    @DccRateLimiter(key = "userId", fallbackMethod = "drawRateLimiterFallback", permitsPerSecond = 1, blacklistCount = 3, blacklistTtlSeconds = 60L)
     public Response<ActivityDrawResponse> draw(ActivityDrawRequest request) {
         ActivityRaffleCommand command = activityRaffleResponseAssembler.toCommand(request);
         ActivityRaffleResult raffle = activityRaffleApplicationService.raffle(command);
         return Response.success(activityRaffleResponseAssembler.toResponse(raffle));
+    }
+
+    /**
+     * 处理活动抽奖被限流后的降级响应。
+     *
+     * <p>该方法的参数列表必须与 {@link #draw(ActivityDrawRequest)} 完全一致，
+     * 限流组件会根据原方法参数类型反射查找并调用本方法。</p>
+     *
+     * <p>fallback 只负责协议层失败响应，不执行业务补偿，
+     * 也不会调用 application 或 domain 层。</p>
+     *
+     * @param request 被限流的原始抽奖请求
+     * @return 请求过于频繁的统一失败响应
+     */
+    private Response<ActivityDrawResponse> drawRateLimiterFallback(ActivityDrawRequest request) {
+        return Response.fail(BusinessResponseCode.RISK_CONTROL_RATE_LIMITED);
     }
 
     @Override

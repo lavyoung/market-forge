@@ -71,6 +71,18 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- 动态限流核心接口。trigger 层使用其中的 @DccRateLimiter 注解声明入口限流规则。 -->
+        <dependency>
+            <groupId>io.github.lavyoung</groupId>
+            <artifactId>dynamic-config-center-rate-limiter</artifactId>
+        </dependency>
+
+        <!-- 测试真实限流切面行为，不进入 trigger 生产运行时依赖。 -->
+        <dependency>
+            <groupId>io.github.lavyoung</groupId>
+            <artifactId>dynamic-config-center-rate-limiter-spring-boot-starter</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
 </project>

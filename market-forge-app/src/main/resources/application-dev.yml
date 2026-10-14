@@ -138,6 +138,13 @@ dcc:
   root-path: ${MARKET_FORGE_ZK_ROOT_PATH:/market-forge-dcc/config}
   session-timeout-ms: ${MARKET_FORGE_ZK_SESSION_TIMEOUT_MS:18000}
   connection-timeout-ms: ${MARKET_FORGE_ZK_CONNECTION_TIMEOUT_MS:30000}
+  rate-limiter:
+    enabled: true
+    fail-open-when-capacity-exceeded: true
+    local:
+      max-bucket-keys: 100000
+      max-reject-counter-keys: 100000
+      max-blacklist-keys: 100000
 
 
 springdoc:

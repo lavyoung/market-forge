@@ -48,6 +48,25 @@ class ResponseContractTest {
     }
 
     /**
+     * Given 带有业务数据泛型的接口，When 创建失败响应，Then 保留接口泛型且数据为空。
+     */
+    @Test
+    void shouldCreateGenericFailureResponse() {
+        // Given
+        IResponseCode responseCode = TestResponseCode.RESOURCE_NOT_FOUND;
+
+        // When
+        Response<String> response = Response.fail(responseCode);
+
+        // Then
+        assertAll(
+                () -> assertEquals(700_001, response.code()),
+                () -> assertEquals("资源不存在", response.message()),
+                () -> assertNull(response.data())
+        );
+    }
+
+    /**
      * Given 项目自定义响应编码，When 创建业务异常，Then 保留编码、国际化键和默认文案。
      */
     @Test

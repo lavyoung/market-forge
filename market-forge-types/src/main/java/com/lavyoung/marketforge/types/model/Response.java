@@ -52,21 +52,28 @@ public record Response<T>(
     /**
      * 根据统一响应编码创建失败响应。
      *
+     * <p>失败响应不携带业务数据，但保留调用方声明的泛型，
+     * 使不同接口可以复用统一失败响应工厂。</p>
+     *
      * @param responseCode 失败响应编码
-     * @return 失败响应
+     * @param <T>          接口声明的响应数据类型
+     * @return 不包含业务数据的失败响应
      */
-    public static Response<Void> fail(IResponseCode responseCode) {
+    public static <T> Response<T> fail(IResponseCode responseCode) {
         return of(responseCode, null);
     }
 
     /**
      * 根据统一响应编码和解析后的文案创建失败响应。
      *
+     * <p>适用于国际化或需要覆盖默认错误文案的业务场景。</p>
+     *
      * @param responseCode 失败响应编码
      * @param message      国际化或场景化处理后的响应文案
-     * @return 失败响应
+     * @param <T>          接口声明的响应数据类型
+     * @return 不包含业务数据的失败响应
      */
-    public static Response<Void> fail(IResponseCode responseCode, String message) {
+    public static <T> Response<T> fail(IResponseCode responseCode, String message) {
         return new Response<>(responseCode.getCode(), message, null);
     }
 
