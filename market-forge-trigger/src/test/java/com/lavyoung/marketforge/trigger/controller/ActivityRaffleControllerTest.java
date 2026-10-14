@@ -11,7 +11,9 @@ import com.lavyoung.marketforge.application.activity.model.ActivityRaffleCommand
 import com.lavyoung.marketforge.application.activity.model.ActivityRaffleResult;
 import com.lavyoung.marketforge.application.activity.service.IActivityRaffleApplicationService;
 import com.lavyoung.marketforge.trigger.assembler.ActivityRaffleResponseAssembler;
+import com.lavyoung.marketforge.trigger.circuitbreaker.ActivityCircuitBreaker;
 import com.lavyoung.marketforge.trigger.exception.GlobalExceptionHandler;
+import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import com.lavyoung.marketforge.types.model.CommonResponseCode;
 import com.lavyoung.marketforge.types.model.Response;
@@ -25,6 +27,8 @@ import org.mapstruct.factory.Mappers;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -100,6 +104,57 @@ class ActivityRaffleControllerTest {
     }
 
     /**
+     * Given 抽奖保护器捕获技术异常，When 用户发起抽奖，Then 返回活动降级响应且不执行应用服务。
+     */
+    @Test
+    void shouldReturnDegradedResponseWhenProtectedDrawFailsTechnically() {
+        // Given
+        IActivityRaffleApplicationService applicationService =
+                mock(IActivityRaffleApplicationService.class);
+        ActivityCircuitBreaker protection = degradedProtection();
+        ActivityRaffleController controller =
+                new ActivityRaffleController(applicationService, ASSEMBLER, protection);
+
+        // When
+        Response<ActivityDrawResponse> response =
+                controller.draw(new ActivityDrawRequest(USER_ID, ACTIVITY_ID, SKU));
+
+        // Then
+        assertAll(
+                () -> assertEquals(BusinessResponseCode.ACTIVITY_DEGRADED.getCode(), response.code()),
+                () -> assertEquals(BusinessResponseCode.ACTIVITY_DEGRADED.getMsg(), response.message()),
+                () -> assertNull(response.data())
+        );
+        verifyNoInteractions(applicationService);
+    }
+
+    /**
+     * Given TimeLimiter 包装了业务异常，When fallback 分类异常，Then 解包并原样抛出业务异常。
+     */
+    @Test
+    void shouldRethrowWrappedBusinessExceptionFromProtectionFallback() {
+        // Given
+        BusinessException businessException = BusinessException.of(
+                BusinessResponseCode.ACTIVITY_ACCOUNT_QUOTA_NOT_ENOUGH
+        );
+        ActivityCircuitBreaker protection = businessFailureProtection(businessException);
+        ActivityRaffleController controller = new ActivityRaffleController(
+                mock(IActivityRaffleApplicationService.class),
+                ASSEMBLER,
+                protection
+        );
+
+        // When
+        BusinessException thrown = assertThrows(
+                BusinessException.class,
+                () -> controller.draw(new ActivityDrawRequest(USER_ID, ACTIVITY_ID, SKU))
+        );
+
+        // Then
+        assertSame(businessException, thrown);
+    }
+
+    /**
      * Given 合法账户查询请求和固定应用结果，When 直接调用 Controller，Then 转换命令并包装响应。
      */
     @Test
@@ -111,7 +166,7 @@ class ActivityRaffleControllerTest {
         when(applicationService.queryActivityAccount(expectedCommand))
                 .thenReturn(new ActivityAccountResult(10, 8, 3, 2, 7, 6));
         ActivityRaffleController controller =
-                new ActivityRaffleController(applicationService, ASSEMBLER);
+                new ActivityRaffleController(applicationService, ASSEMBLER, passThroughProtection());
 
         // When
         Response<ActivityAccountResponse> result =
@@ -160,7 +215,10 @@ class ActivityRaffleControllerTest {
                 mock(IActivityRaffleApplicationService.class);
         when(applicationService.queryActivityAccount(org.mockito.ArgumentMatchers.any()))
                 .thenReturn(new ActivityAccountResult(10, 8, 3, 2, 7, 6));
-        MockMvc mockMvc = standaloneSetup(new ActivityRaffleController(applicationService, ASSEMBLER))
+        MockMvc mockMvc = standaloneSetup(new ActivityRaffleController(
+                applicationService,
+                ASSEMBLER,
+                passThroughProtection()))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
         String requestBody = """
@@ -194,7 +252,8 @@ class ActivityRaffleControllerTest {
         // Given
         MockMvc mockMvc = standaloneSetup(new ActivityRaffleController(
                 mock(IActivityRaffleApplicationService.class),
-                ASSEMBLER))
+                ASSEMBLER,
+                passThroughProtection()))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
         String requestBody = """
@@ -226,7 +285,12 @@ class ActivityRaffleControllerTest {
             RateLimiterSwitch rateLimiterSwitch,
             RateLimiterStore rateLimiterStore
     ) {
-        ActivityRaffleController target = new ActivityRaffleController(applicationService, ASSEMBLER);
+        ActivityCircuitBreaker protection = passThroughProtection();
+        ActivityRaffleController target = new ActivityRaffleController(
+                applicationService,
+                ASSEMBLER,
+                protection
+        );
         DccRateLimiterAspect aspect = new DccRateLimiterAspect(
                 rateLimiterSwitch,
                 rateLimiterStore,
@@ -236,6 +300,44 @@ class ActivityRaffleControllerTest {
         AspectJProxyFactory proxyFactory = new AspectJProxyFactory(target);
         proxyFactory.addAspect(aspect);
         return proxyFactory.getProxy();
+    }
+
+    /**
+     * 创建执行正常调用函数的保护器测试桩。
+     *
+     * @return 正常放行的保护器
+     */
+    private ActivityCircuitBreaker passThroughProtection() {
+        ActivityCircuitBreaker protection = mock(ActivityCircuitBreaker.class);
+        when(protection.execute(any(), any())).thenAnswer(invocation -> {
+            Supplier<?> action = invocation.getArgument(1);
+            return action.get();
+        });
+        return protection;
+    }
+
+    /**
+     * 创建直接返回活动降级响应的保护器测试桩。
+     *
+     * @return 返回活动降级结果的保护器
+     */
+    private ActivityCircuitBreaker degradedProtection() {
+        ActivityCircuitBreaker protection = mock(ActivityCircuitBreaker.class);
+        when(protection.execute(any(), any()))
+                .thenReturn(Response.fail(BusinessResponseCode.ACTIVITY_DEGRADED));
+        return protection;
+    }
+
+    /**
+     * 创建原样抛出业务异常的保护器测试桩。
+     *
+     * @param businessException 预期抛出的业务异常
+     * @return 抛出业务异常的保护器
+     */
+    private ActivityCircuitBreaker businessFailureProtection(BusinessException businessException) {
+        ActivityCircuitBreaker protection = mock(ActivityCircuitBreaker.class);
+        when(protection.execute(any(), any())).thenThrow(businessException);
+        return protection;
     }
 
     /**

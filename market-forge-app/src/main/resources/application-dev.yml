@@ -145,7 +145,38 @@ dcc:
       max-bucket-keys: 100000
       max-reject-counter-keys: 100000
       max-blacklist-keys: 100000
+resilience4j:
+  circuitbreaker:
+    instances:
+      activity-draw:
+        # 使用最近 10 次调用作为失败率统计窗口。
+        sliding-window-type: count-based
+        sliding-window-size: 10
+        # 至少采集 5 次调用后才计算失败率，避免一次偶发异常立即熔断。
+        minimum-number-of-calls: 5
+        # 失败率达到 50% 时由 CLOSED 转为 OPEN。
+        failure-rate-threshold: 50
+        # 慢调用占比达到 50% 时也允许触发熔断。
+        slow-call-rate-threshold: 50
+        # 单次调用超过 2 秒即记为慢调用。
+        slow-call-duration-threshold: 2s
+        # OPEN 状态持续 10 秒，然后进入 HALF_OPEN 探测阶段。
+        wait-duration-in-open-state: 10s
+        # HALF_OPEN 状态允许 3 次探测调用。
+        permitted-number-of-calls-in-half-open-state: 3
+        # 无需等待新请求触发，自动从 OPEN 转换为 HALF_OPEN。
+        automatic-transition-from-open-to-half-open-enabled: true
+        # 参数错误、额度不足等业务异常不代表系统故障，不参与熔断统计。
+        ignore-exceptions:
+          - com.lavyoung.marketforge.types.exception.BusinessException
 
+  timelimiter:
+    instances:
+      activity-draw:
+        # 单次抽奖调用最长允许执行 5 秒。
+        timeout-duration: 5s
+        # 超时后尝试取消执行中的 Future。
+        cancel-running-future: true
 
 springdoc:
   api-docs:
@@ -160,7 +191,29 @@ springdoc:
   packages-to-scan:
     - com.lavyoung.marketforge.trigger.controller
 
+# 监控端点
 management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info
+          - metrics
+          - circuitbreakers
+          - circuitbreakerevents
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      # 仅开发环境展示详细组件状态，生产环境继续保持 never。
+      show-details: always
+    circuitbreakers:
+      enabled: true
+    circuitbreakerevents:
+      enabled: true
+    metrics:
+      enabled: true
   tracing:
     enabled: true
     sampling:

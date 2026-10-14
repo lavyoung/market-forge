@@ -16,8 +16,10 @@ module market.forge.trigger {
     requires org.slf4j;
     requires static lombok;
     requires dynamic.config.center.rate.limiter;
+    requires spring.cloud.commons;
 
     opens com.lavyoung.marketforge.trigger.assembler;
+    opens com.lavyoung.marketforge.trigger.circuitbreaker;
     opens com.lavyoung.marketforge.trigger.controller;
     opens com.lavyoung.marketforge.trigger.exception;
     opens com.lavyoung.marketforge.trigger.job;
