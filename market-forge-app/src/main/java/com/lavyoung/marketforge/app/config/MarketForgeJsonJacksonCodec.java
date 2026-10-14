@@ -77,9 +77,10 @@ public final class MarketForgeJsonJacksonCodec extends JsonJacksonCodec {
                 BasicPolymorphicTypeValidator.builder()
                         .allowIfSubType("com.lavyoung.marketforge.")
                         .allowIfSubType("java.lang.")
+                        .allowIfSubType("java.math.")
                         .allowIfSubType("java.time.")
                         .allowIfSubType("java.util.")
-                        .allowIfSubTypeIsArray()
+                        .allowIfSubType("[")
                         .build();
 
         ObjectMapper.DefaultTypeResolverBuilder typeResolverBuilder =

@@ -6,6 +6,7 @@ import com.lavyoung.marketforge.domain.message.model.valobj.TaskStateVO;
 import com.lavyoung.marketforge.domain.message.repository.ITaskRepository;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.TaskAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.mq.ITaskDao;
+import com.lavyoung.marketforge.infrastructure.persistent.model.TaskPublishingClaim;
 import com.lavyoung.marketforge.infrastructure.persistent.po.TaskPO;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
@@ -88,26 +89,23 @@ public class TaskRepository implements ITaskRepository {
                 .limit(limit)
                 .toList();
     }
-
     @Override
-    public boolean markPublishing(String userId, String eventId, LocalDateTime now,
+    public boolean markPublishing(String userId,
+                                  String eventId,
+                                  LocalDateTime now,
                                   LocalDateTime publishingExpiredBefore) {
-        UpdateWrapper<TaskPO> updateWrapper = new UpdateWrapper<TaskPO>()
-                .eq("user_id", userId)
-                .eq("event_id", eventId)
-                .and(wrapper -> wrapper
-                        .eq("state", TaskStateVO.CREATE.getCode())
-                        .or(failed -> failed
-                                .eq("state", TaskStateVO.PUBLISH_FAILED.getCode())
-                                .and(retry -> retry.isNull("next_retry_time").or().le("next_retry_time", now)))
-                        .or(stale -> stale
-                                .eq("state", TaskStateVO.PUBLISHING.getCode())
-                                .le("update_time", publishingExpiredBefore)))
-                .set("state", TaskStateVO.PUBLISHING.getCode())
-                .set("next_retry_time", null)
-                .set("last_error", null)
-                .set("update_time", now);
-        return taskDao.update(null, updateWrapper) == 1;
+        TaskPublishingClaim claim = new TaskPublishingClaim(
+                userId,
+                eventId,
+                TaskStateVO.PUBLISHING.getCode(),
+                TaskStateVO.CREATE.getCode(),
+                TaskStateVO.PUBLISH_FAILED.getCode(),
+                TaskStateVO.PUBLISHING.getCode(),
+                now,
+                publishingExpiredBefore
+        );
+
+        return taskDao.markPublishing(claim) == 1;
     }
 
     @Override

@@ -8,6 +8,7 @@ import org.redisson.client.handler.State;
 import org.redisson.codec.JsonJacksonCodec;
 
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 
@@ -115,6 +116,7 @@ class RedisConfigTest {
                 99_999,
                 100_301L,
                 900_901_001L,
+                new BigDecimal("0.0100"),
                 "open"
         );
     }
@@ -131,6 +133,7 @@ class RedisConfigTest {
      * @param stockCountSurplus 活动剩余库存
      * @param activityCountId   活动次数配置标识
      * @param strategyId        抽奖策略标识
+     * @param awardRate         奖品概率，用于验证 java.math 类型白名单
      * @param state             活动状态
      */
     private record ActivityCacheSample(
@@ -143,6 +146,7 @@ class RedisConfigTest {
             Integer stockCountSurplus,
             Long activityCountId,
             Long strategyId,
+            BigDecimal awardRate,
             String state
     ) {
     }

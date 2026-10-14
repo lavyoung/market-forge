@@ -1,6 +1,7 @@
 package com.lavyoung.marketforge.infrastructure.persistent.dao.mq;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.lavyoung.marketforge.infrastructure.persistent.model.TaskPublishingClaim;
 import com.lavyoung.marketforge.infrastructure.persistent.po.TaskPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -24,4 +25,15 @@ public interface ITaskDao extends BaseMapper<TaskPO> {
      * @return 匹配的消息任务；不存在时返回 {@link Optional#empty()}
      */
     Optional<TaskPO> queryByEventId(@Param("userId") String userId, @Param("eventId") String eventId);
+
+    /**
+     * 按任务当前状态和投递租约原子抢占投递权。
+     *
+     * <p>该更新使用数据库条件更新保证并发安全。当多个线程同时抢占同一任务时，
+     * 只有一个线程能够更新成功并获得投递权。</p>
+     *
+     * @param claim 投递权抢占参数
+     * @return 更新成功的记录数；{@code 1} 表示抢占成功，{@code 0} 表示任务不可抢占
+     */
+    int markPublishing(@Param("claim") TaskPublishingClaim claim);
 }

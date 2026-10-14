@@ -325,6 +325,40 @@ class RedissonServiceTest {
     }
 
     /**
+     * Given JSON 反序列化将较小整数恢复为 {@link Integer}，When 业务按 {@link Long} 读取 Hash 值，
+     * Then Redis 适配层应完成等值数字转换，避免将序列化实现细节泄漏到领域仓储。
+     */
+    @Test
+    void shouldConvertIntegerHashValueToLong() {
+        // Given
+        when(redissonClient.getMap(HASH_KEY)).thenReturn(hash);
+        when(hash.get(1)).thenReturn(9_009_010);
+
+        // When
+        Optional<Long> value = redisService.getHashValue(HASH_KEY, 1, Long.class);
+
+        // Then
+        assertEquals(Optional.of(9_009_010L), value);
+    }
+
+    /**
+     * Given Hash 中包含无法转换为目标类型的值，When 业务请求不兼容类型，
+     * Then 明确抛出类型异常，防止错误缓存数据被静默篡改。
+     */
+    @Test
+    void shouldRejectIncompatibleHashValueType() {
+        // Given
+        when(redissonClient.getMap(HASH_KEY)).thenReturn(hash);
+        when(hash.get("field-1")).thenReturn("not-a-number");
+
+        // When & Then
+        assertThrows(
+                ClassCastException.class,
+                () -> redisService.getHashValue(HASH_KEY, "field-1", Long.class)
+        );
+    }
+
+    /**
      * Given List 元素，When 执行首尾写入和区间读取，Then 保持元素顺序。
      */
     @Test

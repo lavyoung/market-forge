@@ -35,4 +35,28 @@
         LIMIT 1
     </select>
 
+    <update id="markPublishing">
+        UPDATE task
+        SET state = #{claim.publishingState},
+        next_retry_time = NULL,
+        last_error = NULL,
+        update_time = #{claim.now}
+        WHERE user_id = #{claim.userId}
+        AND event_id = #{claim.eventId}
+        AND (
+        state = #{claim.createState}
+        OR (
+        state = #{claim.publishFailedState}
+        AND (
+        next_retry_time IS NULL
+        OR next_retry_time <![CDATA[<=]]> #{claim.now}
+        )
+        )
+        OR (
+        state = #{claim.publishingExpiredState}
+        AND update_time <![CDATA[<=]]> #{claim.publishingExpiredBefore}
+        )
+        )
+    </update>
+
 </mapper>

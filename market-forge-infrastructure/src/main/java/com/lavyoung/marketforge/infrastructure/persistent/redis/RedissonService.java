@@ -3,6 +3,8 @@ package com.lavyoung.marketforge.infrastructure.persistent.redis;
 import org.redisson.api.*;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -369,12 +371,15 @@ public class RedissonService implements IRedisService {
             Class<HV> valueType) {
         Objects.requireNonNull(hashKeyType, "hashKeyType must not be null");
         Objects.requireNonNull(valueType, "valueType must not be null");
+
         Map<Object, Object> entries = this.<Object, Object>getHash(key).readAllMap();
         Map<HK, HV> result = new LinkedHashMap<>(entries.size());
+
         entries.forEach((hashKey, value) -> result.put(
-                hashKeyType.cast(hashKey),
-                valueType.cast(value)
+                castValue(hashKey, hashKeyType),
+                castValue(value, valueType)
         ));
+
         return Map.copyOf(result);
     }
 
@@ -732,16 +737,27 @@ public class RedissonService implements IRedisService {
     }
 
     /**
-     * 将可能为空的队列元素安全转换为目标类型。
+     * 将可能为空的缓存值转换为目标类型。
      *
-     * @param value     队列元素
-     * @param valueType 目标类型
-     * @param <T>       元素类型
-     * @return 转换后的元素；值为空时返回空
+     * <p>Redis JSON 中没有显式类型信息的数字可能被恢复为不同的
+     * {@link Number} 子类型。例如较小的 {@code Long} 值可能被恢复为
+     * {@link Integer}。因此，数字值需要执行精确转换，普通对象仍执行严格类型检查。</p>
+     *
+     * @param value     缓存中的原始值
+     * @param valueType 业务期望的目标类型
+     * @param <T>       目标类型
+     * @return 转换后的值；原始值为空时返回空
+     * @throws NullPointerException 目标类型为空时抛出
+     * @throws ClassCastException   原始值无法安全转换为目标类型时抛出
      */
     private <T> Optional<T> castNullable(Object value, Class<T> valueType) {
         Objects.requireNonNull(valueType, "valueType must not be null");
-        return Optional.ofNullable(value).map(valueType::cast);
+
+        if (value == null) {
+            return Optional.empty();
+        }
+
+        return Optional.of(castValue(value, valueType));
     }
 
     /**
@@ -852,5 +868,91 @@ public class RedissonService implements IRedisService {
             throw new IllegalArgumentException("ttl must be greater than zero");
         }
         return ttl;
+    }
+
+    /**
+     * 将非空缓存值转换为目标类型。
+     *
+     * <p>目标类型已经匹配时直接返回；原始值与目标类型均为数字类型时，
+     * 使用精确数字转换；其他不兼容类型直接抛出异常。</p>
+     *
+     * @param value     非空缓存值
+     * @param valueType 业务期望的目标类型
+     * @param <T>       目标类型
+     * @return 转换后的目标类型值
+     * @throws NullPointerException 缓存值或目标类型为空时抛出
+     * @throws ClassCastException   缓存值无法安全转换为目标类型时抛出
+     */
+    private <T> T castValue(Object value, Class<T> valueType) {
+        Objects.requireNonNull(value, "value must not be null");
+        Objects.requireNonNull(valueType, "valueType must not be null");
+
+        if (valueType.isInstance(value)) {
+            return valueType.cast(value);
+        }
+
+        if (value instanceof Number number && Number.class.isAssignableFrom(valueType)) {
+            return convertNumber(number, valueType);
+        }
+
+        throw new ClassCastException(
+                "cached value type %s cannot be converted to %s".formatted(value.getClass().getName(), valueType.getName())
+        );
+    }
+
+    /**
+     * 将缓存数字精确转换为指定数字类型。
+     *
+     * <p>整数类型使用 {@code xxxValueExact()}，当数值包含小数或超过目标类型
+     * 范围时立即失败，避免库存、奖品标识等业务数据被静默截断。</p>
+     *
+     * @param number     Redis 返回的数字
+     * @param targetType 业务期望的数字类型
+     * @param <T>        目标数字类型
+     * @return 转换后的数字
+     * @throws ClassCastException 数值越界、包含不允许的小数或目标类型不受支持时抛出
+     */
+    private <T> T convertNumber(Number number, Class<T> targetType) {
+        try {
+            BigDecimal decimal = number instanceof BigDecimal bigDecimal
+                    ? bigDecimal
+                    : number instanceof BigInteger bigInteger
+                    ? new BigDecimal(bigInteger)
+                    : new BigDecimal(number.toString());
+
+            Object converted = getConverted(targetType, decimal);
+
+            return targetType.cast(converted);
+        } catch (ArithmeticException | NumberFormatException exception) {
+            ClassCastException typeException = new ClassCastException("numeric value %s cannot be converted exactly to %s"
+                    .formatted(number, targetType.getName()));
+
+            typeException.initCause(exception);
+            throw typeException;
+        }
+    }
+
+    private static <T> Object getConverted(Class<T> targetType, BigDecimal decimal) {
+        Object converted;
+        if (targetType == Byte.class) {
+            converted = decimal.byteValueExact();
+        } else if (targetType == Short.class) {
+            converted = decimal.shortValueExact();
+        } else if (targetType == Integer.class) {
+            converted = decimal.intValueExact();
+        } else if (targetType == Long.class) {
+            converted = decimal.longValueExact();
+        } else if (targetType == Float.class) {
+            converted = decimal.floatValue();
+        } else if (targetType == Double.class) {
+            converted = decimal.doubleValue();
+        } else if (targetType == BigInteger.class) {
+            converted = decimal.toBigIntegerExact();
+        } else if (targetType == BigDecimal.class) {
+            converted = decimal;
+        } else {
+            throw new ClassCastException("unsupported numeric target type: " + targetType.getName());
+        }
+        return converted;
     }
 }
