@@ -51,5 +51,6 @@ module market.forge.application {
     opens com.lavyoung.marketforge.application.credit.service;
     opens com.lavyoung.marketforge.application.credit.service.impl;
     opens com.lavyoung.marketforge.application.credit.messaging;
+    opens com.lavyoung.marketforge.application.tx.impl;
 
 }

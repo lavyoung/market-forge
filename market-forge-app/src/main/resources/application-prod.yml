@@ -152,3 +152,14 @@ dcc:
   root-path: ${MARKET_FORGE_ZK_ROOT_PATH:/market-forge-dcc/config}
   session-timeout-ms: ${MARKET_FORGE_ZK_SESSION_TIMEOUT_MS:18000}
   connection-timeout-ms: ${MARKET_FORGE_ZK_CONNECTION_TIMEOUT_MS:30000}
+
+market-forge:
+  elasticsearch:
+    # 生产环境不提供默认节点和凭据，缺失时应阻止应用启动。
+    uris:
+      - ${ELASTICSEARCH_URI}
+    username: ${ELASTICSEARCH_USERNAME}
+    password: ${ELASTICSEARCH_PASSWORD}
+    connect-timeout: ${ELASTICSEARCH_CONNECT_TIMEOUT:3s}
+    socket-timeout: ${ELASTICSEARCH_SOCKET_TIMEOUT:10s}
+    connection-request-timeout: ${ELASTICSEARCH_CONNECTION_REQUEST_TIMEOUT:3s}

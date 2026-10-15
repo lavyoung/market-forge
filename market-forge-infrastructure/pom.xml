@@ -102,6 +102,11 @@
             <artifactId>hutool-all</artifactId>
         </dependency>
 
+        <!-- Elasticsearch 官方类型安全 Java 客户端 -->
+        <dependency>
+            <groupId>co.elastic.clients</groupId>
+            <artifactId>elasticsearch-java</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

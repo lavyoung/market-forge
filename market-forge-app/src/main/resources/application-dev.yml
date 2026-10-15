@@ -178,6 +178,35 @@ resilience4j:
         # 超时后尝试取消执行中的 Future。
         cancel-running-future: true
 
+market-forge:
+  thread-pool:
+    enabled: true
+    pools:
+      message-task:
+        core-pool-size: 4
+        maximum-pool-size: 8
+        queue-capacity: 1000
+        keep-alive-seconds: 60
+        await-termination-seconds: 30
+        rejected-policy: caller-runs
+      award-grant:
+        core-pool-size: 4
+        maximum-pool-size: 16
+        queue-capacity: 2000
+        keep-alive-seconds: 60
+        await-termination-seconds: 30
+        rejected-policy: abort
+  elasticsearch:
+    # 开发环境直接连接开发服务器，Elasticsearch 必须保持身份认证开启。
+    uris:
+      - ${ELASTICSEARCH_URI:http://192.168.3.127:9200}
+    username: ${ELASTICSEARCH_USERNAME:elastic}
+    # 密码必须通过 IDE 环境变量或启动命令注入，不在配置文件中保存。
+    password: ${ELASTICSEARCH_PASSWORD:8d51VgoG3FFSxXyGcRaqjRgv}
+    connect-timeout: 3s
+    socket-timeout: 10s
+    connection-request-timeout: 3s
+
 springdoc:
   api-docs:
     enabled: true
@@ -231,23 +260,3 @@ dynamic:
   thread-pool:
     config-sync-enabled: true
     application-name: ${spring.application.name}
-
-
-market-forge:
-  thread-pool:
-    enabled: true
-    pools:
-      message-task:
-        core-pool-size: 4
-        maximum-pool-size: 8
-        queue-capacity: 1000
-        keep-alive-seconds: 60
-        await-termination-seconds: 30
-        rejected-policy: caller-runs
-      award-grant:
-        core-pool-size: 4
-        maximum-pool-size: 16
-        queue-capacity: 2000
-        keep-alive-seconds: 60
-        await-termination-seconds: 30
-        rejected-policy: abort

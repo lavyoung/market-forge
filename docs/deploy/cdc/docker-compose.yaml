@@ -1,0 +1,117 @@
+name: cdc-platform
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.6.2
+    container_name: cdc-elasticsearch
+    restart: unless-stopped
+    environment:
+      node.name: elasticsearch-01
+      cluster.name: development-search
+      discovery.type: single-node
+      bootstrap.memory_lock: "true"
+      xpack.security.enabled: "true"
+      xpack.security.http.ssl.enabled: "false"
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:?ELASTIC_PASSWORD is required}
+      ES_JAVA_OPTS: -Xms768m -Xmx768m
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    mem_limit: 1536m
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl --fail --silent --user elastic:$${ELASTIC_PASSWORD} http://localhost:9200/_cluster/health >/dev/null"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    networks:
+      - cdc
+
+  elasticsearch-setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.6.2
+    container_name: cdc-elasticsearch-setup
+    restart: "no"
+    environment:
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:?ELASTIC_PASSWORD is required}
+      KIBANA_SYSTEM_PASSWORD: ${KIBANA_SYSTEM_PASSWORD:?KIBANA_SYSTEM_PASSWORD is required}
+    command:
+      - bash
+      - -c
+      - |
+        echo "Waiting for Elasticsearch..."
+        until curl --silent http://elasticsearch:9200 \
+          | grep --quiet "missing authentication credentials"; do
+          sleep 5
+        done
+
+        echo "Configuring kibana_system password..."
+        until curl --silent \
+          --user "elastic:$${ELASTIC_PASSWORD}" \
+          --header "Content-Type: application/json" \
+          --request POST \
+          http://elasticsearch:9200/_security/user/kibana_system/_password \
+          --data "{\"password\":\"$${KIBANA_SYSTEM_PASSWORD}\"}" \
+          | grep --quiet "^{}"; do
+          sleep 5
+        done
+
+        echo "Elasticsearch security setup completed."
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    mem_limit: 256m
+    networks:
+      - cdc
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.6.2
+    container_name: cdc-kibana
+    restart: unless-stopped
+    environment:
+      SERVER_NAME: cdc-kibana
+      SERVER_HOST: 0.0.0.0
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      ELASTICSEARCH_USERNAME: kibana_system
+      ELASTICSEARCH_PASSWORD: ${KIBANA_SYSTEM_PASSWORD:?KIBANA_SYSTEM_PASSWORD is required}
+      NODE_OPTIONS: --max-old-space-size=512
+      TELEMETRY_ENABLED: "false"
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      elasticsearch-setup:
+        condition: service_completed_successfully
+    mem_limit: 768m
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl --fail --silent http://localhost:5601/api/status >/dev/null"
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+      start_period: 90s
+    networks:
+      - cdc
+
+volumes:
+  elasticsearch-data:
+    name: cdc-elasticsearch-data
+
+networks:
+  cdc:
+    name: cdc-platform

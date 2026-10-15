@@ -31,11 +31,17 @@ module market.forge.infrastructure {
     requires jakarta.annotation;
     requires cn.hutool;
     requires lavshard.spring.boot.starter;
+    requires elasticsearch.java;
+    requires elasticsearch.rest.client;
+    requires org.apache.httpcomponents.httpcore;
+    requires org.apache.httpcomponents.httpclient;
+    requires org.apache.httpcomponents.httpasyncclient;
 
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler;
     opens com.lavyoung.marketforge.infrastructure.persistent.dao;
     opens com.lavyoung.marketforge.infrastructure.persistent.dao.activity;
     opens com.lavyoung.marketforge.infrastructure.persistent.dao.mq;
+    opens com.lavyoung.marketforge.infrastructure.persistent.model to org.mybatis;
     opens com.lavyoung.marketforge.infrastructure.persistent.handler;
     opens com.lavyoung.marketforge.infrastructure.persistent.po;
     opens com.lavyoung.marketforge.infrastructure.persistent.po.activity;
@@ -45,10 +51,12 @@ module market.forge.infrastructure {
     opens com.lavyoung.marketforge.infrastructure.messaging;
     opens com.lavyoung.marketforge.infrastructure.messaging.rabbitmq;
     opens com.lavyoung.marketforge.infrastructure.concurrent;
+    opens com.lavyoung.marketforge.infrastructure.persistent.elasticsearch.config;
     opens com.lavyoung.marketforge.infrastructure.persistent.po.behavior;
     opens com.lavyoung.marketforge.infrastructure.persistent.dao.behavior;
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler.behavior;
     opens com.lavyoung.marketforge.infrastructure.persistent.po.credit;
     opens com.lavyoung.marketforge.infrastructure.persistent.dao.credit;
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler.credit;
+
 }
