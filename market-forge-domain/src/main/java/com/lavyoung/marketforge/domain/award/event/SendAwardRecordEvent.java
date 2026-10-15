@@ -1,6 +1,6 @@
 package com.lavyoung.marketforge.domain.award.event;
 
-import com.lavyoung.marketforge.types.messaging.IntegrationEvent;
+import com.lavyoung.marketforge.types.messaging.BusinessIdempotentIntegrationEvent;
 import com.lavyoung.marketforge.types.messaging.MqConstants;
 import lombok.Builder;
 
@@ -35,7 +35,7 @@ public record SendAwardRecordEvent(
         String awardKey,
         String awardConfig,
         String awardTitle
-) implements IntegrationEvent {
+) implements BusinessIdempotentIntegrationEvent {
 
     /**
      * 基于中奖记录关键信息创建用户中奖记录事件。
