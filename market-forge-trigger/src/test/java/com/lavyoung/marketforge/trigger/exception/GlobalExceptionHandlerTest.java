@@ -6,8 +6,10 @@ import com.lavyoung.marketforge.types.model.CommonResponseCode;
 import com.lavyoung.marketforge.types.model.Response;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -64,6 +66,29 @@ class GlobalExceptionHandlerTest {
                 () -> assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, result.getStatusCode()),
                 () -> assertEquals(CommonResponseCode.SYSTEM_ERROR.getCode(), result.getBody().code()),
                 () -> assertEquals("System error", result.getBody().message())
+        );
+    }
+
+    /**
+     * Given 请求路径没有匹配到控制器或静态资源，When 转换为 HTTP 响应，
+     * Then 返回 404 和统一资源不存在错误码，而不是将客户端错误误报为系统异常。
+     */
+    @Test
+    void shouldMapMissingResourceToNotFound() {
+        // Given
+        NoResourceFoundException exception = new NoResourceFoundException(
+                HttpMethod.GET,
+                "/award/records"
+        );
+
+        // When
+        ResponseEntity<Response<Void>> result = handler.handleNoResourceFoundException(exception);
+
+        // Then
+        assertAll(
+                () -> assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode()),
+                () -> assertEquals(CommonResponseCode.RESOURCE_NOT_FOUND.getCode(), result.getBody().code()),
+                () -> assertEquals(CommonResponseCode.RESOURCE_NOT_FOUND.getMsg(), result.getBody().message())
         );
     }
 }
