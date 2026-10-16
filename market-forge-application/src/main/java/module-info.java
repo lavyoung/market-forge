@@ -11,6 +11,7 @@ module market.forge.application {
     requires spring.tx;
     requires static lombok;
     requires org.apache.commons.lang3;
+    requires spring.core;
 
     exports com.lavyoung.marketforge.application.strategy.model;
     exports com.lavyoung.marketforge.application.strategy.service;
@@ -22,6 +23,7 @@ module market.forge.application {
     exports com.lavyoung.marketforge.application.activity.messaging;
     exports com.lavyoung.marketforge.application.message;
     exports com.lavyoung.marketforge.application.award.model;
+    exports com.lavyoung.marketforge.application.award.query;
     exports com.lavyoung.marketforge.application.award.service;
     exports com.lavyoung.marketforge.application.award.service.impl;
     exports com.lavyoung.marketforge.application.award.messaging;

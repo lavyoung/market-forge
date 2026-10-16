@@ -29,6 +29,12 @@
             <artifactId>market-forge-domain</artifactId>
         </dependency>
 
+        <!-- Application 查询端口，由 Infrastructure 提供外部搜索适配实现。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>market-forge-application</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>market-forge-types</artifactId>

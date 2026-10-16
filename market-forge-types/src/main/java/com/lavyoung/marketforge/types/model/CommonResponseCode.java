@@ -32,9 +32,15 @@ public enum CommonResponseCode implements IResponseCode {
     REQUEST_BODY_INVALID(1_003, "common.request.body.invalid", "请求体格式无效"),
 
     /**
+     * 请求路径没有匹配到控制器或静态资源。
+     */
+    RESOURCE_NOT_FOUND(1_004, "common.resource.not-found", "请求的资源不存在"),
+
+    /**
      * 未被业务规则识别的系统异常。
      */
     SYSTEM_ERROR(900_000_001, "system.error", "系统异常，请稍后重试");
+
 
     private final int code;
     private final String i18nKey;

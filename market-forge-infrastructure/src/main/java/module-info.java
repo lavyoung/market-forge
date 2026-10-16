@@ -36,6 +36,7 @@ module market.forge.infrastructure {
     requires org.apache.httpcomponents.httpcore;
     requires org.apache.httpcomponents.httpclient;
     requires org.apache.httpcomponents.httpasyncclient;
+    requires market.forge.application;
 
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler;
     opens com.lavyoung.marketforge.infrastructure.persistent.dao;
@@ -58,5 +59,8 @@ module market.forge.infrastructure {
     opens com.lavyoung.marketforge.infrastructure.persistent.po.credit;
     opens com.lavyoung.marketforge.infrastructure.persistent.dao.credit;
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler.credit;
+    opens com.lavyoung.marketforge.infrastructure.persistent.elasticsearch.document to com.fasterxml.jackson.databind;
+    opens com.lavyoung.marketforge.infrastructure.persistent.elasticsearch.assembler;
+    opens com.lavyoung.marketforge.infrastructure.persistent.elasticsearch.query;
 
 }

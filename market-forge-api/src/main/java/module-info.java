@@ -12,6 +12,7 @@ module market.forge.api {
     requires transitive market.forge.types;
     requires transitive spring.web;
     requires io.swagger.v3.oas.annotations;
+    requires spring.context;
 
     exports com.lavyoung.marketforge.api.strategy.request;
     exports com.lavyoung.marketforge.api.strategy.response;
@@ -34,4 +35,10 @@ module market.forge.api {
     exports com.lavyoung.marketforge.api.credit.request;
     exports com.lavyoung.marketforge.api.credit.response;
     exports com.lavyoung.marketforge.api.credit;
+    exports com.lavyoung.marketforge.api.award;
+    exports com.lavyoung.marketforge.api.award.request;
+    exports com.lavyoung.marketforge.api.award.response;
+
+    opens com.lavyoung.marketforge.api.award.request;
+    opens com.lavyoung.marketforge.api.award.response;
 }

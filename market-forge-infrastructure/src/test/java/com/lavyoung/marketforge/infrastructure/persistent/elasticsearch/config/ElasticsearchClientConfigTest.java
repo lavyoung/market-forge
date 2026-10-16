@@ -2,6 +2,7 @@ package com.lavyoung.marketforge.infrastructure.persistent.elasticsearch.config;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.transport.ElasticsearchTransport;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elasticsearch.client.RestClient;
 import org.junit.jupiter.api.DisplayName;
@@ -41,6 +42,8 @@ class ElasticsearchClientConfigTest {
             assertNotNull(context.getBean(ElasticsearchProperties.class));
             assertNotNull(context.getBean(ElasticsearchTransport.class));
             assertNotNull(context.getBean(ElasticsearchClient.class));
+            assertTrue(context.getBean(ObjectMapper.class)
+                    .isEnabled(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE));
 
             RestClient restClient = context.getBean(RestClient.class);
             assertEquals(2, restClient.getNodes().size());

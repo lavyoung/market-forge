@@ -4,6 +4,7 @@ import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.ElasticsearchTransport;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
@@ -73,7 +74,8 @@ public class ElasticsearchClientConfig {
      */
     @Bean
     public ElasticsearchTransport elasticsearchTransport(RestClient restClient, ObjectMapper objectMapper) {
-        return new RestClientTransport(restClient, new JacksonJsonpMapper(objectMapper));
+        ObjectMapper mapper = objectMapper.copy().disable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE);
+        return new RestClientTransport(restClient, new JacksonJsonpMapper(mapper));
     }
 
     /**

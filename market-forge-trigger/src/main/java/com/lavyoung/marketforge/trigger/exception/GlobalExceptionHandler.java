@@ -13,6 +13,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * 将应用异常转换为统一 HTTP 响应。
@@ -113,6 +114,27 @@ public class GlobalExceptionHandler {
         log.error("未处理的系统异常", exception);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Response.fail(
                 CommonResponseCode.SYSTEM_ERROR, "System error"));
+    }
+
+    /**
+     * 处理请求路径未匹配到控制器或静态资源的情况。
+     *
+     * <p>Spring MVC 在启用静态资源处理后，会将没有匹配到控制器的请求继续交给
+     * 静态资源处理器。静态资源同样不存在时，将抛出
+     * {@link NoResourceFoundException}。该异常属于客户端请求错误，不应返回
+     * HTTP 500。</p>
+     *
+     * @param exception 资源不存在异常
+     * @return HTTP 404 和统一资源不存在响应
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Response<Void>> handleNoResourceFoundException(
+            NoResourceFoundException exception) {
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Response.fail(
+                CommonResponseCode.RESOURCE_NOT_FOUND,
+                CommonResponseCode.RESOURCE_NOT_FOUND.getMsg()
+        ));
     }
 
 }

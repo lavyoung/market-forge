@@ -17,6 +17,7 @@ module market.forge.trigger {
     requires static lombok;
     requires dynamic.config.center.rate.limiter;
     requires spring.cloud.commons;
+    requires spring.webmvc;
 
     opens com.lavyoung.marketforge.trigger.assembler;
     opens com.lavyoung.marketforge.trigger.circuitbreaker;
