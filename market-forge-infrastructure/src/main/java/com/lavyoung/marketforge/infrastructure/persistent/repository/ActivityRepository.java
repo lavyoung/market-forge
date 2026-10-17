@@ -480,6 +480,7 @@ public class ActivityRepository implements IActivityRepository {
         ActivityOrderEntity order = new ActivityOrderEntity(
                 activityOrderEntity.userId(),
                 activityOrderEntity.activityId(),
+                activityOrderEntity.awardUnlockScope(),
                 activityOrderEntity.sku(),
                 activityOrderEntity.activityName(),
                 activityOrderEntity.strategyId(),

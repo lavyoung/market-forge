@@ -80,8 +80,9 @@ public abstract class AbstractRaffleActivityPartakeService implements IRaffleAct
         // 查询未使用的活动订单
         ActivityOrderEntity activityOrder = activityRepository.queryNotUsedRaffleOrder(partakeRaffleActivity).orElse(null);
         if (activityOrder != null) {
-            log.info("创建抽奖参与订单【已存在未消费】 userId={} activityId={} activityOrder={}", userId, activityId, activityOrder);
-            return activityOrder;
+            ActivityOrderEntity contextualOrder = activityOrder.withActivityContext(activityEntity.awardUnlockScope(), activityEntity.endDateTime());
+            log.info("创建抽奖参与订单【已存在未消费】 userId={} activityId={} contextualOrder={}", userId, activityId, contextualOrder);
+            return contextualOrder;
         }
         // 不存在则需要创建并返回
         // 1. 查询账户额度过滤 返回账户构建对象

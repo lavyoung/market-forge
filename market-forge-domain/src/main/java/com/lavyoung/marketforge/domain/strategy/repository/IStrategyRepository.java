@@ -186,4 +186,18 @@ public interface IStrategyRepository {
      * @return 匹配的奖品基础配置；不存在时返回空
      */
     Optional<AwardEntity> queryAwardEntity(Long awardId);
+
+    /**
+     * 批量查询指定策略下各奖品的次数锁门槛。
+     *
+     * <p>次数锁属于奖品级策略规则，规则值来自 {@code strategy_rule}，
+     * 通过策略标识、奖品标识和 {@link RuleModel#LOCK} 唯一确定。</p>
+     *
+     * @param strategyId 策略标识
+     * @param awardIds   配置了次数锁的奖品标识
+     * @return 奖品标识到非负解锁门槛的不可变映射
+     * @throws NullPointerException                                       策略标识或奖品集合为空时抛出
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 次数锁规则缺失、重复或格式非法时抛出
+     */
+    Map<Long, Integer> queryAwardRuleLockCounts(Long strategyId, List<Long> awardIds);
 }

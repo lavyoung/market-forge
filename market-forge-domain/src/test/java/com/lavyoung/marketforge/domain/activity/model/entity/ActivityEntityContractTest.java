@@ -23,7 +23,7 @@ class ActivityEntityContractTest {
     private static final Map<Class<?>, Set<String>> ENTITY_COMPONENTS = Map.of(
             ActivityEntity.class, Set.of(
                     "activityId", "activityName", "activityDesc", "beginDateTime", "endDateTime", "stockCount",
-                    "stockCountSurplus", "activityCountId", "strategyId", "state"
+                    "stockCountSurplus", "activityCountId", "strategyId", "state", "awardUnlockScope"
             ),
             ActivityCountEntity.class, Set.of(
                     "activityCountId", "totalCount", "dayCount", "monthCount"
@@ -43,7 +43,8 @@ class ActivityEntityContractTest {
             ),
             ActivityOrderEntity.class, Set.of(
                     "userId", "activityId", "sku", "activityName", "strategyId", "orderId", "orderTime",
-                    "totalCount", "dayCount", "monthCount", "state", "outBusinessNo", "endDateTime"
+                    "totalCount", "dayCount", "monthCount", "state", "outBusinessNo", "endDateTime",
+                    "awardUnlockScope"
             )
     );
 

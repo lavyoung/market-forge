@@ -1,12 +1,14 @@
 package com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory.engine;
 
+import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory.DefaultTreeFactory;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 
-import java.time.LocalDateTime;
-
 /**
- * 规则树执行引擎-规则树组合接口
+ * 规则树执行引擎契约。
+ *
+ * <p>负责从根节点开始执行规则树，并将完整抽奖上下文传递给每个节点，
+ * 直到规则树抵达没有后继连线的叶子节点。</p>
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -15,29 +17,12 @@ import java.time.LocalDateTime;
 public interface IDecisionTreeEngine {
 
     /**
-     * 从根节点开始执行规则树，直至没有可继续流转的节点。
+     * 执行本次抽奖对应的规则树。
      *
-     * @param userId     参与抽奖的用户标识
-     * @param strategyId 抽奖策略标识
-     * @param awardId    责任链随机命中的初始奖品标识
-     * @param endDateTime 活动结束时间，用于向库存规则节点透传 Redis 锁租约依据；为空时兼容旧调用
-     * @return 最后一个已执行节点产生的奖品决策结果
-     * @throws BusinessException    节点结果无法匹配任何后继连线时抛出
-     * @throws NullPointerException 规则树引用了未注册的节点实现时抛出
+     * @param raffleFactorEntity 包含用户、活动、策略、候选奖品和解锁范围的抽奖因子
+     * @return 规则树最终确定的奖品和命中规则信息
+     * @throws NullPointerException 抽奖因子为空时抛出
+     * @throws BusinessException    规则树配置不完整、节点未注册或节点流转失败时抛出
      */
-    DefaultTreeFactory.StrategyAwardVO process(String userId, Long strategyId, Long awardId, LocalDateTime endDateTime);
-
-    /**
-     * 从根节点开始执行规则树，直至没有可继续流转的节点。
-     * <p>
-     * 兼容不携带活动结束时间的旧调用；库存规则节点会使用默认短租约。
-     *
-     * @param userId     参与抽奖的用户标识
-     * @param strategyId 抽奖策略标识
-     * @param awardId    责任链随机命中的初始奖品标识
-     * @return 最后一个已执行节点产生的奖品决策结果
-     */
-    default DefaultTreeFactory.StrategyAwardVO process(String userId, Long strategyId, Long awardId) {
-        return process(userId, strategyId, awardId, null);
-    }
+    DefaultTreeFactory.StrategyAwardVO process(RaffleFactorEntity raffleFactorEntity);
 }

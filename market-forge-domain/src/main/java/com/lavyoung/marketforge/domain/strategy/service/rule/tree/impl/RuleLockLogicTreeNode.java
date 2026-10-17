@@ -1,5 +1,9 @@
 package com.lavyoung.marketforge.domain.strategy.service.rule.tree.impl;
 
+import com.lavyoung.marketforge.domain.award.model.vo.AwardUnlockCountQueryVO;
+import com.lavyoung.marketforge.domain.award.model.vo.AwardUnlockResultVO;
+import com.lavyoung.marketforge.domain.award.service.IAwardUnlockService;
+import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleLogicCheckTypeVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.rule.tree.ILogicTreeNode;
@@ -9,15 +13,16 @@ import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * 奖品次数锁规则树节点。
- * <p>
- * 从奖品规则配置中读取解锁所需次数；未达到门槛时接管流程，由后继节点提供兜底奖品。
+ *
+ * <p>活动抽奖按照活动配置的日次数或累计次数判断奖品是否解锁。
+ * 非活动抽奖没有活动上下文时，保留按策略累计抽奖次数判断的兼容行为。</p>
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -31,69 +36,77 @@ public class RuleLockLogicTreeNode implements ILogicTreeNode {
     /**
      * 抽奖策略仓储端口。
      */
-    private final IStrategyRepository repository;
+    private final IStrategyRepository strategyRepository;
+    private final IAwardUnlockService awardUnlockService;
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public DefaultTreeFactory.TreeActionEntity logic(String userId, Long strategyId, Long awardId, String ruleValue, LocalDateTime endDateTime) {
-        String lockRuleValue = repository.queryStrategyRuleValue(strategyId, awardId, ruleModel().getCode());
-        int requiredRaffleCount = parseRequiredRaffleCount(lockRuleValue, userId, strategyId, awardId);
-        long userRaffleCount = repository.queryUserRaffleCount(userId, strategyId);
-        if (requiredRaffleCount > userRaffleCount) {
-            return DefaultTreeFactory.TreeActionEntity
-                    .builder()
-                    .ruleLogicCheckTypeVO(RuleLogicCheckTypeVO.TAKE_OVER)
-                    .strategyAwardVO(DefaultTreeFactory.StrategyAwardVO.builder()
-                            .awardId(null) // 此奖励不允许
-                            .ruleModel(RuleModel.LOCK)
-                            .build()
-                    )
-                    .build();
-        }
-        log.info("抽奖策略-规则树，次数锁通过 userId={} strategyId={} ruleModel={} ruleValue={}",
-                userId, strategyId, ruleModel(), lockRuleValue);
-        return DefaultTreeFactory.TreeActionEntity
-                .builder()
-                .strategyAwardVO(DefaultTreeFactory.StrategyAwardVO
-                        .builder()
-                        .awardId(awardId)
-                        .build())
-                .ruleLogicCheckTypeVO(RuleLogicCheckTypeVO.ALLOW)
-                .build();
-    }
+    public DefaultTreeFactory.TreeActionEntity logic(RaffleFactorEntity raffleFactorEntity, String ruleValue) {
+        RaffleFactorEntity factor = Objects.requireNonNull(raffleFactorEntity, "raffleFactorEntity must not be null");
+        Long strategyId = Objects.requireNonNull(factor.strategyId(), "strategyId must not be null");
+        Long awardId = Objects.requireNonNull(factor.awardId(), "awardId must not be null");
 
-    @Override
-    public RuleModel ruleModel() {
-        return RuleModel.LOCK;
+        int requiredCount = strategyRepository.queryAwardRuleLockCounts(strategyId, List.of(awardId)).get(awardId);
+        AwardUnlockResultVO unlockResult = evaluateUnlock(factor, requiredCount);
+
+        if (!unlockResult.unlocked()) {
+            log.info("抽奖策略-次数锁未通过 userId={} activityId={} strategyId={} awardId={} scope={} requiredCount={} completedCount={}",
+                    factor.userId(), factor.activityId(), strategyId, awardId, factor.awardUnlockScope(),
+                    unlockResult.requiredCount(), unlockResult.completedCount());
+            return takeOver();
+        }
+
+        log.info("抽奖策略-次数锁通过 userId={} activityId={} strategyId={} awardId={} scope={} requiredCount={} completedCount={}",
+                factor.userId(), factor.activityId(), strategyId, awardId, factor.awardUnlockScope(),
+                unlockResult.requiredCount(), unlockResult.completedCount());
+        return allow(awardId);
     }
 
     /**
-     * 解析奖品解锁所需的累计抽奖次数。
+     * 按活动上下文或兼容口径计算奖品解锁结果。
      *
-     * @param lockRuleValue 奖品次数锁规则值
-     * @param userId        用户标识，仅用于错误日志
-     * @param strategyId    策略标识，仅用于错误日志
-     * @param awardId       奖品标识，仅用于错误日志
-     * @return 非负的解锁次数
-     * @throws BusinessException 规则值为空、非整数或小于零时抛出
+     * @param factor        本次抽奖因子
+     * @param requiredCount 奖品要求完成的抽奖次数
+     * @return 奖品解锁判定结果
+     * @throws BusinessException 活动上下文不完整时抛出
      */
-    private int parseRequiredRaffleCount(String lockRuleValue, String userId, Long strategyId, Long awardId) {
-        if (StringUtils.isBlank(lockRuleValue)) {
-            log.error("抽奖策略-规则树，次数锁规则值为空 userId={} strategyId={} awardId={}", userId, strategyId, awardId);
-            throw new BusinessException(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID);
+    private AwardUnlockResultVO evaluateUnlock(RaffleFactorEntity factor, int requiredCount) {
+        if (factor.hasActivityContext()) {
+            AwardUnlockCountQueryVO queryVO = new AwardUnlockCountQueryVO(
+                    factor.userId(), factor.activityId(), factor.awardUnlockScope(), factor.statisticsDate());
+            return awardUnlockService.evaluateUnlock(queryVO, requiredCount);
         }
-        try {
-            int requiredRaffleCount = Integer.parseInt(lockRuleValue);
-            if (requiredRaffleCount < 0) {
-                throw new NumberFormatException("negative raffle count");
-            }
-            return requiredRaffleCount;
-        } catch (NumberFormatException exception) {
-            log.error("抽奖策略-规则树，次数锁规则值非法 userId={} strategyId={} awardId={} ruleValue={}",
-                    userId, strategyId, awardId, lockRuleValue);
-            throw new BusinessException(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, exception);
+
+        boolean hasPartialContext = factor.activityId() != null || factor.awardUnlockScope() != null || factor.statisticsDate() != null;
+        if (hasPartialContext) {
+            throw BusinessException.of(BusinessResponseCode.ACTIVITY_CONFIG_INVALID, factor.activityId(), factor.awardUnlockScope(), factor.statisticsDate());
         }
+
+        long completedCount = strategyRepository.queryUserRaffleCount(factor.userId(), factor.strategyId());
+        return AwardUnlockResultVO.evaluate(requiredCount, completedCount);
+    }
+
+    private DefaultTreeFactory.TreeActionEntity takeOver() {
+        return DefaultTreeFactory.TreeActionEntity.builder()
+                .ruleLogicCheckTypeVO(RuleLogicCheckTypeVO.TAKE_OVER)
+                .strategyAwardVO(DefaultTreeFactory.StrategyAwardVO.builder().awardId(null).ruleModel(ruleModel()).build())
+                .build();
+    }
+
+    private DefaultTreeFactory.TreeActionEntity allow(Long awardId) {
+        return DefaultTreeFactory.TreeActionEntity.builder()
+                .ruleLogicCheckTypeVO(RuleLogicCheckTypeVO.ALLOW)
+                .strategyAwardVO(DefaultTreeFactory.StrategyAwardVO.builder().awardId(awardId).build())
+                .build();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public RuleModel ruleModel() {
+        return RuleModel.LOCK;
     }
 }

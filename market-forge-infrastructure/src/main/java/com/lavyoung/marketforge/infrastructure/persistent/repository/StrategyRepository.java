@@ -19,8 +19,11 @@ import com.lavyoung.marketforge.infrastructure.persistent.po.UserAwardRecordPO;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
 import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
+import com.lavyoung.marketforge.types.exception.BusinessException;
+import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -29,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * 抽奖策略仓储端口的基础设施实现。
@@ -275,6 +279,34 @@ public class StrategyRepository implements IStrategyRepository {
                 .eq(AwardPO::getAwardId, awardId))));
     }
 
+    @Override
+    public Map<Long, Integer> queryAwardRuleLockCounts(Long strategyId, List<Long> awardIds) {
+        Objects.requireNonNull(strategyId, "strategyId must not be null");
+        Objects.requireNonNull(awardIds, "awardIds must not be null");
+        List<Long> distinctAwardIds = awardIds.stream().filter(Objects::nonNull).distinct().toList();
+
+        if (distinctAwardIds.isEmpty()) {
+            return Map.of();
+        }
+
+        List<StrategyRulePO> lockRules = strategyRuleDao.selectList(Wrappers.lambdaQuery(StrategyRulePO.class)
+                .eq(StrategyRulePO::getStrategyId, strategyId)
+                .in(StrategyRulePO::getAwardId, distinctAwardIds)
+                .eq(StrategyRulePO::getRuleModel, RuleModel.LOCK.getCode()));
+
+        Map<Long, Integer> lockCountMap = lockRules.stream()
+                .collect(Collectors.toUnmodifiableMap(StrategyRulePO::getAwardId,
+                        this::parseAwardLockCount, (left, right) -> {
+                            throw BusinessException.of(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, strategyId, left, right);
+                        }));
+
+        if (lockCountMap.size() != distinctAwardIds.size()) {
+            throw BusinessException.of(BusinessResponseCode.STRATEGY_RULE_NOT_FOUND, strategyId, distinctAwardIds);
+        }
+
+        return lockCountMap;
+    }
+
     /**
      * 查询数据库中的策略奖品，并将领域实体写入缓存。
      *
@@ -290,5 +322,29 @@ public class StrategyRepository implements IStrategyRepository {
         );
         redisService.setValue(cacheKey, strategyAwards);
         return strategyAwards;
+    }
+
+    /**
+     * 解析奖品级次数锁规则值。
+     *
+     * @param rulePO 奖品级策略规则持久化对象
+     * @return 非负解锁次数
+     * @throws BusinessException 规则值为空、不是整数或小于零时抛出
+     */
+    private int parseAwardLockCount(StrategyRulePO rulePO) {
+        String ruleValue = rulePO.getRuleValue();
+        if (StringUtils.isBlank(ruleValue)) {
+            throw BusinessException.of(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, rulePO.getStrategyId(), rulePO.getAwardId(), ruleValue);
+        }
+
+        try {
+            int lockCount = Integer.parseInt(ruleValue);
+            if (lockCount < 0) {
+                throw new NumberFormatException("negative lock count");
+            }
+            return lockCount;
+        } catch (NumberFormatException exception) {
+            throw BusinessException.of(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, exception, rulePO.getStrategyId(), rulePO.getAwardId(), ruleValue);
+        }
     }
 }

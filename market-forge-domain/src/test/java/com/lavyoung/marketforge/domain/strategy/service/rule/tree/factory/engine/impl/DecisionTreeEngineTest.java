@@ -1,5 +1,6 @@
 package com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory.engine.impl;
 
+import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.*;
 import com.lavyoung.marketforge.domain.strategy.service.rule.tree.ILogicTreeNode;
 import com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory.DefaultTreeFactory;
@@ -12,8 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * 验证 {@link DecisionTreeEngine} 的叶子终止与节点连线匹配行为。
@@ -36,7 +36,8 @@ class DecisionTreeEngineTest {
                 .awardId(AWARD_ID)
                 .ruleModel(RuleModel.DEFAULT)
                 .build();
-        when(rootNode.logic(USER_ID, STRATEGY_ID, AWARD_ID, null)).thenReturn(
+        RaffleFactorEntity factor = raffleFactor();
+        when(rootNode.logic(factor, null)).thenReturn(
                 DefaultTreeFactory.TreeActionEntity.builder()
                         .ruleLogicCheckTypeVO(RuleLogicCheckTypeVO.ALLOW)
                         .strategyAwardVO(expected)
@@ -48,10 +49,11 @@ class DecisionTreeEngineTest {
         );
 
         // When
-        DefaultTreeFactory.StrategyAwardVO result = engine.process(USER_ID, STRATEGY_ID, AWARD_ID);
+        DefaultTreeFactory.StrategyAwardVO result = engine.process(factor);
 
         // Then
         assertSame(expected, result);
+        verify(rootNode).logic(factor, null);
     }
 
     /**
@@ -61,7 +63,8 @@ class DecisionTreeEngineTest {
     void shouldRejectNodeResultWithoutMatchingLine() {
         // Given
         ILogicTreeNode rootNode = mock(ILogicTreeNode.class);
-        when(rootNode.logic(USER_ID, STRATEGY_ID, AWARD_ID, null)).thenReturn(
+        RaffleFactorEntity factor = raffleFactor();
+        when(rootNode.logic(factor, null)).thenReturn(
                 DefaultTreeFactory.TreeActionEntity.builder()
                         .ruleLogicCheckTypeVO(RuleLogicCheckTypeVO.ALLOW)
                         .build()
@@ -81,7 +84,7 @@ class DecisionTreeEngineTest {
         // When
         BusinessException exception = assertThrows(
                 BusinessException.class,
-                () -> engine.process(USER_ID, STRATEGY_ID, AWARD_ID)
+                () -> engine.process(factor)
         );
 
         // Then
@@ -108,5 +111,14 @@ class DecisionTreeEngineTest {
                 ROOT_RULE,
                 Map.of(ROOT_RULE, rootNode)
         );
+    }
+
+    /**
+     * 创建携带候选奖品的最小抽奖因子。
+     *
+     * @return 规则树执行所需的抽奖因子
+     */
+    private RaffleFactorEntity raffleFactor() {
+        return RaffleFactorEntity.builder().userId(USER_ID).strategyId(STRATEGY_ID).awardId(AWARD_ID).build();
     }
 }

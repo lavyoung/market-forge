@@ -15,7 +15,6 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
-import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
@@ -43,46 +42,45 @@ public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
     /**
      * {@inheritDoc}
      *
-     * @param raffleFactorEntity 包含用户和策略标识的抽奖因子，不可为 {@code null}
-     * @return 规则指定或随机选中的奖品信息
+     * @param raffleFactorEntity 本次抽奖所需的完整领域上下文
+     * @return 责任链和规则树最终确定的奖品
      * @throws BusinessException    用户标识为空或策略标识为空时抛出
-     * @throws NullPointerException 抽奖因子为 {@code null} 时抛出
+     * @throws NullPointerException 抽奖因子为空时抛出
      */
     @Override
     public RaffleAwardEntity performRaffle(RaffleFactorEntity raffleFactorEntity) {
-        // 1. 参数校验
-        Long strategyId = raffleFactorEntity.strategyId();
-        String userId = raffleFactorEntity.userId();
+        RaffleFactorEntity factor = Objects.requireNonNull(raffleFactorEntity, "raffleFactorEntity must not be null");
+        Long strategyId = factor.strategyId();
+        String userId = factor.userId();
+
         if (strategyId == null || StringUtils.isBlank(userId)) {
             throw new BusinessException(CommonResponseCode.PARAM_INVALID);
         }
 
-        // 2. 责任链抽奖模式 - 黑名单 - 权重 - 兜底
-        DefaultChainFactory.StrategyAwardVO chainStrategyAwardVO = this.raffleLogicChain(userId, strategyId);
-        log.info("抽奖策略计算-责任链 userId={} strategyId={} awardId={} ruleModel={}", userId, strategyId, chainStrategyAwardVO.awardId(), chainStrategyAwardVO.ruleModel());
-        // 没到默认的策略 说明其他策略捕获处理 直接返回结果
-        if (!Objects.equals(RuleModel.DEFAULT, chainStrategyAwardVO.ruleModel())) {
+        DefaultChainFactory.StrategyAwardVO chainResult = raffleLogicChain(userId, strategyId);
+        log.info("抽奖策略计算-责任链 userId={} strategyId={} awardId={} ruleModel={}",
+                userId, strategyId, chainResult.awardId(), chainResult.ruleModel());
+
+        if (!Objects.equals(RuleModel.DEFAULT, chainResult.ruleModel())) {
             return RaffleAwardEntity.builder()
                     .strategyId(strategyId)
-                    .awardId(chainStrategyAwardVO.awardId())
+                    .awardId(chainResult.awardId())
                     .build();
         }
-        // 3. 默认兜底处理  继续执行-类似构建“解锁放行—库存接管—幸运奖兜底”的规则树
-        DefaultTreeFactory.StrategyAwardVO treeStrategyAwardVO = this.raffleLogicTree(
-                userId,
-                strategyId,
-                chainStrategyAwardVO.awardId(),
-                raffleFactorEntity.endDateTime()
-        );
-        log.info("抽奖策略计算-规则树 userId={} strategyId={} awardId={} ruleModel={} ruleValue={}", userId, strategyId, treeStrategyAwardVO.awardId(),
-                treeStrategyAwardVO.ruleModel(), treeStrategyAwardVO.awardRuleValue());
+
+        RaffleFactorEntity treeFactor = factor.withAwardId(chainResult.awardId());
+        DefaultTreeFactory.StrategyAwardVO treeResult = raffleLogicTree(treeFactor);
+
+        log.info("抽奖策略计算-规则树 userId={} activityId={} strategyId={} awardId={} ruleModel={} ruleValue={}",
+                userId, factor.activityId(), strategyId, treeResult.awardId(),
+                treeResult.ruleModel(), treeResult.awardRuleValue());
+
         return RaffleAwardEntity.builder()
                 .strategyId(strategyId)
-                .awardId(treeStrategyAwardVO.awardId())
-                .awardConfig(treeStrategyAwardVO.awardRuleValue())
+                .awardId(treeResult.awardId())
+                .awardConfig(treeResult.awardRuleValue())
                 .build();
     }
-
 
     /**
      * 执行策略的抽奖责任链。
@@ -97,13 +95,12 @@ public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
     /**
      * 对责任链随机命中的奖品执行规则树决策。
      *
-     * @param userId     参与抽奖的用户标识
-     * @param strategyId 抽奖策略标识
-     * @param awardId    责任链随机命中的奖品标识
-     * @param endDateTime 活动结束时间，用于向库存规则节点透传 Redis 锁租约依据；为空时兼容旧调用
+     * <p>抽奖因子中的 {@code awardId} 已由责任链写入，同时保留活动标识、
+     * 解锁范围、统计日期和活动结束时间，供不同规则节点使用。</p>
+     *
+     * @param raffleFactorEntity 携带候选奖品和完整活动上下文的抽奖因子
      * @return 规则树最终确定的奖品、命中规则及奖品规则配置
      * @throws BusinessException 规则树缺失或节点流转配置无效时抛出
      */
-    protected abstract DefaultTreeFactory.StrategyAwardVO raffleLogicTree(String userId, Long strategyId, Long awardId, LocalDateTime endDateTime);
-
+    protected abstract DefaultTreeFactory.StrategyAwardVO raffleLogicTree(RaffleFactorEntity raffleFactorEntity);
 }

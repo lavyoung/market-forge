@@ -29,6 +29,7 @@ public interface ActivityOrderAssembler {
      * @return 活动订单领域实体
      */
     @Mapping(target = "endDateTime", ignore = true)
+    @Mapping(target = "awardUnlockScope", ignore = true)
     ActivityOrderEntity toEntity(ActivityOrderPO activityOrderPO);
 
     /**

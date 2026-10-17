@@ -1,5 +1,6 @@
 package com.lavyoung.marketforge.domain.strategy.service.impl;
 
+import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleTreeVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
@@ -19,7 +20,6 @@ import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,27 +51,30 @@ public class DefaultRaffleStrategy extends AbstractRaffleStrategy implements IRa
 
     /**
      * {@inheritDoc}
-     * <p>
-     * 奖品未配置执行阶段规则时保留原奖品；规则模型无法组装成规则树时终止抽奖。
      *
-     * @throws BusinessException 规则树配置缺失、无法完成组装时抛出
+     * <p>奖品没有配置执行阶段规则时直接保留候选奖品；
+     * 存在规则配置时组装规则树，并将完整抽奖因子交给执行引擎。</p>
+     *
+     * @throws BusinessException 规则树配置缺失或无法完成组装时抛出
      */
     @Override
-    protected DefaultTreeFactory.StrategyAwardVO raffleLogicTree(String userId, Long strategyId, Long awardId, LocalDateTime endDateTime) {
-        StrategyAwardRuleModelVO strategyAwardRuleModelVO = repository.queryStrategyAwardRuleModels(strategyId, awardId);
-        // 组装规则树
-        if (strategyAwardRuleModelVO == null) {
+    protected DefaultTreeFactory.StrategyAwardVO raffleLogicTree(RaffleFactorEntity raffleFactorEntity) {
+        Long strategyId = raffleFactorEntity.strategyId();
+        Long awardId = raffleFactorEntity.awardId();
+
+        StrategyAwardRuleModelVO ruleModels = repository.queryStrategyAwardRuleModels(strategyId, awardId);
+        if (ruleModels == null) {
             return DefaultTreeFactory.StrategyAwardVO.builder().awardId(awardId).build();
         }
-        RuleTreeVO ruleTreeVO = ruleTreeRepository.queryRuleTreeVOByTreeId(strategyAwardRuleModelVO.toModelList())
+
+        RuleTreeVO ruleTreeVO = ruleTreeRepository.queryRuleTreeVOByTreeId(ruleModels.toModelList())
                 .orElseThrow(() -> {
-                    log.error("存在抽奖策略 strategyId={} 配置的规则模型Key={} 未在库表中配置完整规则树", strategyId,
-                            strategyAwardRuleModelVO.ruleModels());
-                    return new BusinessException(BusinessResponseCode.STRATEGY_NOT_ASSEMBLED);
+                    log.error("抽奖策略规则树配置不完整 strategyId={} awardId={} ruleModels={}",
+                            strategyId, awardId, ruleModels.ruleModels());
+                    return BusinessException.of(BusinessResponseCode.STRATEGY_NOT_ASSEMBLED, strategyId, awardId);
                 });
-        return endDateTime == null
-                ? defaultTreeFactory.openLogicTree(ruleTreeVO).process(userId, strategyId, awardId)
-                : defaultTreeFactory.openLogicTree(ruleTreeVO).process(userId, strategyId, awardId, endDateTime);
+
+        return defaultTreeFactory.openLogicTree(ruleTreeVO).process(raffleFactorEntity);
     }
 
     @Override

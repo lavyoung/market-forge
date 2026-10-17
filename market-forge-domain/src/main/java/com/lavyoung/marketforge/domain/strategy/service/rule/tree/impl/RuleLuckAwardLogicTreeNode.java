@@ -1,5 +1,6 @@
 package com.lavyoung.marketforge.domain.strategy.service.rule.tree.impl;
 
+import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleLogicCheckTypeVO;
 import com.lavyoung.marketforge.domain.strategy.service.rule.tree.ILogicTreeNode;
 import com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory.DefaultTreeFactory;
@@ -11,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  * 幸运奖兜底规则树节点。
@@ -30,7 +31,10 @@ public class RuleLuckAwardLogicTreeNode implements ILogicTreeNode {
      * {@inheritDoc}
      */
     @Override
-    public DefaultTreeFactory.TreeActionEntity logic(String userId, Long strategyId, Long awardId, String ruleValue, LocalDateTime endDateTime) {
+    public DefaultTreeFactory.TreeActionEntity logic(RaffleFactorEntity raffleFactorEntity, String ruleValue) {
+        RaffleFactorEntity factor = Objects.requireNonNull(raffleFactorEntity, "raffleFactorEntity must not be null");
+        String userId = factor.userId();
+        Long strategyId = factor.strategyId();
         if (StringUtils.isBlank(ruleValue)) {
             log.error("抽奖策略-规则树：策略绑定的幸运奖规则值为空 userId={} strategyId={} ruleModel={}",
                     userId, strategyId, ruleModel());

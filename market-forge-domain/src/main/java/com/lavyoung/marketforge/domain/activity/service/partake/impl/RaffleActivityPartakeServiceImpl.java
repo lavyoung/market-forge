@@ -51,6 +51,7 @@ public class RaffleActivityPartakeServiceImpl extends AbstractRaffleActivityPart
                 .userId(userId)
                 .sku(partakeRaffleActivity.sku())
                 .activityId(activityId)
+                .awardUnlockScope(activityEntity.awardUnlockScope())
                 .activityName(activityEntity.activityName())
                 .strategyId(activityEntity.strategyId())
                 .endDateTime(activityEntity.endDateTime())

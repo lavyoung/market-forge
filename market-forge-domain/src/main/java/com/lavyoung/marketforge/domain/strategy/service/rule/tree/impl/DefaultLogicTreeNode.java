@@ -1,12 +1,13 @@
 package com.lavyoung.marketforge.domain.strategy.service.rule.tree.impl;
 
+import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleLogicCheckTypeVO;
 import com.lavyoung.marketforge.domain.strategy.service.rule.tree.ILogicTreeNode;
 import com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory.DefaultTreeFactory;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  * 规则树默认终止节点。
@@ -24,11 +25,12 @@ public class DefaultLogicTreeNode implements ILogicTreeNode {
      * {@inheritDoc}
      */
     @Override
-    public DefaultTreeFactory.TreeActionEntity logic(String userId, Long strategyId, Long awardId, String ruleValue, LocalDateTime endDateTime) {
+    public DefaultTreeFactory.TreeActionEntity logic(RaffleFactorEntity raffleFactorEntity, String ruleValue) {
+        RaffleFactorEntity factor = Objects.requireNonNull(raffleFactorEntity, "raffleFactorEntity must not be null");
         return DefaultTreeFactory.TreeActionEntity.builder()
                 .ruleLogicCheckTypeVO(RuleLogicCheckTypeVO.ALLOW)
                 .strategyAwardVO(DefaultTreeFactory.StrategyAwardVO.builder()
-                        .awardId(awardId)
+                        .awardId(factor.awardId())
                         .ruleModel(ruleModel())
                         .build())
                 .build();

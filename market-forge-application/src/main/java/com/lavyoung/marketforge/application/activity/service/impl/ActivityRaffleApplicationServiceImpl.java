@@ -17,14 +17,13 @@ import com.lavyoung.marketforge.domain.award.model.vo.AwardUnlockResultVO;
 import com.lavyoung.marketforge.domain.award.service.IAwardUnlockService;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
-import com.lavyoung.marketforge.domain.strategy.repository.IRuleTreeRepository;
+import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.IRaffleAward;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -53,7 +52,6 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
 
     private final IActivityRepository activityRepository;
     private final IRaffleAward raffleAward;
-    private final IRuleTreeRepository ruleTreeRepository;
     private final IStrategyRepository strategyRepository;
 
     private final IActivityDegradeSwitch activityDegradeSwitch;
@@ -81,6 +79,9 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
         RaffleResult raffleResult = strategyRaffleService.raffle(new RaffleCommand(
                 activityOrder.userId(),
                 activityOrder.strategyId(),
+                activityOrder.activityId(),
+                activityOrder.awardUnlockScope(),
+                activityOrder.orderTime().toLocalDate(),
                 activityOrder.endDateTime()
         ));
 
@@ -115,9 +116,12 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
         if (activityEntity.strategyId() == null) {
             throw BusinessException.of(BusinessResponseCode.ACTIVITY_STRATEGY_NOT_CONFIGURED, activityId);
         }
+        if (activityEntity.awardUnlockScope() == null) {
+            throw BusinessException.of(BusinessResponseCode.ACTIVITY_CONFIG_INVALID, activityId, "awardUnlockScope");
+        }
 
         List<StrategyAwardEntity> awardEntities = raffleAward.queryRaffleStrategyAwardList(activityEntity.strategyId());
-        Map<String, Integer> ruleLockCountMap = queryRuleLockCountMap(awardEntities);
+        Map<Long, Integer> ruleLockCountMap = queryRuleLockCountMap(activityEntity.strategyId(), awardEntities);
         Map<Long, Integer> ruleWeightCountMap = queryRuleWeightCountMap(activityEntity.strategyId());
         Map<Integer, AwardUnlockResultVO> unlockResultMap = queryAwardUnlockResultMap(userId, activityEntity, ruleLockCountMap);
         long userRaffleCount = strategyRepository.queryUserRaffleCount(userId, activityEntity.strategyId());
@@ -177,23 +181,6 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
     }
 
     /**
-     * 从奖品列表中提取规则树标识。
-     * <p>
-     * 只有配置了规则模型的奖品才需要查询规则锁。
-     * 没有配置 ruleModels 的奖品，默认不受次数锁限制。
-     *
-     * @param awards 策略奖品列表
-     * @return 去重后的规则树标识列表
-     */
-    private List<String> extractRuleModelTreeIds(List<StrategyAwardEntity> awards) {
-        return awards.stream()
-                .map(StrategyAwardEntity::ruleModels)
-                .filter(StringUtils::isNotBlank)
-                .distinct()
-                .toList();
-    }
-
-    /**
      * 将策略奖品和用户维度判定上下文转换为活动页展示结果。
      *
      * @param award   策略奖品配置
@@ -202,7 +189,7 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
      * @throws BusinessException 奖品配置了次数锁但缺少判定结果时抛出
      */
     private ActivityAwardResult toActivityAwardResult(StrategyAwardEntity award, AwardDisplayContext context) {
-        Integer lockCount = StringUtils.isBlank(award.ruleModels()) ? null : context.lockCountMap().get(award.ruleModels());
+        Integer lockCount = context.lockCountMap().get(award.awardId());
 
         AwardUnlockResultVO unlockResult = null;
         if (lockCount != null) {
@@ -238,21 +225,37 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
     }
 
     /**
-     * 查询奖品次数锁规则。
-     * <p>
-     * 返回结构示例：
-     * tree_lock_1 -> 1
-     * tree_lock_2 -> 2
+     * 批量查询活动奖品列表中的次数锁门槛。
      *
-     * @param awards 策略奖品列表
-     * @return 规则树标识到解锁次数的映射
+     * <p>先从策略奖品配置中筛选包含 {@link RuleModel#LOCK} 的奖品，
+     * 再通过策略仓储一次查询对应的奖品级规则。</p>
+     *
+     * @param strategyId 当前活动关联的策略标识
+     * @param awards     当前策略的奖品配置
+     * @return 奖品标识到解锁次数的不可变映射
      */
-    private Map<String, Integer> queryRuleLockCountMap(List<StrategyAwardEntity> awards) {
-        List<String> treeIds = extractRuleModelTreeIds(awards);
-        if (treeIds.isEmpty()) {
+    private Map<Long, Integer> queryRuleLockCountMap(Long strategyId, List<StrategyAwardEntity> awards) {
+        List<Long> lockAwardIds = awards.stream()
+                .filter(this::containsLockRule)
+                .map(StrategyAwardEntity::awardId).distinct().toList();
+
+        if (lockAwardIds.isEmpty()) {
             return Map.of();
         }
-        return ruleTreeRepository.queryAwardRuleLockCount(treeIds);
+
+        return strategyRepository.queryAwardRuleLockCounts(strategyId, lockAwardIds);
+    }
+
+    /**
+     * 判断策略奖品是否配置次数锁规则。
+     *
+     * @param award 策略奖品配置
+     * @return 包含 {@link RuleModel#LOCK} 时返回 {@code true}
+     */
+    private boolean containsLockRule(StrategyAwardEntity award) {
+        return new StrategyAwardRuleModelVO(
+                award.ruleModels()
+        ).toModelList().contains(RuleModel.LOCK);
     }
 
     /**
@@ -307,14 +310,13 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
      *
      * @param userId       用户标识
      * @param activity     当前活动配置
-     * @param lockCountMap 规则树标识与解锁门槛的映射
+     * @param lockCountMap 奖品标识与解锁门槛的映射
      * @return 解锁门槛与判定结果的不可变映射
      */
     private Map<Integer, AwardUnlockResultVO> queryAwardUnlockResultMap(String userId,
                                                                         ActivityEntity activity,
-                                                                        Map<String, Integer> lockCountMap) {
-        Set<Integer> requiredCounts = lockCountMap.values()
-                .stream()
+                                                                        Map<Long, Integer> lockCountMap) {
+        Set<Integer> requiredCounts = lockCountMap.values().stream()
                 .filter(Objects::nonNull)
                 .collect(Collectors.toUnmodifiableSet());
 
@@ -322,8 +324,7 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
             return Map.of();
         }
 
-        AwardUnlockCountQueryVO queryVO = new AwardUnlockCountQueryVO(
-                userId,
+        AwardUnlockCountQueryVO queryVO = new AwardUnlockCountQueryVO(userId,
                 activity.activityId(),
                 activity.awardUnlockScope(),
                 LocalDate.now()
@@ -340,7 +341,7 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
      *
      * @param activityId      活动标识
      * @param unlockScope     奖品解锁次数统计范围
-     * @param lockCountMap    规则树标识到解锁门槛的映射
+     * @param lockCountMap    奖品标识到解锁门槛的映射
      * @param unlockResultMap 解锁门槛到用户判定结果的映射
      * @param weightCountMap  奖品标识到权重门槛的映射
      * @param userRaffleCount 用户在当前策略下的累计抽奖次数
@@ -348,7 +349,7 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
     private record AwardDisplayContext(
             Long activityId,
             AwardUnlockScopeVO unlockScope,
-            Map<String, Integer> lockCountMap,
+            Map<Long, Integer> lockCountMap,
             Map<Integer, AwardUnlockResultVO> unlockResultMap,
             Map<Long, Integer> weightCountMap,
             long userRaffleCount

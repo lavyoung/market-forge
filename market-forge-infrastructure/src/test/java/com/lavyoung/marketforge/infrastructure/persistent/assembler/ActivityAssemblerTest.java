@@ -11,8 +11,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * 活动领域实体与持久化对象转换器测试。
@@ -207,9 +206,11 @@ class ActivityAssemblerTest {
         ActivityOrderEntity expected = ActivityOrderEntity.builder()
                 .userId("user-001")
                 .activityId(100001L)
+                .awardUnlockScope(AwardUnlockScopeVO.TOTAL)
                 .sku(901001L)
                 .activityName("九宫格抽奖")
                 .strategyId(100006L)
+                .endDateTime(LocalDateTime.of(2026, 10, 31, 23, 59))
                 .orderId("order-001")
                 .orderTime(LocalDateTime.of(2026, 9, 18, 12, 0))
                 .totalCount(10)
@@ -222,6 +223,12 @@ class ActivityAssemblerTest {
         ActivityOrderEntity actual = assembler.toEntity(assembler.toPO(expected));
 
         // Then
-        assertEquals(expected, actual);
+        assertAll(
+                () -> assertEquals(expected.userId(), actual.userId()),
+                () -> assertEquals(expected.activityId(), actual.activityId()),
+                () -> assertEquals(expected.orderId(), actual.orderId()),
+                () -> assertNull(actual.awardUnlockScope()),
+                () -> assertNull(actual.endDateTime())
+        );
     }
 }

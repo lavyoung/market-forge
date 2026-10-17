@@ -1,5 +1,6 @@
 package com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory.engine.impl;
 
+import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleTreeNodeLineVo;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleTreeNodeVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleTreeVO;
@@ -12,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
 
-import java.time.LocalDateTime;
 import java.util.*;
 
 /**
@@ -44,48 +44,51 @@ public class DecisionTreeEngine implements IDecisionTreeEngine {
      * @throws BusinessException 规则树缺少节点实现、节点结果无效、流转不匹配或存在循环时抛出
      */
     @Override
-    public DefaultTreeFactory.StrategyAwardVO process(String userId, Long strategyId, Long awardId, LocalDateTime endDateTime) {
+    public DefaultTreeFactory.StrategyAwardVO process(RaffleFactorEntity raffleFactorEntity) {
+        RaffleFactorEntity validRaffleFactor = Objects.requireNonNull(raffleFactorEntity, "raffleFactorEntity must not be null");
+
         String rootRule = ruleTreeVO.treeRootRule();
         Map<String, RuleTreeNodeVO> treeNodeVOMap = ruleTreeVO.treeNodeVOMap();
         RuleTreeNodeVO nodeVO = treeNodeVOMap.get(rootRule);
         if (nodeVO == null) {
             throw invalidTree("规则树根节点不存在 rootRule=" + rootRule);
         }
+
         DefaultTreeFactory.StrategyAwardVO strategyAwardVO = null;
         Set<String> visitedNodes = new HashSet<>();
+
         while (nodeVO != null) {
             if (!visitedNodes.add(nodeVO.ruleKey())) {
                 throw invalidTree("规则树存在循环节点 ruleKey=" + nodeVO.ruleKey());
             }
+
             ILogicTreeNode treeNode = logicTreeNodeMap.get(nodeVO.ruleKey());
             if (treeNode == null) {
                 throw invalidTree("规则树节点未注册 ruleKey=" + nodeVO.ruleKey());
             }
-            DefaultTreeFactory.TreeActionEntity treeActionEntity = endDateTime == null
-                    ? treeNode.logic(userId, strategyId, awardId, nodeVO.ruleValue())
-                    : treeNode.logic(userId, strategyId, awardId, nodeVO.ruleValue(), endDateTime);
-            if (treeActionEntity == null || treeActionEntity.ruleLogicCheckTypeVO() == null
-                    || treeActionEntity.strategyAwardVO() == null) {
+
+            DefaultTreeFactory.TreeActionEntity treeActionEntity = treeNode.logic(validRaffleFactor, nodeVO.ruleValue());
+            if (treeActionEntity == null || treeActionEntity.ruleLogicCheckTypeVO() == null || treeActionEntity.strategyAwardVO() == null) {
                 throw invalidTree("规则树节点返回结果不完整 ruleKey=" + nodeVO.ruleKey());
             }
+
             strategyAwardVO = treeActionEntity.strategyAwardVO();
-            Optional<String> nextNode = nextNode(
-                    treeActionEntity.ruleLogicCheckTypeVO().getCode(),
-                    nodeVO.ruleTreeNodeLineVoList()
-            );
+            Optional<String> nextNode = nextNode(treeActionEntity.ruleLogicCheckTypeVO().getCode(), nodeVO.ruleTreeNodeLineVoList());
+
             if (nextNode.isEmpty()) {
                 nodeVO = null;
-            } else {
-                String nextRuleKey = nextNode.get();
-                nodeVO = treeNodeVOMap.get(nextRuleKey);
-                if (nodeVO == null) {
-                    throw invalidTree("规则树后继节点不存在 ruleKey=" + nextRuleKey);
-                }
+                continue;
+            }
+
+            String nextRuleKey = nextNode.get();
+            nodeVO = treeNodeVOMap.get(nextRuleKey);
+            if (nodeVO == null) {
+                throw invalidTree("规则树后继节点不存在 ruleKey=" + nextRuleKey);
             }
         }
+
         return strategyAwardVO;
     }
-
     /**
      * 根据当前节点结果选择下一跳节点。
      *

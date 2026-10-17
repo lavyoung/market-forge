@@ -1,6 +1,8 @@
 package com.lavyoung.marketforge.infrastructure.persistent.repository;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.lavyoung.marketforge.domain.strategy.event.AwardStockDeductedEvent;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardStockKeyVO;
@@ -14,7 +16,10 @@ import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyRulePO;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
 import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
+import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.messaging.MessagePublisher;
+import com.lavyoung.marketforge.types.model.BusinessResponseCode;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +28,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -82,6 +89,10 @@ class StrategyRepositoryTest {
      */
     @BeforeEach
     void setUp() {
+        TableInfoHelper.initTableInfo(
+                new MapperBuilderAssistant(new MybatisConfiguration(), "StrategyRepositoryTest"),
+                StrategyRulePO.class
+        );
         repository = new StrategyRepository(
                 strategyAwardDao,
                 strategyDao,
@@ -146,6 +157,84 @@ class StrategyRepositoryTest {
 
         // Then
         assertNull(result);
+    }
+
+    /**
+     * Given 多个奖品配置次数锁且请求包含重复奖品标识，When 批量查询解锁门槛，Then 去重后只查询一次并按奖品标识返回结果。
+     */
+    @Test
+    void shouldQueryAwardRuleLockCountsInSingleBatch() {
+        // Given
+        StrategyRulePO twoTimesRule = newLockRule(AWARD_ID, "2");
+        StrategyRulePO fiveTimesRule = newLockRule(100_012L, "5");
+        when(strategyRuleDao.selectList(any(Wrapper.class)))
+                .thenReturn(List.of(twoTimesRule, fiveTimesRule));
+
+        // When
+        Map<Long, Integer> result = repository.queryAwardRuleLockCounts(
+                STRATEGY_ID,
+                List.of(AWARD_ID, 100_012L, AWARD_ID)
+        );
+
+        // Then
+        assertEquals(Map.of(AWARD_ID, 2, 100_012L, 5), result);
+        verify(strategyRuleDao).selectList(any(Wrapper.class));
+    }
+
+    /**
+     * Given 页面奖品列表不包含次数锁奖品，When 查询解锁门槛，Then 返回空映射且不访问数据库。
+     */
+    @Test
+    void shouldSkipRuleQueryWhenAwardIdsAreEmpty() {
+        // When
+        Map<Long, Integer> result = repository.queryAwardRuleLockCounts(STRATEGY_ID, List.of());
+
+        // Then
+        assertTrue(result.isEmpty());
+        verifyNoInteractions(strategyRuleDao);
+    }
+
+    /**
+     * Given 奖品声明了次数锁但数据库缺少对应规则，When 批量查询解锁门槛，Then 抛出规则不存在业务异常。
+     */
+    @Test
+    void shouldRejectMissingAwardLockRule() {
+        // Given
+        when(strategyRuleDao.selectList(any(Wrapper.class)))
+                .thenReturn(List.of(newLockRule(AWARD_ID, "2")));
+
+        // When
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> repository.queryAwardRuleLockCounts(
+                        STRATEGY_ID,
+                        List.of(AWARD_ID, 100_012L)
+                )
+        );
+
+        // Then
+        assertEquals(BusinessResponseCode.STRATEGY_RULE_NOT_FOUND, exception.getResponseCode());
+        verify(strategyRuleDao).selectList(any(Wrapper.class));
+    }
+
+    /**
+     * Given 次数锁规则值不是非负整数，When 批量查询解锁门槛，Then 抛出规则值非法业务异常。
+     */
+    @Test
+    void shouldRejectInvalidAwardLockRuleValue() {
+        // Given
+        when(strategyRuleDao.selectList(any(Wrapper.class)))
+                .thenReturn(List.of(newLockRule(AWARD_ID, "strategy_rule")));
+
+        // When
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> repository.queryAwardRuleLockCounts(STRATEGY_ID, List.of(AWARD_ID))
+        );
+
+        // Then
+        assertEquals(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, exception.getResponseCode());
+        verify(strategyRuleDao).selectList(any(Wrapper.class));
     }
 
     /**
@@ -274,5 +363,21 @@ class StrategyRepositoryTest {
 
         // Then
         assertTrue(updated);
+    }
+
+    /**
+     * 构造奖品级次数锁持久化对象。
+     *
+     * @param awardId   奖品标识
+     * @param ruleValue 次数锁规则值
+     * @return 可供仓储查询测试使用的规则对象
+     */
+    private StrategyRulePO newLockRule(Long awardId, String ruleValue) {
+        StrategyRulePO rule = new StrategyRulePO();
+        rule.setStrategyId(STRATEGY_ID);
+        rule.setAwardId(awardId);
+        rule.setRuleModel(RuleModel.LOCK.getCode());
+        rule.setRuleValue(ruleValue);
+        return rule;
     }
 }

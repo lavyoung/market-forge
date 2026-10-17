@@ -4,6 +4,7 @@ import com.lavyoung.marketforge.application.strategy.model.RaffleCommand;
 import com.lavyoung.marketforge.application.strategy.model.RaffleResult;
 import com.lavyoung.marketforge.application.strategy.model.StrategyAwardResult;
 import com.lavyoung.marketforge.application.strategy.service.impl.StrategyStrategyRaffleServiceImpl;
+import com.lavyoung.marketforge.domain.activity.model.vo.AwardUnlockScopeVO;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.domain.strategy.model.entity.AwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleAwardEntity;
@@ -16,6 +17,8 @@ import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyArmory;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,9 +39,15 @@ class StrategyRaffleServiceImplTest {
         IRaffleStrategy raffleStrategy = mock(IRaffleStrategy.class);
         IStrategyArmory strategyArmory = mock(IStrategyArmory.class);
         IStrategyRepository strategyRepository = mock(IStrategyRepository.class);
+        LocalDate statisticsDate = LocalDate.of(2026, 10, 17);
+        LocalDateTime endDateTime = LocalDateTime.of(2026, 10, 31, 23, 59);
         RaffleFactorEntity factor = RaffleFactorEntity.builder()
                 .userId("user-001")
                 .strategyId(100_001L)
+                .activityId(100_301L)
+                .awardUnlockScope(AwardUnlockScopeVO.TOTAL)
+                .statisticsDate(statisticsDate)
+                .endDateTime(endDateTime)
                 .build();
         when(raffleStrategy.performRaffle(factor)).thenReturn(RaffleAwardEntity.builder()
                 .strategyId(100_001L)
@@ -64,7 +73,14 @@ class StrategyRaffleServiceImplTest {
                 raffleStrategy, strategyArmory, mock(IActivityRepository.class), strategyRepository, mock(IRaffleAward.class));
 
         // When
-        RaffleResult result = service.raffle(new RaffleCommand("user-001", 100_001L));
+        RaffleResult result = service.raffle(new RaffleCommand(
+                "user-001",
+                100_001L,
+                100_301L,
+                AwardUnlockScopeVO.TOTAL,
+                statisticsDate,
+                endDateTime
+        ));
 
         // Then
         assertAll(

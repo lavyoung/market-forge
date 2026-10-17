@@ -57,6 +57,7 @@ public class RaffleRaffleActivityAccountQuotaServiceServiceImpl extends Abstract
         ActivityOrderEntity activityOrderEntity = ActivityOrderEntity.builder()
                 .userId(skuRechargeEntity.userId())
                 .activityId(activitySkuEntity.activityId())
+                .awardUnlockScope(activityEntity.awardUnlockScope())
                 .sku(skuRechargeEntity.sku())
                 .activityName(activityEntity.activityName())
                 .strategyId(activityEntity.strategyId())

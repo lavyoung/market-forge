@@ -36,7 +36,8 @@ class ActivityPersistentObjectMappingTest {
     private static final Map<Class<? extends BasePO>, Set<String>> TABLE_FIELDS = Map.of(
             ActivityPO.class, Set.of(
                     "id", "activityId", "activityName", "activityDesc", "beginDateTime", "endDateTime",
-                    "stockCount", "stockCountSurplus", "activityCountId", "strategyId", "state"
+                    "stockCount", "stockCountSurplus", "activityCountId", "strategyId", "state",
+                    "awardUnlockScope"
             ),
             ActivityCountPO.class, Set.of(
                     "id", "activityCountId", "totalCount", "dayCount", "monthCount"

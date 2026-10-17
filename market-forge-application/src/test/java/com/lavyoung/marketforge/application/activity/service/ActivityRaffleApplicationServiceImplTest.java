@@ -17,7 +17,6 @@ import com.lavyoung.marketforge.domain.award.model.vo.AwardUnlockResultVO;
 import com.lavyoung.marketforge.domain.award.service.IAwardUnlockService;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
-import com.lavyoung.marketforge.domain.strategy.repository.IRuleTreeRepository;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.IRaffleAward;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
@@ -52,6 +51,8 @@ class ActivityRaffleApplicationServiceImplTest {
     private static final Long STRATEGY_ID = 900_901_001L;
     private static final Long AWARD_ID = 900_901_011L;
     private static final String ORDER_ID = "RO1003010001";
+    private static final LocalDateTime ORDER_TIME = LocalDateTime.of(2026, 9, 30, 10, 0);
+    private static final LocalDateTime END_DATE_TIME = LocalDateTime.of(2026, 10, 31, 23, 59);
 
     @Mock
     private IRaffleActivityPartakeService activityPartakeService;
@@ -75,9 +76,6 @@ class ActivityRaffleApplicationServiceImplTest {
     private IRaffleAward raffleAward;
 
     @Mock
-    private IRuleTreeRepository ruleTreeRepository;
-
-    @Mock
     private IStrategyRepository strategyRepository;
 
     @Mock
@@ -96,7 +94,15 @@ class ActivityRaffleApplicationServiceImplTest {
         RaffleResult raffleResult = new RaffleResult(STRATEGY_ID, AWARD_ID, "random_ore", "quantity=1", "随机矿石", "随机矿石");
         when(activityAccessPolicy.isAllowed(USER_ID)).thenReturn(true);
         when(activityPartakeService.createRaffleOrder(any())).thenReturn(order);
-        when(strategyRaffleService.raffle(new RaffleCommand(USER_ID, STRATEGY_ID))).thenReturn(raffleResult);
+        RaffleCommand raffleCommand = new RaffleCommand(
+                USER_ID,
+                STRATEGY_ID,
+                ACTIVITY_ID,
+                AwardUnlockScopeVO.TOTAL,
+                ORDER_TIME.toLocalDate(),
+                END_DATE_TIME
+        );
+        when(strategyRaffleService.raffle(raffleCommand)).thenReturn(raffleResult);
         ActivityRaffleApplicationServiceImpl service = newService();
 
         // When
@@ -107,7 +113,7 @@ class ActivityRaffleApplicationServiceImplTest {
                 ArgumentCaptor.forClass(PartakeRaffleActivityEntity.class);
         verify(activityPartakeService).createRaffleOrder(partakeCaptor.capture());
         verify(activityAccessPolicy).isAllowed(USER_ID);
-        verify(strategyRaffleService).raffle(new RaffleCommand(USER_ID, STRATEGY_ID));
+        verify(strategyRaffleService).raffle(raffleCommand);
         verify(settlementTransaction).settle(order, raffleResult);
         assertAll(
                 () -> assertEquals(USER_ID, partakeCaptor.getValue().userId()),
@@ -219,12 +225,13 @@ class ActivityRaffleApplicationServiceImplTest {
                 .awardTitle("1等奖")
                 .awardSubtitle("抽奖2次后解锁")
                 .awardRate(new BigDecimal("0.0100"))
-                .ruleModels("tree_lock_2")
+                .ruleModels("rule_lock/rule_stock")
                 .sort(8)
                 .build();
         when(activityRepository.getActivityEntityByIdActivityId(ACTIVITY_ID)).thenReturn(activity);
         when(raffleAward.queryRaffleStrategyAwardList(STRATEGY_ID)).thenReturn(List.of(unlockedAward, lockedAward));
-        when(ruleTreeRepository.queryAwardRuleLockCount(List.of("tree_lock_2"))).thenReturn(Map.of("tree_lock_2", 2));
+        when(strategyRepository.queryAwardRuleLockCounts(STRATEGY_ID, List.of(108L)))
+                .thenReturn(Map.of(108L, 2));
         AwardUnlockCountQueryVO unlockQuery = new AwardUnlockCountQueryVO(
                 USER_ID,
                 ACTIVITY_ID,
@@ -262,6 +269,7 @@ class ActivityRaffleApplicationServiceImplTest {
                 () -> assertEquals(1, results.get(1).waitAwardWeightCount())
         );
         verify(awardUnlockService).evaluateUnlocks(unlockQuery, Set.of(2));
+        verify(strategyRepository).queryAwardRuleLockCounts(STRATEGY_ID, List.of(108L));
         verify(activityRepository, never()).queryActivityAccountDayByUserId(anyString(), anyLong(), any());
         verify(strategyRepository).queryUserRaffleCount(USER_ID, STRATEGY_ID);
     }
@@ -374,7 +382,6 @@ class ActivityRaffleApplicationServiceImplTest {
                 activityArmory,
                 activityRepository,
                 raffleAward,
-                ruleTreeRepository,
                 strategyRepository,
                 activityDegradeSwitch,
                 activityAccessPolicy
@@ -385,11 +392,13 @@ class ActivityRaffleApplicationServiceImplTest {
         return ActivityOrderEntity.builder()
                 .userId(USER_ID)
                 .activityId(ACTIVITY_ID)
+                .awardUnlockScope(AwardUnlockScopeVO.TOTAL)
                 .sku(SKU)
                 .activityName("九宫格活动抽奖")
                 .strategyId(STRATEGY_ID)
+                .endDateTime(END_DATE_TIME)
                 .orderId(ORDER_ID)
-                .orderTime(LocalDateTime.of(2026, 9, 30, 10, 0))
+                .orderTime(ORDER_TIME)
                 .state(UserRaffleOrderStateVO.CREATE.getCode())
                 .build();
     }

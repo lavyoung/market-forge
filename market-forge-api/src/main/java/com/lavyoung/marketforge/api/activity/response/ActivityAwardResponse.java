@@ -15,6 +15,7 @@ import java.io.Serializable;
  * @param awardSubtitle        奖品副标题
  * @param sort                 展示排序
  * @param awardRuleLockCount   奖品解锁所需抽奖次数
+ * @param awardUnlockScope     奖品解锁次数统计范围，取值为 day 或 total
  * @param isAwardUnlock        当前用户是否已解锁
  * @param waitUnLockCount      距离解锁还差几次
  * @param awardRuleWeightCount 奖品进入权重奖池所需累计抽奖次数

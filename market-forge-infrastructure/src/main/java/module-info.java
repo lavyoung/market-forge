@@ -37,6 +37,7 @@ module market.forge.infrastructure {
     requires org.apache.httpcomponents.httpclient;
     requires org.apache.httpcomponents.httpasyncclient;
     requires market.forge.application;
+    requires org.apache.commons.lang3;
 
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler;
     opens com.lavyoung.marketforge.infrastructure.persistent.dao;

@@ -166,11 +166,12 @@ class RaffleStrategyRunnerTest {
         ILogicTreeNode lockNode = mock(ILogicTreeNode.class);
         ILogicTreeNode stockNode = mock(ILogicTreeNode.class);
         ILogicTreeNode luckAwardNode = mock(ILogicTreeNode.class);
-        when(lockNode.logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID, null))
+        RaffleFactorEntity factor = validFactor().withAwardId(DEFAULT_AWARD_ID);
+        when(lockNode.logic(factor, null))
                 .thenReturn(treeAction(RuleLogicCheckTypeVO.ALLOW, DEFAULT_AWARD_ID, RuleModel.LOCK, null));
-        when(stockNode.logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID, null))
+        when(stockNode.logic(factor, null))
                 .thenReturn(treeAction(RuleLogicCheckTypeVO.TAKE_OVER, DEFAULT_AWARD_ID, RuleModel.LOCK, null));
-        when(luckAwardNode.logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID, null))
+        when(luckAwardNode.logic(factor, null))
                 .thenReturn(treeAction(RuleLogicCheckTypeVO.ALLOW, LUCK_AWARD_ID, RuleModel.LUCK_AWARD, "1/100"));
         DefaultTreeFactory treeFactory = new DefaultTreeFactory(Map.of(
                 RuleModel.LOCK.getCode(), lockNode,
@@ -180,7 +181,7 @@ class RaffleStrategyRunnerTest {
 
         // When
         IDecisionTreeEngine treeEngine = treeFactory.openLogicTree(ruleTree());
-        DefaultTreeFactory.StrategyAwardVO result = treeEngine.process(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID);
+        DefaultTreeFactory.StrategyAwardVO result = treeEngine.process(factor);
 
         // Then
         assertAll(
@@ -189,9 +190,9 @@ class RaffleStrategyRunnerTest {
                 () -> assertEquals("1/100", result.awardRuleValue())
         );
         InOrder executionOrder = inOrder(lockNode, stockNode, luckAwardNode);
-        executionOrder.verify(lockNode).logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID, null);
-        executionOrder.verify(stockNode).logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID, null);
-        executionOrder.verify(luckAwardNode).logic(USER_ID, STRATEGY_ID, DEFAULT_AWARD_ID, null);
+        executionOrder.verify(lockNode).logic(factor, null);
+        executionOrder.verify(stockNode).logic(factor, null);
+        executionOrder.verify(luckAwardNode).logic(factor, null);
     }
 
     /**
@@ -268,8 +269,7 @@ class RaffleStrategyRunnerTest {
      * @param ruleValue 奖品规则配置
      * @return 节点执行结果
      */
-    private DefaultTreeFactory.TreeActionEntity treeAction(RuleLogicCheckTypeVO checkType, Long awardId,
-                                                           RuleModel ruleModel, String ruleValue) {
+    private DefaultTreeFactory.TreeActionEntity treeAction(RuleLogicCheckTypeVO checkType, Long awardId, RuleModel ruleModel, String ruleValue) {
         return DefaultTreeFactory.TreeActionEntity.builder()
                 .ruleLogicCheckTypeVO(checkType)
                 .strategyAwardVO(DefaultTreeFactory.StrategyAwardVO.builder()

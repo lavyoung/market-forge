@@ -1,5 +1,6 @@
 package com.lavyoung.marketforge.domain.strategy.service.impl;
 
+import com.lavyoung.marketforge.domain.activity.model.vo.AwardUnlockScopeVO;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleTreeVO;
@@ -21,6 +22,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -41,6 +44,9 @@ class DefaultRaffleStrategyTest {
     private static final Long STRATEGY_ID = 100_001L;
     private static final Long AWARD_ID = 100_011L;
     private static final Long TREE_AWARD_ID = 100_012L;
+    private static final Long ACTIVITY_ID = 100_301L;
+    private static final LocalDate STATISTICS_DATE = LocalDate.of(2026, 10, 18);
+    private static final LocalDateTime END_DATE_TIME = LocalDateTime.of(2026, 10, 31, 23, 59);
 
     @Mock
     private IStrategyRepository repository;
@@ -146,17 +152,19 @@ class DefaultRaffleStrategyTest {
         when(repository.queryStrategyAwardRuleModels(STRATEGY_ID, AWARD_ID)).thenReturn(ruleModels);
         when(ruleTreeRepository.queryRuleTreeVOByTreeId(List.of(RuleModel.LOCK))).thenReturn(Optional.of(ruleTree));
         when(treeFactory.openLogicTree(ruleTree)).thenReturn(treeEngine);
-        when(treeEngine.process(USER_ID, STRATEGY_ID, AWARD_ID)).thenReturn(treeAward);
+        RaffleFactorEntity factor = validFactor();
+        RaffleFactorEntity treeFactor = factor.withAwardId(AWARD_ID);
+        when(treeEngine.process(treeFactor)).thenReturn(treeAward);
 
         // When
-        RaffleAwardEntity award = raffleStrategy.performRaffle(validFactor());
+        RaffleAwardEntity award = raffleStrategy.performRaffle(factor);
 
         // Then
         assertAll(
                 () -> assertEquals(TREE_AWARD_ID, award.awardId()),
                 () -> assertEquals("1/100", award.awardConfig())
         );
-        verify(treeEngine).process(USER_ID, STRATEGY_ID, AWARD_ID);
+        verify(treeEngine).process(treeFactor);
     }
 
     /**
@@ -199,10 +207,17 @@ class DefaultRaffleStrategyTest {
     /**
      * 创建有效抽奖因子。
      *
-     * @return 包含固定用户和策略标识的抽奖因子
+     * @return 包含用户、活动、策略和解锁范围的抽奖因子
      */
     private RaffleFactorEntity validFactor() {
-        return RaffleFactorEntity.builder().userId(USER_ID).strategyId(STRATEGY_ID).build();
+        return RaffleFactorEntity.builder()
+                .userId(USER_ID)
+                .strategyId(STRATEGY_ID)
+                .activityId(ACTIVITY_ID)
+                .awardUnlockScope(AwardUnlockScopeVO.DAY)
+                .statisticsDate(STATISTICS_DATE)
+                .endDateTime(END_DATE_TIME)
+                .build();
     }
 
     /**

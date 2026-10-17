@@ -1,5 +1,6 @@
 package com.lavyoung.marketforge.domain.strategy.service.rule.tree.impl;
 
+import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.RuleLogicCheckTypeVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardStockKeyVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyAwardStockMessageRepository;
@@ -11,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  * 奖品库存规则树节点。
@@ -41,33 +42,25 @@ public class RuleStockLogicTreeNode implements ILogicTreeNode {
      * {@inheritDoc}
      */
     @Override
-    public DefaultTreeFactory.TreeActionEntity logic(String userId, Long strategyId, Long awardId, String ruleValue, LocalDateTime endDateTime) {
-        boolean status = strategyDispatch.subtractAwardStock(strategyId, awardId, endDateTime);
-        if (status) {
-            log.info("抽奖策略-规则树，获得奖，库存扣减 userId={} strategyId={} ruleModel={} ruleValue={}", userId, strategyId, ruleModel(), ruleValue);
-            repository.send(StrategyAwardStockKeyVO.builder()
-                    .awardId(awardId)
-                    .strategyId(strategyId)
-                    .userId(userId)
-                    .build()
-            );
+    public DefaultTreeFactory.TreeActionEntity logic(RaffleFactorEntity raffleFactorEntity, String ruleValue) {
+        RaffleFactorEntity factor = Objects.requireNonNull(raffleFactorEntity, "raffleFactorEntity must not be null");
+        boolean deducted = strategyDispatch.subtractAwardStock(factor.strategyId(), factor.awardId(), factor.endDateTime());
+
+        if (!deducted) {
             return DefaultTreeFactory.TreeActionEntity.builder()
-                    .strategyAwardVO(DefaultTreeFactory.StrategyAwardVO.builder()
-                            .awardId(awardId)
-                            .build())
-                    .ruleLogicCheckTypeVO(RuleLogicCheckTypeVO.ALLOW)
+                    .strategyAwardVO(DefaultTreeFactory.StrategyAwardVO.builder().awardId(null).ruleModel(ruleModel()).build())
+                    .ruleLogicCheckTypeVO(RuleLogicCheckTypeVO.TAKE_OVER)
                     .build();
         }
-        return DefaultTreeFactory.TreeActionEntity
-                .builder()
-                .strategyAwardVO(DefaultTreeFactory.StrategyAwardVO.builder()
-                        .awardId(null)
-                        .ruleModel(ruleModel())
-                        .build())
-                .ruleLogicCheckTypeVO(RuleLogicCheckTypeVO.TAKE_OVER)
+
+        repository.send(StrategyAwardStockKeyVO.builder()
+                .awardId(factor.awardId()).strategyId(factor.strategyId()).userId(factor.userId()).build());
+
+        return DefaultTreeFactory.TreeActionEntity.builder()
+                .strategyAwardVO(DefaultTreeFactory.StrategyAwardVO.builder().awardId(factor.awardId()).build())
+                .ruleLogicCheckTypeVO(RuleLogicCheckTypeVO.ALLOW)
                 .build();
     }
-
     /**
      * {@inheritDoc}
      */
