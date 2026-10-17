@@ -135,6 +135,7 @@ CREATE TABLE raffle_activity
     stock_count_surplus int             NOT NULL COMMENT '剩余库存',
     activity_count_id   bigint          NOT NULL COMMENT '活动次数配置ID',
     strategy_id         bigint          NOT NULL COMMENT '抽奖策略ID',
+    award_unlock_scope varchar(16) NOT NULL COMMENT '奖品解锁次数范围：day-当日、total-活动累计',
     state               varchar(16)     NOT NULL COMMENT '活动状态',
     create_time         datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time         datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',

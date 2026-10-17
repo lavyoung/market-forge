@@ -1,5 +1,6 @@
 package com.lavyoung.marketforge.domain.activity.model.entity;
 
+import com.lavyoung.marketforge.domain.activity.model.vo.AwardUnlockScopeVO;
 import lombok.Builder;
 
 import java.time.LocalDateTime;
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
  * @param stockCountSurplus 活动剩余库存
  * @param activityCountId   活动参与次数配置标识
  * @param strategyId        活动关联的抽奖策略标识
+ * @param awardUnlockScope  奖品次数锁的统计范围
  * @param state             活动状态
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -32,6 +34,7 @@ public record ActivityEntity(
         Integer stockCountSurplus,
         Long activityCountId,
         Long strategyId,
+        AwardUnlockScopeVO awardUnlockScope,
         String state
 ) {
 }

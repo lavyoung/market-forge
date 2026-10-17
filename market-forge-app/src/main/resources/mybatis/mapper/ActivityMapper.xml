@@ -16,6 +16,7 @@
         <result column="stock_count_surplus" property="stockCountSurplus"/>
         <result column="activity_count_id" property="activityCountId"/>
         <result column="strategy_id" property="strategyId"/>
+        <result column="award_unlock_scope" property="awardUnlockScope"/>
         <result column="state" property="state"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
@@ -23,8 +24,8 @@
 
     <sql id="activityColumns">
         id, activity_id, activity_name, activity_desc, begin_date_time, end_date_time,
-        stock_count, stock_count_surplus, activity_count_id, strategy_id, state,
-        create_time, update_time
+        stock_count, stock_count_surplus, activity_count_id, strategy_id,
+        award_unlock_scope, state, create_time, update_time
     </sql>
 
     <select id="queryByActivityId" resultMap="activityResultMap">

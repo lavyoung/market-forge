@@ -1,7 +1,9 @@
 package com.lavyoung.marketforge.infrastructure.persistent.assembler;
 
 import com.lavyoung.marketforge.domain.activity.model.entity.*;
+import com.lavyoung.marketforge.domain.activity.model.vo.AwardUnlockScopeVO;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.activity.*;
+import com.lavyoung.marketforge.infrastructure.persistent.po.activity.ActivityPO;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
@@ -10,6 +12,7 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * 活动领域实体与持久化对象转换器测试。
@@ -37,6 +40,7 @@ class ActivityAssemblerTest {
                 .stockCountSurplus(900)
                 .activityCountId(100001L)
                 .strategyId(100006L)
+                .awardUnlockScope(AwardUnlockScopeVO.TOTAL)
                 .state("open")
                 .build();
 
@@ -45,6 +49,41 @@ class ActivityAssemblerTest {
 
         // Then
         assertEquals(expected, actual);
+    }
+
+    /**
+     * Given 持久化活动配置按日解锁，When 转换为领域实体并再转回持久化对象，
+     * Then 范围编码应在 {@code day} 和 {@link AwardUnlockScopeVO#DAY} 之间完整往返。
+     */
+    @Test
+    void shouldConvertDayAwardUnlockScopeInBothDirections() {
+        // Given
+        ActivityAssembler assembler = Mappers.getMapper(ActivityAssembler.class);
+        ActivityPO activityPO = new ActivityPO();
+        activityPO.setAwardUnlockScope("day");
+
+        // When
+        ActivityEntity activityEntity = assembler.toEntity(activityPO);
+        ActivityPO convertedPO = assembler.toPO(activityEntity);
+
+        // Then
+        assertEquals(AwardUnlockScopeVO.DAY, activityEntity.awardUnlockScope());
+        assertEquals("day", convertedPO.getAwardUnlockScope());
+    }
+
+    /**
+     * Given 数据库中存在未支持的解锁范围编码，When 将持久化对象转换为领域实体，
+     * Then 应立即抛出异常，避免将无效配置传入奖品解锁规则。
+     */
+    @Test
+    void shouldRejectUnsupportedAwardUnlockScope() {
+        // Given
+        ActivityAssembler assembler = Mappers.getMapper(ActivityAssembler.class);
+        ActivityPO activityPO = new ActivityPO();
+        activityPO.setAwardUnlockScope("weekly");
+
+        // When & Then
+        assertThrows(IllegalArgumentException.class, () -> assembler.toEntity(activityPO));
     }
 
     /**

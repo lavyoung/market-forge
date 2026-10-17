@@ -80,10 +80,10 @@ VALUES (100301, 100301, 100, 10, 100);
 
 INSERT INTO raffle_activity
 (id, activity_id, activity_name, activity_desc, begin_date_time, end_date_time,
- stock_count, stock_count_surplus, activity_count_id, strategy_id, state)
+ stock_count, stock_count_surplus, activity_count_id, strategy_id, award_unlock_scope, state)
 VALUES (100301, 100301, '九宫格活动抽奖', '九宫格抽奖活动演示数据',
         '2026-01-01 00:00:00', '2036-12-31 23:59:59',
-        100000, 100000, 100301, 900901001, 'open');
+        100000, 100000, 100301, 900901001, 'total', 'open');
 
 INSERT INTO raffle_activity_sku
 (sku, activity_id, activity_count_id, stock_count, stock_count_surplus, credit_amount)
@@ -134,7 +134,7 @@ SELECT strategy_id, strategy_desc, rule_models
 FROM strategy
 WHERE strategy_id = 900901001;
 
-SELECT activity_id, activity_name, strategy_id, state
+SELECT activity_id, activity_name, strategy_id, award_unlock_scope, state
 FROM raffle_activity
 WHERE activity_id = 100301;
 

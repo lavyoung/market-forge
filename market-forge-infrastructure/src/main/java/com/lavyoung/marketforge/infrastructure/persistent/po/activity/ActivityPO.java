@@ -75,6 +75,14 @@ public class ActivityPO extends BasePO {
      * 活动关联的抽奖策略标识。
      */
     private Long strategyId;
+    /**
+     * 奖品次数锁统计范围。
+     *
+     * <p>数据库保存 {@code day} 或 {@code total}，转换为领域实体时
+     * 由 ActivityAssembler 解析为 AwardUnlockScopeVO。</p>
+     */
+    private String awardUnlockScope;
+
 
     /**
      * 活动状态。

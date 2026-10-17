@@ -1,6 +1,7 @@
 package com.lavyoung.marketforge.infrastructure.persistent.assembler.activity;
 
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityEntity;
+import com.lavyoung.marketforge.domain.activity.model.vo.AwardUnlockScopeVO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.activity.ActivityPO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -56,4 +57,28 @@ public interface ActivityAssembler {
      * @return 活动持久化对象列表
      */
     List<ActivityPO> toPOs(List<ActivityEntity> activityEntities);
+
+    /**
+     * 将数据库范围编码转换为领域值对象。
+     *
+     * @param code 数据库存储的范围编码
+     * @return 活动奖品解锁统计范围
+     * @throws IllegalArgumentException 编码为空或无法识别时抛出
+     */
+    default AwardUnlockScopeVO toAwardUnlockScope(String code) {
+        return AwardUnlockScopeVO.fromCode(code)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "unsupported award unlock scope: " + code
+                ));
+    }
+
+    /**
+     * 将领域值对象转换为数据库范围编码。
+     *
+     * @param scope 活动奖品解锁统计范围
+     * @return 数据库存储编码；范围为空时返回 {@code null}
+     */
+    default String toAwardUnlockScopeCode(AwardUnlockScopeVO scope) {
+        return scope == null ? null : scope.getCode();
+    }
 }
