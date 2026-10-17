@@ -1,11 +1,14 @@
 package com.lavyoung.marketforge.infrastructure.persistent.repository;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
 import com.lavyoung.marketforge.domain.award.model.aggreate.UserAwardRecordAggregate;
 import com.lavyoung.marketforge.domain.award.model.entity.UserAwardRecordEntity;
-import com.lavyoung.marketforge.domain.award.model.valobj.AwardStateVO;
+import com.lavyoung.marketforge.domain.award.model.vo.AwardStateVO;
+import com.lavyoung.marketforge.domain.award.model.vo.AwardUnlockCountQueryVO;
 import com.lavyoung.marketforge.domain.award.repository.IAwardRepository;
 import com.lavyoung.marketforge.domain.message.model.entity.TaskEntity;
 import com.lavyoung.marketforge.domain.message.model.valobj.TaskStateVO;
@@ -25,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -100,5 +104,28 @@ public class AwardRepository implements IAwardRepository {
                 .eq("award_state", currentState.getCode())
                 .set("award_state", targetState.getCode());
         return userAwardRecordDao.update(null, updateWrapper) == 1;
+    }
+
+    @Override
+    public long countCompletedRaffles(AwardUnlockCountQueryVO queryVO) {
+        // 统计已完成抽奖记录次数
+        Objects.requireNonNull(queryVO, "query must not be null");
+        LambdaQueryWrapper<UserAwardRecordPO> queryWrapper = Wrappers.lambdaQuery(UserAwardRecordPO.class)
+                .eq(UserAwardRecordPO::getUserId, queryVO.userId())
+                .eq(UserAwardRecordPO::getActivityId, queryVO.activityId());
+        switch (queryVO.unlockScope()) {
+            case DAY -> {
+                // award_time >= 当天 00:00:00
+                // AND award_time < 下一天 00:00:00
+                LocalDateTime rangeStart = queryVO.statisticsDate().atStartOfDay();
+                LocalDateTime rangeEnd = queryVO.statisticsDate().plusDays(1).atStartOfDay();
+                queryWrapper.ge(UserAwardRecordPO::getAwardTime, rangeStart)
+                        .lt(UserAwardRecordPO::getAwardTime, rangeEnd);
+            }
+            case TOTAL -> {
+                // 活动累计模式只按用户和活动过滤，不添加时间条件。
+            }
+        }
+        return userAwardRecordDao.selectCount(queryWrapper);
     }
 }

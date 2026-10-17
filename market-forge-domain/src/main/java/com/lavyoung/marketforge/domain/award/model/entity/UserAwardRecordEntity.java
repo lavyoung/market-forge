@@ -1,6 +1,6 @@
 package com.lavyoung.marketforge.domain.award.model.entity;
 
-import com.lavyoung.marketforge.domain.award.model.valobj.AwardStateVO;
+import com.lavyoung.marketforge.domain.award.model.vo.AwardStateVO;
 import lombok.Builder;
 
 import java.time.LocalDateTime;

@@ -1,4 +1,4 @@
-package com.lavyoung.marketforge.domain.award.model.valobj;
+package com.lavyoung.marketforge.domain.award.model.vo;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

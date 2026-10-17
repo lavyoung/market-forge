@@ -7,10 +7,14 @@ import com.lavyoung.marketforge.application.strategy.model.RaffleCommand;
 import com.lavyoung.marketforge.application.strategy.model.RaffleResult;
 import com.lavyoung.marketforge.application.strategy.service.IStrategyRaffleService;
 import com.lavyoung.marketforge.domain.activity.model.entity.*;
+import com.lavyoung.marketforge.domain.activity.model.vo.AwardUnlockScopeVO;
 import com.lavyoung.marketforge.domain.activity.model.vo.UserRaffleOrderStateVO;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityPartakeService;
 import com.lavyoung.marketforge.domain.activity.service.armory.IActivityArmory;
+import com.lavyoung.marketforge.domain.award.model.vo.AwardUnlockCountQueryVO;
+import com.lavyoung.marketforge.domain.award.model.vo.AwardUnlockResultVO;
+import com.lavyoung.marketforge.domain.award.service.IAwardUnlockService;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.repository.IRuleTreeRepository;
@@ -31,6 +35,7 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -50,6 +55,9 @@ class ActivityRaffleApplicationServiceImplTest {
 
     @Mock
     private IRaffleActivityPartakeService activityPartakeService;
+
+    @Mock
+    private IAwardUnlockService awardUnlockService;
 
     @Mock
     private IStrategyRaffleService strategyRaffleService;
@@ -186,7 +194,7 @@ class ActivityRaffleApplicationServiceImplTest {
     }
 
     /**
-     * Given 用户当天已参与 1 次且奖品配置次数锁，When 查询活动奖品列表，Then 返回奖品解锁状态和剩余解锁次数。
+     * Given 活动按历史累计次数解锁且用户已完成 1 次，When 查询奖品列表，Then 批量返回解锁状态和范围。
      */
     @Test
     void shouldQueryActivityAwardListWithUnlockState() {
@@ -195,6 +203,7 @@ class ActivityRaffleApplicationServiceImplTest {
                 .activityId(ACTIVITY_ID)
                 .activityName("九宫格活动抽奖")
                 .strategyId(STRATEGY_ID)
+                .awardUnlockScope(AwardUnlockScopeVO.TOTAL)
                 .build();
         StrategyAwardEntity unlockedAward = StrategyAwardEntity.builder()
                 .strategyId(STRATEGY_ID)
@@ -213,17 +222,17 @@ class ActivityRaffleApplicationServiceImplTest {
                 .ruleModels("tree_lock_2")
                 .sort(8)
                 .build();
-        ActivityAccountDayEntity dayAccount = ActivityAccountDayEntity.builder()
-                .userId(USER_ID)
-                .activityId(ACTIVITY_ID)
-                .day(LocalDate.now())
-                .dayCount(3)
-                .dayCountSurplus(2)
-                .build();
         when(activityRepository.getActivityEntityByIdActivityId(ACTIVITY_ID)).thenReturn(activity);
         when(raffleAward.queryRaffleStrategyAwardList(STRATEGY_ID)).thenReturn(List.of(unlockedAward, lockedAward));
         when(ruleTreeRepository.queryAwardRuleLockCount(List.of("tree_lock_2"))).thenReturn(Map.of("tree_lock_2", 2));
-        when(activityRepository.queryActivityAccountDayByUserId(USER_ID, ACTIVITY_ID, LocalDate.now())).thenReturn(dayAccount);
+        AwardUnlockCountQueryVO unlockQuery = new AwardUnlockCountQueryVO(
+                USER_ID,
+                ACTIVITY_ID,
+                AwardUnlockScopeVO.TOTAL,
+                LocalDate.now()
+        );
+        when(awardUnlockService.evaluateUnlocks(unlockQuery, Set.of(2)))
+                .thenReturn(Map.of(2, AwardUnlockResultVO.evaluate(2, 1L)));
         when(strategyRepository.getStrategyRule(STRATEGY_ID, RuleModel.WEIGHT)).thenReturn(StrategyRuleEntity.builder()
                 .strategyId(STRATEGY_ID)
                 .ruleModel(RuleModel.WEIGHT.getCode())
@@ -242,6 +251,7 @@ class ActivityRaffleApplicationServiceImplTest {
                 () -> assertEquals(0, results.get(0).waitUnLockCount()),
                 () -> assertEquals(108L, results.get(1).awardId()),
                 () -> assertEquals(2, results.get(1).awardRuleLockCount()),
+                () -> assertEquals("total", results.get(1).awardUnlockScope()),
                 () -> assertFalse(results.get(1).isAwardUnlock()),
                 () -> assertEquals(1, results.get(1).waitUnLockCount()),
                 () -> assertNull(results.get(0).awardRuleWeightCount()),
@@ -251,6 +261,8 @@ class ActivityRaffleApplicationServiceImplTest {
                 () -> assertFalse(results.get(1).isAwardWeightUnlock()),
                 () -> assertEquals(1, results.get(1).waitAwardWeightCount())
         );
+        verify(awardUnlockService).evaluateUnlocks(unlockQuery, Set.of(2));
+        verify(activityRepository, never()).queryActivityAccountDayByUserId(anyString(), anyLong(), any());
         verify(strategyRepository).queryUserRaffleCount(USER_ID, STRATEGY_ID);
     }
 
@@ -356,6 +368,7 @@ class ActivityRaffleApplicationServiceImplTest {
     private ActivityRaffleApplicationServiceImpl newService() {
         return new ActivityRaffleApplicationServiceImpl(
                 activityPartakeService,
+                awardUnlockService,
                 strategyRaffleService,
                 settlementTransaction,
                 activityArmory,

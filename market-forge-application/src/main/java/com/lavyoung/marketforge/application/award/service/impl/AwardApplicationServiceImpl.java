@@ -7,7 +7,7 @@ import com.lavyoung.marketforge.application.message.TaskCreatedEvent;
 import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
 import com.lavyoung.marketforge.domain.award.model.aggreate.UserAwardRecordAggregate;
 import com.lavyoung.marketforge.domain.award.model.entity.UserAwardRecordEntity;
-import com.lavyoung.marketforge.domain.award.model.valobj.AwardStateVO;
+import com.lavyoung.marketforge.domain.award.model.vo.AwardStateVO;
 import com.lavyoung.marketforge.domain.award.repository.IAwardRepository;
 import com.lavyoung.marketforge.domain.award.service.IAwardStateService;
 import com.lavyoung.marketforge.domain.credit.model.vo.CreditAccountBusinessTypeVO;

@@ -1,7 +1,7 @@
 package com.lavyoung.marketforge.domain.award.service.impl;
 
 import com.lavyoung.marketforge.domain.award.model.entity.UserAwardRecordEntity;
-import com.lavyoung.marketforge.domain.award.model.valobj.AwardStateVO;
+import com.lavyoung.marketforge.domain.award.model.vo.AwardStateVO;
 import com.lavyoung.marketforge.domain.award.repository.IAwardRepository;
 import com.lavyoung.marketforge.domain.award.service.IAwardStateService;
 import com.lavyoung.marketforge.types.exception.BusinessException;

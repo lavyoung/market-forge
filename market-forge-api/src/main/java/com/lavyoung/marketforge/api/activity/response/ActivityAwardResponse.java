@@ -41,6 +41,9 @@ public record ActivityAwardResponse(
         @Schema(description = "奖品次数锁规则，抽奖 N 次后解锁；未配置时为空", example = "2")
         Integer awardRuleLockCount,
 
+        @Schema(description = "奖品解锁次数统计范围：day 表示活动当日，total 表示活动历史累计", example = "total")
+        String awardUnlockScope,
+
         @Schema(description = "奖品是否已解锁", example = "false")
         Boolean isAwardUnlock,
 

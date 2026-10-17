@@ -8,9 +8,13 @@ import com.lavyoung.marketforge.application.strategy.model.RaffleCommand;
 import com.lavyoung.marketforge.application.strategy.model.RaffleResult;
 import com.lavyoung.marketforge.application.strategy.service.IStrategyRaffleService;
 import com.lavyoung.marketforge.domain.activity.model.entity.*;
+import com.lavyoung.marketforge.domain.activity.model.vo.AwardUnlockScopeVO;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityPartakeService;
 import com.lavyoung.marketforge.domain.activity.service.armory.IActivityArmory;
+import com.lavyoung.marketforge.domain.award.model.vo.AwardUnlockCountQueryVO;
+import com.lavyoung.marketforge.domain.award.model.vo.AwardUnlockResultVO;
+import com.lavyoung.marketforge.domain.award.service.IAwardUnlockService;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.repository.IRuleTreeRepository;
@@ -25,10 +29,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 活动抽奖应用服务默认实现。
@@ -44,6 +46,7 @@ import java.util.Objects;
 public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleApplicationService {
 
     private final IRaffleActivityPartakeService activityPartakeService;
+    private final IAwardUnlockService awardUnlockService;
     private final IStrategyRaffleService strategyRaffleService;
     private final ActivityRaffleSettlementTransaction settlementTransaction;
     private final IActivityArmory activityArmory;
@@ -116,11 +119,19 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
         List<StrategyAwardEntity> awardEntities = raffleAward.queryRaffleStrategyAwardList(activityEntity.strategyId());
         Map<String, Integer> ruleLockCountMap = queryRuleLockCountMap(awardEntities);
         Map<Long, Integer> ruleWeightCountMap = queryRuleWeightCountMap(activityEntity.strategyId());
-        int dayPartakeCount = queryDayPartakeCount(userId, activityId);
+        Map<Integer, AwardUnlockResultVO> unlockResultMap = queryAwardUnlockResultMap(userId, activityEntity, ruleLockCountMap);
         long userRaffleCount = strategyRepository.queryUserRaffleCount(userId, activityEntity.strategyId());
 
+        AwardDisplayContext context = new AwardDisplayContext(
+                activityId,
+                activityEntity.awardUnlockScope(),
+                ruleLockCountMap,
+                unlockResultMap,
+                ruleWeightCountMap,
+                userRaffleCount
+        );
         return awardEntities.stream()
-                .map(award -> toActivityAwardResult(award, ruleLockCountMap, dayPartakeCount, ruleWeightCountMap, userRaffleCount))
+                .map(award -> toActivityAwardResult(award, context))
                 .toList();
     }
 
@@ -183,41 +194,46 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
     }
 
     /**
-     * 将策略奖品配置转换为活动页奖品展示结果。
+     * 将策略奖品和用户维度判定上下文转换为活动页展示结果。
      *
-     * @param award              策略奖品配置
-     * @param ruleLockCountMap   规则树标识到解锁次数的映射
-     * @param dayPartakeCount    用户当天已参与次数
-     * @param ruleWeightCountMap 奖品标识到权重门槛的映射
-     * @param userRaffleCount    用户在当前策略下的累计抽奖次数
+     * @param award   策略奖品配置
+     * @param context 当前活动和用户的奖品展示上下文
      * @return 活动奖品展示结果
+     * @throws BusinessException 奖品配置了次数锁但缺少判定结果时抛出
      */
-    private ActivityAwardResult toActivityAwardResult(StrategyAwardEntity award,
-                                                      Map<String, Integer> ruleLockCountMap,
-                                                      int dayPartakeCount,
-                                                      Map<Long, Integer> ruleWeightCountMap,
-                                                      long userRaffleCount) {
-        Integer awardRuleLockCount = StringUtils.isBlank(award.ruleModels())
-                ? null
-                : ruleLockCountMap.get(award.ruleModels());
-        boolean unlocked = awardRuleLockCount == null || dayPartakeCount >= awardRuleLockCount;
-        int waitUnlockCount = unlocked ? 0 : awardRuleLockCount - dayPartakeCount;
+    private ActivityAwardResult toActivityAwardResult(StrategyAwardEntity award, AwardDisplayContext context) {
+        Integer lockCount = StringUtils.isBlank(award.ruleModels()) ? null : context.lockCountMap().get(award.ruleModels());
 
-        Integer awardRuleWeightCount = ruleWeightCountMap.get(award.awardId());
-        boolean weightUnlocked = awardRuleWeightCount == null || userRaffleCount >= awardRuleWeightCount;
-        int waitAwardWeightCount = weightUnlocked ? 0 : Math.toIntExact(awardRuleWeightCount - userRaffleCount);
+        AwardUnlockResultVO unlockResult = null;
+        if (lockCount != null) {
+            unlockResult = context.unlockResultMap().get(lockCount);
+            if (unlockResult == null) {
+                throw BusinessException.of(BusinessResponseCode.ACTIVITY_CONFIG_INVALID, context.activityId(), award.awardId(), lockCount);
+            }
+        }
+
+        boolean unlocked = unlockResult == null || unlockResult.unlocked();
+
+        int waitUnlockCount = unlockResult == null ? 0 : unlockResult.remainingCount();
+
+        Integer weightCount = context.weightCountMap().get(award.awardId());
+
+        boolean weightUnlocked = weightCount == null || context.userRaffleCount() >= weightCount;
+
+        int waitWeightCount = weightUnlocked ? 0 : Math.toIntExact(weightCount - context.userRaffleCount());
 
         return new ActivityAwardResult(
                 award.awardId(),
                 award.awardTitle(),
                 award.awardSubtitle(),
                 award.sort(),
-                awardRuleLockCount,
+                lockCount,
+                context.unlockScope().getCode(),
                 unlocked,
                 waitUnlockCount,
-                awardRuleWeightCount,
+                weightCount,
                 weightUnlocked,
-                waitAwardWeightCount
+                waitWeightCount
         );
     }
 
@@ -281,5 +297,61 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
         });
 
         return Map.copyOf(awardWeightCountMap);
+    }
+
+    /**
+     * 批量查询当前活动奖品门槛对应的解锁结果。
+     *
+     * <p>先对门槛去重，再通过领域服务执行一次中奖记录统计，
+     * 防止奖品数量增加后产生 N+1 数据库查询。</p>
+     *
+     * @param userId       用户标识
+     * @param activity     当前活动配置
+     * @param lockCountMap 规则树标识与解锁门槛的映射
+     * @return 解锁门槛与判定结果的不可变映射
+     */
+    private Map<Integer, AwardUnlockResultVO> queryAwardUnlockResultMap(String userId,
+                                                                        ActivityEntity activity,
+                                                                        Map<String, Integer> lockCountMap) {
+        Set<Integer> requiredCounts = lockCountMap.values()
+                .stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toUnmodifiableSet());
+
+        if (requiredCounts.isEmpty()) {
+            return Map.of();
+        }
+
+        AwardUnlockCountQueryVO queryVO = new AwardUnlockCountQueryVO(
+                userId,
+                activity.activityId(),
+                activity.awardUnlockScope(),
+                LocalDate.now()
+        );
+
+        return awardUnlockService.evaluateUnlocks(queryVO, requiredCounts);
+    }
+
+    /**
+     * 活动奖品列表单次查询所需的共享上下文。
+     *
+     * <p>使用上下文对象避免结果组装方法出现过多参数，同时保证
+     * 所有奖品共享同一批解锁结果和权重统计结果。</p>
+     *
+     * @param activityId      活动标识
+     * @param unlockScope     奖品解锁次数统计范围
+     * @param lockCountMap    规则树标识到解锁门槛的映射
+     * @param unlockResultMap 解锁门槛到用户判定结果的映射
+     * @param weightCountMap  奖品标识到权重门槛的映射
+     * @param userRaffleCount 用户在当前策略下的累计抽奖次数
+     */
+    private record AwardDisplayContext(
+            Long activityId,
+            AwardUnlockScopeVO unlockScope,
+            Map<String, Integer> lockCountMap,
+            Map<Integer, AwardUnlockResultVO> unlockResultMap,
+            Map<Long, Integer> weightCountMap,
+            long userRaffleCount
+    ) {
     }
 }

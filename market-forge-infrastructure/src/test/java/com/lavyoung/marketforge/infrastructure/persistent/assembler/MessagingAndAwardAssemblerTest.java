@@ -3,7 +3,7 @@ package com.lavyoung.marketforge.infrastructure.persistent.assembler;
 import cn.hutool.json.JSONUtil;
 import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
 import com.lavyoung.marketforge.domain.award.model.entity.UserAwardRecordEntity;
-import com.lavyoung.marketforge.domain.award.model.valobj.AwardStateVO;
+import com.lavyoung.marketforge.domain.award.model.vo.AwardStateVO;
 import com.lavyoung.marketforge.domain.message.model.entity.TaskEntity;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;

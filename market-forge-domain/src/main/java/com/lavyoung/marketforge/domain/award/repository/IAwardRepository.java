@@ -2,7 +2,8 @@ package com.lavyoung.marketforge.domain.award.repository;
 
 import com.lavyoung.marketforge.domain.award.model.aggreate.UserAwardRecordAggregate;
 import com.lavyoung.marketforge.domain.award.model.entity.UserAwardRecordEntity;
-import com.lavyoung.marketforge.domain.award.model.valobj.AwardStateVO;
+import com.lavyoung.marketforge.domain.award.model.vo.AwardStateVO;
+import com.lavyoung.marketforge.domain.award.model.vo.AwardUnlockCountQueryVO;
 
 import java.util.Optional;
 
@@ -47,4 +48,17 @@ public interface IAwardRepository {
      * @return 状态更新成功时返回 {@code true}
      */
     boolean updateAwardState(String userId, String orderId, AwardStateVO currentState, AwardStateVO targetState);
+
+    /**
+     * 查询用户在活动中已经完成的有效抽奖次数。
+     *
+     * <p>实现方应以中奖记录作为已完成抽奖的事实来源。日范围统计只查询
+     * 指定业务日期内的数据，累计范围统计查询当前活动的全部历史数据。
+     * 发奖状态不参与过滤，因为发奖处理中或发奖失败不改变抽奖已经完成的事实。</p>
+     *
+     * @param queryVO 奖品解锁次数查询条件
+     * @return 符合活动和统计范围的已完成抽奖次数
+     * @throws NullPointerException 查询条件为空时抛出
+     */
+    long countCompletedRaffles(AwardUnlockCountQueryVO queryVO);
 }
