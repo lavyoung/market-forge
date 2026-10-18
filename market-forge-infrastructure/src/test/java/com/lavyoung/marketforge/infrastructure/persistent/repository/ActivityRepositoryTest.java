@@ -7,6 +7,7 @@ import com.lavyoung.marketforge.infrastructure.persistent.assembler.activity.*;
 import com.lavyoung.marketforge.infrastructure.persistent.dao.activity.*;
 import com.lavyoung.marketforge.infrastructure.persistent.po.activity.*;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
+import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.messaging.MessagePublisher;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
@@ -15,13 +16,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.Optional;
+import java.util.TimeZone;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
@@ -166,10 +168,10 @@ class ActivityRepositoryTest {
     }
 
     /**
-     * Given 订单已不是待支付状态，When 发货，Then 应抛出状态异常且不重复入账。
+     * Given 订单已经完成，When 收到重复发货消息，Then 应幂等返回且不重复增加账户额度。
      */
     @Test
-    void shouldRejectDeliveryWhenOrderStateIsNotWaitPay() {
+    void shouldIgnoreRedeliveryWhenOrderIsComplete() {
         // Given
         ActivityRepository repository = repository();
         ActivityOrderPO orderPO = new ActivityOrderPO();
@@ -177,21 +179,12 @@ class ActivityRepositoryTest {
         when(activityOrderDao.queryByUserIdAndOutBusinessNo(USER_ID, OUT_BUSINESS_NO))
                 .thenReturn(Optional.of(orderPO));
         when(activityOrderAssembler.toEntity(orderPO)).thenReturn(order);
-        when(activityOrderDao.updateStateByOutBusinessNo(
-                USER_ID,
-                OUT_BUSINESS_NO,
-                OrderStateVO.WAIT_PAY.getCode(),
-                OrderStateVO.COMPLETE.getCode()
-        )).thenReturn(0);
 
         // When
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> repository.deliverCreditPayOrder(new DeliveryOrderEntity(USER_ID, OUT_BUSINESS_NO))
-        );
+        repository.deliverCreditPayOrder(new DeliveryOrderEntity(USER_ID, OUT_BUSINESS_NO));
 
         // Then
-        assertEquals(BusinessResponseCode.ACTIVITY_ORDER_STATE_ERROR, exception.getResponseCode());
+        verify(activityOrderDao, never()).updateStateByOutBusinessNo(any(), any(), any(), any());
         verify(activityAccountDao, never()).incrementTotalCount(any(), any(), any(), any(), any());
         verify(activityAccountMonthDao, never()).incrementMonthCount(any(), any(), any(), any());
         verify(activityAccountDayDao, never()).incrementDayCount(any(), any(), any(), any());
@@ -239,6 +232,37 @@ class ActivityRepositoryTest {
         assertEquals(BusinessResponseCode.ACTIVITY_SKU_NOT_FOUND, exception.getResponseCode());
         verify(activitySkuDao, never()).updateById(any(ActivitySkuPO.class));
         verifyNoInteractions(redisService);
+    }
+
+    /**
+     * Given 系统使用地区时区且缓存中仍有库存，When 预扣库存，Then 应正确计算锁租约并完成 CAS 扣减。
+     *
+     * <p>该场景防止把 {@code Asia/Hong_Kong} 这类地区时区误当作 {@code +08:00}
+     * 固定偏移量解析，从而在创建积分兑换订单前抛出 {@link java.time.DateTimeException}。</p>
+     */
+    @Test
+    void shouldDeductSkuStockWithRegionBasedSystemTimeZone() {
+        // Given
+        TimeZone originalTimeZone = TimeZone.getDefault();
+        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Hong_Kong"));
+        try {
+            ActivityRepository repository = repository();
+            String stockKey = Constants.RedisKeys.ACTIVITY_SKU_STOCK_COUNT_KEY + SKU;
+            String lockKey = stockKey + "_5";
+            when(redisService.getValue(stockKey, Integer.class)).thenReturn(Optional.of(5));
+            when(redisService.setIfAbsent(eq(lockKey), eq(1), any(Duration.class))).thenReturn(true);
+            when(redisService.compareAndSetAtomicLong(stockKey, 5, 4)).thenReturn(true);
+
+            // When
+            var result = repository.subtractionActivitySkuStock(SKU, LocalDateTime.now().plusDays(1));
+
+            // Then
+            assertTrue(result.success());
+            verify(redisService).setIfAbsent(eq(lockKey), eq(1), argThat(duration -> !duration.isNegative() && !duration.isZero()));
+            verify(redisService).compareAndSetAtomicLong(stockKey, 5, 4);
+        } finally {
+            TimeZone.setDefault(originalTimeZone);
+        }
     }
 
     private ActivityRepository repository() {

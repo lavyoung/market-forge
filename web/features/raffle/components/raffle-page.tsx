@@ -11,6 +11,7 @@ import {
 import ActivityAccountPanel from "@/features/raffle/components/activity-account-panel";
 import CalendarSignPanel from "@/features/raffle/components/calendar-sign-panel";
 import StrategyWeightPanel from "@/features/raffle/components/strategy-weight-panel";
+import CreditExchangePanel from "@/features/credit/components/credit-exchange-panel";
 import {describeUnlockState, normalizeAwards} from "@/features/raffle/model/raffle-award-view";
 import Link from "next/link";
 import {useEffect, useRef, useState} from "react";
@@ -120,6 +121,7 @@ export default function RafflePage({activityId}: RafflePageProp) {
     const [drawError, setDrawError] = useState<string | null>(null);
     const [armoryStatus, setArmoryStatus] = useState<ArmoryStatus>("idle");
     const [armoryMessage, setArmoryMessage] = useState<string | null>(null);
+    const [creditRefreshToken, setCreditRefreshToken] = useState(0);
 
     const mountedRef = useRef(false);
     const inFlightRef = useRef(false);
@@ -201,19 +203,20 @@ export default function RafflePage({activityId}: RafflePageProp) {
     }
 
     /**
-     * 签到成功后有限次数地刷新活动账户额度。
+     * 异步额度业务受理后有限次数地刷新活动账户。
      *
-     * 签到接口只代表返利订单已经创建。活动 SKU 需要经过可靠消息和 MQ
-     * 异步结算后才会增加活动账户额度，因此立即查询可能仍得到旧数据。
+     * 签到返利和积分兑换都需要经过可靠消息和 MQ 异步结算后才会增加
+     * 活动账户额度，因此业务接口返回后立即查询仍可能得到旧数据。
      *
      * 方法以签到前的总额度作为基准。一旦发现总额度变化便停止轮询；
      * 如果结算尚未完成，则在有限次数后保留最后一次成功查询的数据，
      * 避免浏览器无限请求后端。
      *
-     * @returns 额度刷新流程完成后的 Promise
+     * @param failureMessage 所有查询失败后展示给用户的业务提示
+     * @returns 查询到总额度变化返回 true，查询成功但暂未变化返回 false
      * @throws Error 所有额度查询均失败时抛出最后一次查询异常
      */
-    async function refreshAccountAfterSign(): Promise<void> {
+    async function refreshAccountAfterAsyncIncrease(failureMessage: string): Promise<boolean> {
         const previousTotalCount = accountData.account?.totalCount ?? null;
         let lastError: unknown;
         let hasSuccessfulRefresh = false;
@@ -224,21 +227,21 @@ export default function RafflePage({activityId}: RafflePageProp) {
             }
 
             if (!mountedRef.current) {
-                return;
+                return false;
             }
 
             try {
                 const account = await queryActivityAccount(activityId);
 
                 if (!mountedRef.current) {
-                    return;
+                    return false;
                 }
 
                 hasSuccessfulRefresh = true;
                 setAccountData({account, error: null});
 
                 if (previousTotalCount === null || account.totalCount !== previousTotalCount) {
-                    return;
+                    return true;
                 }
             } catch (error) {
                 lastError = error;
@@ -246,13 +249,46 @@ export default function RafflePage({activityId}: RafflePageProp) {
         }
 
         if (!hasSuccessfulRefresh) {
-            setAccountData((current) => ({account: current.account, error: "签到成功，但活动额度暂时无法刷新"}));
+            setAccountData((current) => ({account: current.account, error: failureMessage}));
 
             if (lastError instanceof Error) {
                 throw lastError;
             }
 
-            throw new Error("签到成功，但活动额度暂时无法刷新");
+            throw new Error(failureMessage);
+        }
+
+        return false;
+    }
+
+    /**
+     * 签到成功后等待活动 SKU 返利增加抽奖额度。
+     *
+     * @returns 活动账户刷新完成后的 Promise
+     * @throws Error 所有活动账户查询都失败时抛出
+     */
+    async function refreshAccountAfterSign(): Promise<void> {
+        await refreshAccountAfterAsyncIncrease("签到成功，但活动额度暂时无法刷新");
+    }
+
+    /**
+     * 积分兑换订单创建后等待异步发货增加抽奖额度。
+     *
+     * @returns 查询到抽奖额度变化返回 true，额度仍在同步返回 false
+     * @throws Error 所有活动账户查询都失败时抛出
+     */
+    function refreshAccountAfterCreditExchange(): Promise<boolean> {
+        return refreshAccountAfterAsyncIncrease("兑换订单已创建，但活动额度暂时无法刷新");
+    }
+
+    /**
+     * 当抽奖结果为积分奖品时，通知积分模块开始查询异步发奖结果。
+     *
+     * @param result 服务端确认的抽奖结果
+     */
+    function refreshCreditForIntegralAward(result: ActivityDrawResult): void {
+        if (result.awardKey === "integral") {
+            setCreditRefreshToken((current) => current + 1);
         }
     }
 
@@ -272,6 +308,7 @@ export default function RafflePage({activityId}: RafflePageProp) {
 
         setOutcome(nextOutcome);
         setPhase("refreshing");
+        refreshCreditForIntegralAward(nextOutcome.result);
 
         const [awardsResult, accountResult] = await Promise.allSettled([
             queryActivityAwards(activityId),
@@ -371,6 +408,7 @@ export default function RafflePage({activityId}: RafflePageProp) {
             );
 
             if (targetIndex < 0) {
+                refreshCreditForIntegralAward(result);
                 setOutcome({
                     result,
                     awardTitle: `奖品编号 ${result.awardId}`,
@@ -440,6 +478,8 @@ export default function RafflePage({activityId}: RafflePageProp) {
 
                 <ActivityAccountPanel account={accountData.account} error={accountData.error}/>
                 <CalendarSignPanel onSigned={refreshAccountAfterSign}/>
+                <CreditExchangePanel activityId={activityId} externalRefreshToken={creditRefreshToken}
+                                     onExchangeAccepted={refreshAccountAfterCreditExchange}/>
 
                 <section
                     className={styles.card}

@@ -1,6 +1,6 @@
 package com.lavyoung.marketforge.domain.credit.event;
 
-import com.lavyoung.marketforge.types.messaging.IntegrationEvent;
+import com.lavyoung.marketforge.types.messaging.BusinessIdempotentIntegrationEvent;
 import com.lavyoung.marketforge.types.messaging.MqConstants;
 import lombok.Builder;
 
@@ -12,7 +12,9 @@ import java.util.UUID;
  *
  * <p>当积分账户完成一笔调额后，系统通过该事件通知下游继续处理依赖积分支付结果的业务。
  * 在积分兑换活动 SKU 场景中，消费者会根据 {@code userId} 和 {@code outBusinessNo}
- * 定位待支付活动订单，并完成发货入账。</p>
+ * 定位待支付活动订单，并完成发货入账。该订单通过唯一业务号和
+ * {@code WAIT_PAY -> COMPLETE} 条件更新保证幂等，因此消费时不写通用幂等表，
+ * 避免通用表与用户分片数据落在不同数据源而形成跨库本地事务。</p>
  *
  * @param eventId       事件唯一标识，用于可靠投递和消费幂等
  * @param occurredAt    事件发生时间
@@ -32,7 +34,7 @@ public record CreditAdjustSuccessEvent(
         String orderId,
         String outBusinessNo,
         Long amount
-) implements IntegrationEvent {
+) implements BusinessIdempotentIntegrationEvent {
 
     /**
      * 创建积分账户调额成功事件。

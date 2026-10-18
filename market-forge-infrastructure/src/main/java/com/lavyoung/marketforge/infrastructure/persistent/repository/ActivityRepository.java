@@ -328,7 +328,7 @@ public class ActivityRepository implements IActivityRepository {
         // 2. 加锁为了兜底，如果后续有恢复库存，手动处理等【运营是人来操作，会有这种情况发放，系统要做防护】，也不会超卖。因为所有的可用库存key，都被加锁了。
         // 3. 设置加锁时间为活动到期 + 延迟1天
         String lockKey = cacheKey + Constants.UNDERLINE + surplus;
-        long expireMillis = endDateTime.toInstant(ZoneOffset.of(ZoneId.systemDefault().getId())).toEpochMilli() - System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1);
+        long expireMillis = endDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() - System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1);
         boolean setIfAbsent = redisService.setIfAbsent(lockKey, 1, Duration.ofSeconds((expireMillis / 1000) + 1));
         if (!setIfAbsent) {
             log.error("活动sku库存加锁失败 {}", lockKey);
@@ -591,6 +591,12 @@ public class ActivityRepository implements IActivityRepository {
                 ));
 
         ActivityOrderEntity activityOrderEntity = activityOrderAssembler.toEntity(activityOrderPO);
+
+        // RabbitMQ 提供至少一次投递语义。订单已完成说明此前消息已经成功发货，
+        // 重复消息应直接确认，不能再次增加账户额度，也不能继续抛异常触发无效重试。
+        if (OrderStateVO.COMPLETE.getCode().equals(activityOrderEntity.state())) {
+            return;
+        }
 
         int updateCount = activityOrderDao.updateStateByOutBusinessNo(
                 deliveryOrderEntity.userId(),
