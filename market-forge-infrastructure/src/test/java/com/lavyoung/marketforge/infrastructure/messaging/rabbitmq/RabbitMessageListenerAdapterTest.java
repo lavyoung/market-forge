@@ -225,13 +225,10 @@ class RabbitMessageListenerAdapterTest {
         CreditAdjustSuccessEvent event = new CreditAdjustSuccessEvent(
                 USER_ID, "credit-order-001", "exchange-order-001", 10L);
 
-        allowFirstConsumption();
-
         adapter.onCreditAdjustSuccess(messageOf(event));
 
         verify(creditAdjustSuccessMessageHandler).handle(eq(event), any(MessageContext.class));
-        verify(processedMessageRepository).tryRecord(
-                eq(event.eventId()), eq(event.eventType()), any(LocalDateTime.class));
+        verifyNoInteractions(processedMessageRepository);
     }
 
     private void allowFirstConsumption() {
