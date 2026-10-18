@@ -1,26 +1,31 @@
 "use client"
 
 
-import {RaffleResult, StrategyAward} from "@/features/raffle/model/raffle-types";
+import {ActivityAward, ActivityDrawResult} from "@/features/raffle/model/activity-raffle-types";
+import {
+    armoryActivityRaffle,
+    drawActivityRaffle,
+    queryActivityAwards,
+} from "@/features/raffle/api/activity-raffle-api";
 import {useEffect, useRef, useState} from "react";
-import {drawRaffle, getStrategyAwards} from "@/features/raffle/api/raffle-api";
 import styles from "./raffle-page.module.css";
 
 type RafflePageProp = {
-    strategyId: number;
+    activityId: number;
 };
 
 type PageData = {
-    awards: StrategyAward[];
-    error: string | null
+    awards: ActivityAward[];
+    error: string | null;
 };
 
 type DrawOutcome = {
-    result: RaffleResult;
+    result: ActivityDrawResult;
     awardTitle: string;
-}
+};
 
 type Phase = "idle" | "requesting" | "animating";
+type ArmoryStatus = "idle" | "assembling" | "success" | "error";
 
 /**
  * 播放展示动画，最终停在后端指定的奖品位置。
@@ -68,13 +73,53 @@ function playAnimation(count: number,
     }
 }
 
-export default function RafflePage({strategyId}: RafflePageProp) {
+/**
+ * 生成人类可读的奖品解锁状态。
+ *
+ * 次数锁按照活动配置区分当日和累计口径；权重规则始终使用累计抽奖次数。
+ *
+ * @param award 当前用户视角下的活动奖品
+ * @returns 页面展示的解锁状态
+ */
+function describeUnlockState(award: ActivityAward): string {
+    if (!award.isAwardUnlock) {
+        const scope = award.awardUnlockScope === "day" ? "今日" : "累计";
+        return `${scope}还差 ${award.waitUnLockCount} 次解锁`;
+    }
+
+    if (!award.isAwardWeightUnlock) {
+        return `累计还差 ${award.waitAwardWeightCount} 次进入权重奖池`;
+    }
+
+    return award.awardSubtitle || "已解锁";
+}
+
+/**
+ * 校验奖品标识唯一性，并按展示顺序生成新的奖品数组。
+ *
+ * @param awards Java 服务返回的活动奖品
+ * @returns 可直接渲染的有序奖品数组
+ * @throws Error 奖品列表包含重复奖品标识时抛出
+ */
+function normalizeAwards(awards: ActivityAward[]): ActivityAward[] {
+    const uniqueIds = new Set(awards.map((award) => award.awardId));
+
+    if (uniqueIds.size !== awards.length) {
+        throw new Error("活动奖品列表存在重复奖品编号");
+    }
+
+    return [...awards].sort((left, right) => left.sort - right.sort || left.awardId - right.awardId);
+}
+
+export default function RafflePage({activityId}: RafflePageProp) {
 
     const [pageDate, setPageData] = useState<PageData | null>(null);
     const [phase, setPhase] = useState<Phase>("idle");
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
     const [outcome, setOutcome] = useState<DrawOutcome | null>(null);
     const [drawError, setDrawError] = useState<string | null>(null);
+    const [armoryStatus, setArmoryStatus] = useState<ArmoryStatus>("idle");
+    const [armoryMessage, setArmoryMessage] = useState<string | null>(null);
 
     const mountedRef = useRef(false);
     const inFlightRef = useRef(false);
@@ -84,6 +129,7 @@ export default function RafflePage({strategyId}: RafflePageProp) {
     const isLoading = pageDate === null;
     const loadError = pageDate?.error ?? null;
     const isDrawing = phase !== "idle";
+    const isAssembling = armoryStatus === "assembling";
 
 
     useEffect(() => {
@@ -97,53 +143,29 @@ export default function RafflePage({strategyId}: RafflePageProp) {
 
 
     useEffect(() => {
-            const controller = new AbortController();
+        const controller = new AbortController();
 
-            async function load() {
-                try {
-                    const data = await getStrategyAwards(
-                        strategyId,
-                        controller.signal
-                    );
+        async function load() {
+            try {
+                const data = await queryActivityAwards(activityId, controller.signal);
 
-                    if (data.some((award) => award.strategyId !== strategyId)) {
-                        throw new Error("奖品列表包含其他策略的数据");
-                    }
-
-                    const uniqueIds = new Set(data.map((award) => award.awardId));
-
-                    if (uniqueIds.size !== data.length) {
-                        throw new Error("奖品列表存在重复奖品编号");
-                    }
-
-                    const sortedAwards = [...data].sort(
-                        (left, right) =>
-                            left.sort - right.sort || left.awardId - right.awardId,
-                    );
-
-                    if (!controller.signal.aborted) {
-                        setPageData({
-                            awards: sortedAwards,
-                            error: null,
-                        });
-                    }
-                } catch (error) {
-                    if (!controller.signal.aborted) {
-                        setPageData({
-                            awards: [],
-                            error: error instanceof Error ? error.message : "奖品列表加载失败",
-                        })
-                    }
+                if (!controller.signal.aborted) {
+                    setPageData({awards: normalizeAwards(data), error: null});
+                }
+            } catch (error) {
+                if (!controller.signal.aborted) {
+                    setPageData({
+                        awards: [],
+                        error: error instanceof Error ? error.message : "活动奖品列表加载失败",
+                    });
                 }
             }
+        }
 
-            void load();
+        void load();
 
-            return () => {
-                controller.abort();
-            };
-        }, [strategyId]
-    );
+        return () => controller.abort();
+    }, [activityId]);
 
 
     function finishDraw() {
@@ -155,9 +177,46 @@ export default function RafflePage({strategyId}: RafflePageProp) {
         }
     }
 
+    /**
+     * 装配活动公共缓存，并在成功后重新读取奖品展示数据。
+     *
+     * 装配与抽奖互斥，防止概率表和库存缓存重建期间提交抽奖请求。
+     */
+    async function handleArmory() {
+        if (isAssembling || isDrawing) {
+            return;
+        }
+
+        setArmoryStatus("assembling");
+        setArmoryMessage("正在装配活动缓存……");
+
+        try {
+            await armoryActivityRaffle(activityId);
+
+            if (!mountedRef.current) {
+                return;
+            }
+
+            const refreshedAwards = await queryActivityAwards(activityId);
+
+            if (!mountedRef.current) {
+                return;
+            }
+
+            setPageData({awards: normalizeAwards(refreshedAwards), error: null});
+            setArmoryStatus("success");
+            setArmoryMessage("活动装配完成，奖品缓存已刷新。");
+        } catch (error) {
+            if (mountedRef.current) {
+                setArmoryStatus("error");
+                setArmoryMessage(error instanceof Error ? error.message : "活动装配失败");
+            }
+        }
+    }
+
     async function handleDraw() {
         // ref 立即生效，防止 React 更新按钮状态前发生连续点击。
-        if (inFlightRef.current || isLoading || loadError || awards.length === 0) {
+        if (inFlightRef.current || isAssembling || isLoading || loadError || awards.length === 0) {
             return;
         }
 
@@ -168,15 +227,15 @@ export default function RafflePage({strategyId}: RafflePageProp) {
         setActiveIndex(null);
 
         try {
-            const result = await drawRaffle(strategyId);
+            const result = await drawActivityRaffle(activityId);
 
             if (!mountedRef.current) {
                 inFlightRef.current = false;
                 return;
             }
 
-            if (result.strategyId !== strategyId) {
-                throw new Error("返回的抽奖策略不匹配，请核实本次结果，不要重复提交");
+            if (result.activityId !== activityId) {
+                throw new Error("返回的抽奖活动不匹配，请核实本次结果，不要重复提交");
             }
 
             const targetIndex = awards.findIndex(
@@ -248,7 +307,7 @@ export default function RafflePage({strategyId}: RafflePageProp) {
                     <span className={styles.kicker}>MARKET FORGE</span>
                     <h1>幸运抽奖</h1>
                     <p>奖品来自真实策略配置，抽奖结果由服务端决定。</p>
-                    <small>当前策略：{strategyId}</small>
+                    <small>当前活动：{activityId}</small>
                 </header>
 
                 <section
@@ -281,7 +340,7 @@ export default function RafflePage({strategyId}: RafflePageProp) {
                     )}
 
                     {!isLoading && !loadError && awards.length === 0 && (
-                        <p>当前策略尚未配置奖品。</p>
+                        <p>当前活动尚未配置奖品。</p>
                     )}
 
                     {awards.length > 0 && (
@@ -292,33 +351,55 @@ export default function RafflePage({strategyId}: RafflePageProp) {
                                     className={[
                                         styles.prize,
                                         activeIndex === index ? styles.active : "",
+                                        !award.isAwardUnlock ? styles.locked : "",
+                                        award.isAwardUnlock && !award.isAwardWeightUnlock ? styles.weightPending : "",
                                     ]
                                         .filter(Boolean)
                                         .join(" ")}
+                                    aria-label={`${award.awardTitle}，${describeUnlockState(award)}`}
                                 >
-                  <span className={styles.prizeIcon} aria-hidden="true">
-                    🎁
-                  </span>
+                                    <span className={styles.prizeIcon} aria-hidden="true">奖</span>
                                     <strong>{award.awardTitle}</strong>
-                                    <small>奖品编号：{award.awardId}</small>
+                                    <small>{describeUnlockState(award)}</small>
                                 </li>
                             ))}
                         </ul>
                     )}
 
-                    <button
-                        type="button"
-                        className={styles.drawButton}
-                        disabled={
-                            isLoading ||
-                            Boolean(loadError) ||
-                            awards.length === 0 ||
-                            isDrawing
-                        }
-                        onClick={() => void handleDraw()}
-                    >
-                        {buttonText}
-                    </button>
+                    <div className={styles.actionGroup}>
+                        <button
+                            type="button"
+                            className={styles.armoryButton}
+                            disabled={isAssembling || isDrawing}
+                            onClick={() => void handleArmory()}
+                        >
+                            {isAssembling ? "正在装配……" : "装配活动"}
+                        </button>
+
+                        <button
+                            type="button"
+                            className={styles.drawButton}
+                            disabled={
+                                isLoading ||
+                                Boolean(loadError) ||
+                                awards.length === 0 ||
+                                isDrawing ||
+                                isAssembling
+                            }
+                            onClick={() => void handleDraw()}
+                        >
+                            {buttonText}
+                        </button>
+                    </div>
+
+                    {armoryMessage && (
+                        <p
+                            className={armoryStatus === "error" ? styles.armoryError : styles.armoryStatus}
+                            role={armoryStatus === "error" ? "alert" : "status"}
+                        >
+                            {armoryMessage}
+                        </p>
+                    )}
 
                     <p className={styles.notice}>
                         当前为开发联调页面，抽奖资格和次数限制由后端判断。
@@ -340,9 +421,7 @@ export default function RafflePage({strategyId}: RafflePageProp) {
                         <>
                             <h2>本次抽奖结果</h2>
                             <strong>{outcome.awardTitle}</strong>
-                            <p>
-                                {outcome.result.awardDesc || "服务端已返回本次抽奖结果。"}
-                            </p>
+                            <p>活动订单已生成，中奖结果以服务端记录为准。</p>
                             <small>奖品编号：{outcome.result.awardId}</small>
                         </>
                     )}

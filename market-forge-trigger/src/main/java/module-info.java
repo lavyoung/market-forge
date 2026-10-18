@@ -18,6 +18,7 @@ module market.forge.trigger {
     requires dynamic.config.center.rate.limiter;
     requires spring.cloud.commons;
     requires spring.webmvc;
+    requires org.apache.tomcat.embed.core;
 
     opens com.lavyoung.marketforge.trigger.assembler;
     opens com.lavyoung.marketforge.trigger.circuitbreaker;

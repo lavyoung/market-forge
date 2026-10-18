@@ -1,0 +1,49 @@
+import {badGatewayResponse, errorResponse, forwardMarketForge, toProxyResponse,} from "@/lib/server/market-forge-api";
+
+/**
+ * 查询演示用户在指定活动下看到的奖品与解锁状态。
+ *
+ * userId 由服务端配置提供，浏览器只能选择公开的活动标识。
+ */
+export async function GET(request: Request): Promise<Response> {
+    const rawActivityId = new URL(request.url).searchParams.get("activityId");
+    const activityId = Number(rawActivityId);
+
+    if (!rawActivityId || !/^\d+$/.test(rawActivityId) || !Number.isSafeInteger(activityId) || activityId <= 0) {
+        return errorResponse(400, 1001, "activityId 必须是安全范围内的正整数");
+    }
+
+    if (process.env.DEMO_RAFFLE_ENABLED !== "true") {
+        return errorResponse(503, 900_000_001, "活动查询接口尚未开放");
+    }
+
+    const userId = process.env.DEMO_RAFFLE_USER_ID?.trim();
+    const configuredActivityId = Number(process.env.DEMO_RAFFLE_ACTIVITY_ID);
+
+    if (!userId) {
+        return errorResponse(500, 900_000_001, "开发用户未配置");
+    }
+
+    if (!Number.isSafeInteger(configuredActivityId) || configuredActivityId <= 0) {
+        return errorResponse(500, 900_000_001, "开发活动未配置");
+    }
+
+    if (activityId !== configuredActivityId) {
+        return errorResponse(400, 1001, "请求活动与当前页面配置不一致");
+    }
+
+    try {
+        const upstream = await forwardMarketForge("/api/v1/activity/raffles/awards", {
+            method: "POST",
+            body: JSON.stringify({
+                userId,
+                activityId,
+            }),
+        });
+
+        return toProxyResponse(upstream);
+    } catch (error) {
+        console.error("[activity/raffles/awards] 查询活动奖品失败", error);
+        return badGatewayResponse();
+    }
+}

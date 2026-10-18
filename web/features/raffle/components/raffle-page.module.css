@@ -92,7 +92,15 @@
 }
 
 .prizeIcon {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    color: #ffffff;
     font-size: 30px;
+    font-weight: 700;
+    border-radius: 8px;
+    background: #6254c7;
 }
 
 .prize strong {
@@ -113,28 +121,93 @@
     transform: translateY(-2px);
 }
 
-.drawButton {
-    width: 100%;
+.locked {
+    color: #706b78;
+    border-color: #d7d3dc;
+    background: #eeecef;
+}
+
+.locked .prizeIcon {
+    color: #716c76;
+    background: #d9d5dc;
+}
+
+.locked small {
+    color: #8f4650;
+    font-weight: 600;
+}
+
+.weightPending {
+    border-color: #dfc58d;
+    background: #fff8e9;
+}
+
+.weightPending .prizeIcon {
+    color: #523f1a;
+    background: #e4c46e;
+}
+
+.weightPending small {
+    color: #795d20;
+    font-weight: 600;
+}
+
+.actionGroup {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 12px;
     margin-top: 24px;
+}
+
+.drawButton,
+.armoryButton {
+    min-height: 52px;
     padding: 16px 20px;
-    color: #ffffff;
     font: inherit;
     font-weight: 700;
-    border: 0;
     border-radius: 14px;
-    background: linear-gradient(135deg, #7869f5, #5545c9);
     cursor: pointer;
 }
 
-.drawButton:disabled {
+.drawButton {
+    color: #ffffff;
+    border: 0;
+    background: linear-gradient(135deg, #7869f5, #5545c9);
+}
+
+.armoryButton {
+    color: #473c70;
+    border: 1px solid #cbc3df;
+    background: #ffffff;
+}
+
+.drawButton:disabled,
+.armoryButton:disabled {
     opacity: 0.55;
     cursor: not-allowed;
 }
 
 .drawButton:focus-visible,
+.armoryButton:focus-visible,
 .secondaryButton:focus-visible {
     outline: 3px solid #302475;
     outline-offset: 4px;
+}
+
+.armoryStatus,
+.armoryError {
+    min-height: 20px;
+    margin: 12px 0 0;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.armoryStatus {
+    color: #26734d;
+}
+
+.armoryError {
+    color: #9c3131;
 }
 
 .notice {
@@ -210,6 +283,10 @@
 
     .grid {
         gap: 8px;
+    }
+
+    .actionGroup {
+        grid-template-columns: 1fr;
     }
 
     .prize {

@@ -42,6 +42,8 @@ module market.forge.domain {
     exports com.lavyoung.marketforge.domain.credit.repository;
     exports com.lavyoung.marketforge.domain.credit.model.aggregate;
     exports com.lavyoung.marketforge.domain.credit.service;
+    exports com.lavyoung.marketforge.domain.credit.event;
+
 
     requires spring.context;
     requires org.slf4j;
@@ -68,6 +70,7 @@ module market.forge.domain {
     opens com.lavyoung.marketforge.domain.activity.service.partake.impl;
     opens com.lavyoung.marketforge.domain.award.service.impl;
     opens com.lavyoung.marketforge.domain.credit.service.impl;
-    exports com.lavyoung.marketforge.domain.credit.event;
+    opens com.lavyoung.marketforge.domain.activity.model.entity to com.fasterxml.jackson.databind;
+    opens com.lavyoung.marketforge.domain.strategy.model.entity to com.fasterxml.jackson.databind;
 
 }

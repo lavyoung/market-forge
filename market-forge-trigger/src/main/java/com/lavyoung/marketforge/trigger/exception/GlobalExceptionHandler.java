@@ -128,8 +128,7 @@ public class GlobalExceptionHandler {
      * @return HTTP 404 和统一资源不存在响应
      */
     @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<Response<Void>> handleNoResourceFoundException(
-            NoResourceFoundException exception) {
+    public ResponseEntity<Response<Void>> handleNoResourceFoundException(NoResourceFoundException exception) {
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Response.fail(
                 CommonResponseCode.RESOURCE_NOT_FOUND,
