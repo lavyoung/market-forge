@@ -1,10 +1,12 @@
 import {
+    ActivityAccount,
     ActivityArmoryRequest,
     ActivityAward,
     ActivityDrawRequest,
     ActivityDrawResult,
     ApiResponse,
     AwardUnlockScope,
+    CalendarSignResult,
 } from "@/features/raffle/model/activity-raffle-types";
 
 /**
@@ -43,6 +45,16 @@ function isNullableString(value: unknown): value is string | null {
 }
 
 /**
+ * 判断未知值是否为非空字符串数组。
+ *
+ * @param value Java 服务返回的未知数据
+ * @returns 每个数组元素都是非空字符串时返回 true
+ */
+function isNonEmptyStringArray(value: unknown): value is string[] {
+    return Array.isArray(value) && value.every((item) => typeof item === "string" && item.trim().length > 0);
+}
+
+/**
  * 判断未知值是否为后端支持的奖品解锁范围。
  */
 function isAwardUnlockScope(value: unknown): value is AwardUnlockScope {
@@ -65,6 +77,37 @@ function isActivityAward(value: unknown): value is ActivityAward {
         && isNullableNonNegativeInteger(value.awardRuleWeightCount)
         && typeof value.isAwardWeightUnlock === "boolean"
         && isNonNegativeInteger(value.waitAwardWeightCount);
+}
+
+/**
+ * 校验活动账户响应是否符合前端契约。
+ *
+ * TypeScript 类型不会校验网络返回的 JSON，因此六个额度字段都必须
+ * 在运行时确认为非负安全整数，防止错误数据进入额度和权重计算。
+ *
+ * @param value Java 服务返回的未知数据
+ * @returns 数据符合活动账户契约时返回 true
+ */
+function isActivityAccount(value: unknown): value is ActivityAccount {
+    return isRecord(value)
+        && isNonNegativeInteger(value.totalCount)
+        && isNonNegativeInteger(value.totalCountSurplus)
+        && isNonNegativeInteger(value.dayCount)
+        && isNonNegativeInteger(value.dayCountSurplus)
+        && isNonNegativeInteger(value.monthCount)
+        && isNonNegativeInteger(value.monthCountSurplus);
+}
+
+/**
+ * 校验日历签到响应是否符合前端契约。
+ *
+ * @param value Java 服务返回的未知数据
+ * @returns 数据包含合法订单号和事件号列表时返回 true
+ */
+function isCalendarSignResult(value: unknown): value is CalendarSignResult {
+    return isRecord(value)
+        && isNonEmptyStringArray(value.orderIds)
+        && isNonEmptyStringArray(value.eventIds);
 }
 
 /**
@@ -142,6 +185,76 @@ export async function queryActivityAwards(activityId: number, signal?: AbortSign
 
     if (!Array.isArray(data) || !data.every(isActivityAward)) {
         throw new Error("活动奖品列表数据格式不正确");
+    }
+
+    return data;
+}
+
+/**
+ * 查询当前用户在指定活动下的抽奖额度。
+ *
+ * userId 不由浏览器提交，而是由 Next.js BFF 从可信服务端配置中补充。
+ * 响应不会被浏览器缓存，确保签到或抽奖后可以重新读取最新额度。
+ *
+ * @param activityId 活动标识
+ * @param signal 请求取消信号
+ * @returns 当前用户的总、月、日活动额度
+ * @throws Error 网络失败、业务失败或响应结构不符合契约时抛出
+ */
+export async function queryActivityAccount(activityId: number, signal?: AbortSignal): Promise<ActivityAccount> {
+    const params = new URLSearchParams({activityId: String(activityId)});
+    const response = await fetch(`/api/activity/raffles/account?${params}`, {cache: "no-store", signal});
+    const data = await unwrap(response);
+
+    if (!isActivityAccount(data)) {
+        throw new Error("活动账户额度数据格式不正确");
+    }
+
+    return data;
+}
+
+/**
+ * 查询当前用户今天是否已经完成日历签到。
+ *
+ * userId 由 Next.js BFF 从可信服务端配置补充，浏览器不提交用户身份。
+ *
+ * @param signal 请求取消信号
+ * @returns 今天已经签到返回 true，否则返回 false
+ * @throws Error 网络失败、业务失败或响应不是布尔值时抛出
+ */
+export async function queryCalendarSignStatus(signal?: AbortSignal): Promise<boolean> {
+    const response = await fetch("/api/behavior/rebates/calendar-sign", {cache: "no-store", signal});
+    const data = await unwrap(response);
+
+    if (typeof data !== "boolean") {
+        throw new Error("签到状态数据格式不正确");
+    }
+
+    return data;
+}
+
+/**
+ * 为当前用户提交今日签到。
+ *
+ * 该方法不会自动重试。网络中断时后端可能已经完成签到，
+ * 调用方应重新查询签到状态，而不是直接再次提交。
+ *
+ * @returns 本次签到创建的返利订单号和消息事件号
+ * @throws Error 网络失败、业务失败或签到结果结构错误时抛出
+ */
+export async function submitCalendarSign(): Promise<CalendarSignResult> {
+    let response: Response;
+
+    try {
+        response = await fetch("/api/behavior/rebates/calendar-sign", {method: "POST"});
+    } catch {
+        throw new Error("网络连接异常，无法确认签到结果，请先刷新签到状态");
+    }
+
+    const data = await unwrap(response);
+
+    if (!isCalendarSignResult(data)) {
+        throw new Error("签到结果格式不正确，请先刷新签到状态");
     }
 
     return data;

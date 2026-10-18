@@ -1,0 +1,92 @@
+.panel {
+    margin-top: 24px;
+    padding: 22px 0;
+    border-block: 1px solid #ded9e8;
+}
+
+.heading {
+    margin-bottom: 18px;
+}
+
+.heading h2 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.heading p {
+    margin: 7px 0 0;
+    color: #716b80;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.tierList {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tier {
+    padding: 16px 0;
+    border-bottom: 1px solid #e4e0e9;
+}
+
+.tier:first-child {
+    padding-top: 0;
+}
+
+.tier:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.tierHeading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.tierHeading strong {
+    font-size: 14px;
+}
+
+.unlocked,
+.locked {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.unlocked {
+    color: #287b65;
+}
+
+.locked {
+    color: #a55a2b;
+}
+
+.tier progress {
+    width: 100%;
+    height: 7px;
+    margin-top: 12px;
+    accent-color: #287b65;
+}
+
+.tier p {
+    margin: 10px 0 0;
+    color: #514b5d;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.tier p span {
+    color: #817a90;
+}
+
+@media (max-width: 520px) {
+    .tierHeading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 6px;
+    }
+}

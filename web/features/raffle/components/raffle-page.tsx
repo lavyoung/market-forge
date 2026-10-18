@@ -1,13 +1,17 @@
 "use client"
 
 
-import {ActivityAward, ActivityDrawResult} from "@/features/raffle/model/activity-raffle-types";
+import {ActivityAccount, ActivityAward, ActivityDrawResult} from "@/features/raffle/model/activity-raffle-types";
 import {
     armoryActivityRaffle,
     drawActivityRaffle,
-    queryActivityAwards,
+    queryActivityAccount,
+    queryActivityAwards
 } from "@/features/raffle/api/activity-raffle-api";
-import {describeUnlockState, normalizeAwards,} from "@/features/raffle/model/raffle-award-view";
+import ActivityAccountPanel from "@/features/raffle/components/activity-account-panel";
+import CalendarSignPanel from "@/features/raffle/components/calendar-sign-panel";
+import StrategyWeightPanel from "@/features/raffle/components/strategy-weight-panel";
+import {describeUnlockState, normalizeAwards} from "@/features/raffle/model/raffle-award-view";
 import Link from "next/link";
 import {useEffect, useRef, useState} from "react";
 import styles from "./raffle-page.module.css";
@@ -21,6 +25,16 @@ type PageData = {
     error: string | null;
 };
 
+/**
+ * 活动额度在页面中的独立加载状态。
+ *
+ * 额度与奖品分别保存错误，避免其中一个接口失败后覆盖另一个接口的数据。
+ */
+type AccountData = {
+    account: ActivityAccount | null;
+    error: string | null;
+};
+
 type DrawOutcome = {
     result: ActivityDrawResult;
     awardTitle: string;
@@ -30,15 +44,36 @@ type Phase = "idle" | "requesting" | "animating" | "refreshing";
 type ArmoryStatus = "idle" | "assembling" | "success" | "error";
 
 /**
+ * 签到后重新查询活动额度的等待间隔。
+ *
+ * 第一次立即查询，后续查询为异步 MQ 结算预留短暂时间。
+ * 次数必须有限，避免后端异常时浏览器无限轮询。
+ */
+const ACCOUNT_REFRESH_DELAYS = [0, 400, 800, 1200] as const;
+
+/**
+ * 等待指定时长后继续执行。
+ *
+ * @param delayMs 等待的毫秒数
+ * @returns 等待结束后完成的 Promise
+ */
+function wait(delayMs: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+
+/**
  * 播放展示动画，最终停在后端指定的奖品位置。
  *
  * 动画不决定中奖结果，也不请求后端。
  * 返回清理函数，用于页面退出时停止动画。
+ *
+ * @param count 奖品数量
+ * @param targetIndex 服务端中奖结果对应的奖品位置
+ * @param onStep 每次动画移动时执行的回调
+ * @param onComplete 动画抵达目标位置后执行的回调
+ * @returns 停止当前动画并清理定时器的函数
  */
-function playAnimation(count: number,
-                       targetIndex: number,
-                       onStep: (index: number) => void,
-                       onComplete: () => void): () => void {
+function playAnimation(count: number, targetIndex: number, onStep: (index: number) => void, onComplete: () => void): () => void {
     let step = 0;
     let stopped = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -77,7 +112,8 @@ function playAnimation(count: number,
 
 export default function RafflePage({activityId}: RafflePageProp) {
 
-    const [pageDate, setPageData] = useState<PageData | null>(null);
+    const [pageData, setPageData] = useState<PageData | null>(null);
+    const [accountData, setAccountData] = useState<AccountData>({account: null, error: null});
     const [phase, setPhase] = useState<Phase>("idle");
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
     const [outcome, setOutcome] = useState<DrawOutcome | null>(null);
@@ -89,11 +125,16 @@ export default function RafflePage({activityId}: RafflePageProp) {
     const inFlightRef = useRef(false);
     const stopAnimationRef = useRef<(() => void) | null>(null);
 
-    const awards = pageDate?.awards ?? [];
-    const isLoading = pageDate === null;
-    const loadError = pageDate?.error ?? null;
+    const awards = pageData?.awards ?? [];
+    const isLoading = pageData === null;
+    const loadError = pageData?.error ?? null;
     const isDrawing = phase !== "idle";
     const isAssembling = armoryStatus === "assembling";
+    const availableCount = accountData.account
+        ? Math.min(accountData.account.totalCountSurplus, accountData.account.monthCountSurplus, accountData.account.dayCountSurplus)
+        : null;
+    const isAccountLoading = accountData.account === null && accountData.error === null;
+    const isQuotaExhausted = availableCount === 0;
 
 
     useEffect(() => {
@@ -109,7 +150,7 @@ export default function RafflePage({activityId}: RafflePageProp) {
     useEffect(() => {
         const controller = new AbortController();
 
-        async function load() {
+        async function loadAwards() {
             try {
                 const data = await queryActivityAwards(activityId, controller.signal);
 
@@ -126,7 +167,25 @@ export default function RafflePage({activityId}: RafflePageProp) {
             }
         }
 
-        void load();
+        async function loadAccount() {
+            try {
+                const account = await queryActivityAccount(activityId, controller.signal);
+
+                if (!controller.signal.aborted) {
+                    setAccountData({account, error: null});
+                }
+            } catch (error) {
+                if (!controller.signal.aborted) {
+                    setAccountData({
+                        account: null,
+                        error: error instanceof Error ? error.message : "活动额度加载失败",
+                    });
+                }
+            }
+        }
+
+        void loadAwards();
+        void loadAccount();
 
         return () => controller.abort();
     }, [activityId]);
@@ -142,6 +201,62 @@ export default function RafflePage({activityId}: RafflePageProp) {
     }
 
     /**
+     * 签到成功后有限次数地刷新活动账户额度。
+     *
+     * 签到接口只代表返利订单已经创建。活动 SKU 需要经过可靠消息和 MQ
+     * 异步结算后才会增加活动账户额度，因此立即查询可能仍得到旧数据。
+     *
+     * 方法以签到前的总额度作为基准。一旦发现总额度变化便停止轮询；
+     * 如果结算尚未完成，则在有限次数后保留最后一次成功查询的数据，
+     * 避免浏览器无限请求后端。
+     *
+     * @returns 额度刷新流程完成后的 Promise
+     * @throws Error 所有额度查询均失败时抛出最后一次查询异常
+     */
+    async function refreshAccountAfterSign(): Promise<void> {
+        const previousTotalCount = accountData.account?.totalCount ?? null;
+        let lastError: unknown;
+        let hasSuccessfulRefresh = false;
+
+        for (const delayMs of ACCOUNT_REFRESH_DELAYS) {
+            if (delayMs > 0) {
+                await wait(delayMs);
+            }
+
+            if (!mountedRef.current) {
+                return;
+            }
+
+            try {
+                const account = await queryActivityAccount(activityId);
+
+                if (!mountedRef.current) {
+                    return;
+                }
+
+                hasSuccessfulRefresh = true;
+                setAccountData({account, error: null});
+
+                if (previousTotalCount === null || account.totalCount !== previousTotalCount) {
+                    return;
+                }
+            } catch (error) {
+                lastError = error;
+            }
+        }
+
+        if (!hasSuccessfulRefresh) {
+            setAccountData((current) => ({account: current.account, error: "签到成功，但活动额度暂时无法刷新"}));
+
+            if (lastError instanceof Error) {
+                throw lastError;
+            }
+
+            throw new Error("签到成功，但活动额度暂时无法刷新");
+        }
+    }
+
+    /**
      * 保存服务端确认的中奖结果，并重新查询用户视角下的奖品解锁状态。
      *
      * 抽奖结果已经产生后，刷新失败只能作为展示状态异常处理，不能提示用户重新抽奖，
@@ -149,7 +264,7 @@ export default function RafflePage({activityId}: RafflePageProp) {
      *
      * @param nextOutcome 服务端已经确认的中奖结果
      */
-    async function completeDraw(nextOutcome: DrawOutcome) {
+    async function completeDraw(nextOutcome: DrawOutcome): Promise<void> {
         if (!mountedRef.current) {
             inFlightRef.current = false;
             return;
@@ -158,19 +273,36 @@ export default function RafflePage({activityId}: RafflePageProp) {
         setOutcome(nextOutcome);
         setPhase("refreshing");
 
-        try {
-            const refreshedAwards = await queryActivityAwards(activityId);
+        const [awardsResult, accountResult] = await Promise.allSettled([
+            queryActivityAwards(activityId),
+            queryActivityAccount(activityId),
+        ]);
 
-            if (mountedRef.current) {
-                setPageData({awards: normalizeAwards(refreshedAwards), error: null});
-            }
-        } catch {
-            if (mountedRef.current) {
-                setDrawError("抽奖结果已经生成，但奖品解锁状态刷新失败，请刷新页面核实，不要重复抽奖");
-            }
-        } finally {
-            finishDraw();
+        if (!mountedRef.current) {
+            inFlightRef.current = false;
+            return;
         }
+
+        const refreshWarnings: string[] = [];
+
+        if (awardsResult.status === "fulfilled") {
+            setPageData({awards: normalizeAwards(awardsResult.value), error: null});
+        } else {
+            refreshWarnings.push("奖品解锁状态");
+        }
+
+        if (accountResult.status === "fulfilled") {
+            setAccountData({account: accountResult.value, error: null});
+        } else {
+            setAccountData((current) => ({account: current.account, error: "抽奖额度刷新失败，请刷新页面核实"}));
+            refreshWarnings.push("抽奖额度");
+        }
+
+        if (refreshWarnings.length > 0) {
+            setDrawError(`抽奖结果已经生成，但${refreshWarnings.join("和")}刷新失败，请刷新页面核实，不要重复抽奖`);
+        }
+
+        finishDraw();
     }
 
     /**
@@ -212,7 +344,7 @@ export default function RafflePage({activityId}: RafflePageProp) {
 
     async function handleDraw() {
         // ref 立即生效，防止 React 更新按钮状态前发生连续点击。
-        if (inFlightRef.current || isAssembling || isLoading || loadError || awards.length === 0) {
+        if (inFlightRef.current || isAssembling || isLoading || isAccountLoading || isQuotaExhausted || loadError || awards.length === 0) {
             return;
         }
 
@@ -285,14 +417,14 @@ export default function RafflePage({activityId}: RafflePageProp) {
         }
     }
 
-    const buttonText =
-        phase === "requesting"
-            ? "正在获取抽奖结果……"
-            : phase === "animating"
-                ? "正在揭晓……"
-                : phase === "refreshing"
-                    ? "正在刷新奖品状态……"
-                : "开始抽奖";
+    const buttonTextByPhase: Record<Phase, string> = {
+        idle: "开始抽奖",
+        requesting: "正在获取抽奖结果……",
+        animating: "正在揭晓……",
+        refreshing: "正在刷新活动状态……",
+    };
+    const buttonText = isQuotaExhausted ? "抽奖次数已用完" : buttonTextByPhase[phase];
+
     return (
         <main className={styles.page}>
             <section className={styles.container}>
@@ -305,6 +437,9 @@ export default function RafflePage({activityId}: RafflePageProp) {
                         <Link href="/slot-machine">老虎机模式</Link>
                     </div>
                 </header>
+
+                <ActivityAccountPanel account={accountData.account} error={accountData.error}/>
+                <CalendarSignPanel onSigned={refreshAccountAfterSign}/>
 
                 <section
                     className={styles.card}
@@ -375,13 +510,7 @@ export default function RafflePage({activityId}: RafflePageProp) {
                         <button
                             type="button"
                             className={styles.drawButton}
-                            disabled={
-                                isLoading ||
-                                Boolean(loadError) ||
-                                awards.length === 0 ||
-                                isDrawing ||
-                                isAssembling
-                            }
+                            disabled={isLoading || isAccountLoading || isQuotaExhausted || Boolean(loadError) || awards.length === 0 || isDrawing || isAssembling}
                             onClick={() => void handleDraw()}
                         >
                             {buttonText}
@@ -401,6 +530,8 @@ export default function RafflePage({activityId}: RafflePageProp) {
                         当前为开发联调页面，抽奖资格和次数限制由后端判断。
                     </p>
                 </section>
+
+                <StrategyWeightPanel awards={awards}/>
 
                 {drawError && (
                     <p className={styles.error} role="alert">

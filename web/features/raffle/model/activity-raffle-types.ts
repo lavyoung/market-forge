@@ -67,3 +67,43 @@ export type ActivityArmoryRequest = {
     activityId: number;
 };
 
+/**
+ * 当前用户在指定活动下的抽奖额度。
+ *
+ * 三个维度的额度会共同参与抽奖资格判断：
+ * 总额度控制整个活动期间的可用次数，月额度和日额度分别限制
+ * 当前月份与当前日期内的可用次数。
+ */
+export type ActivityAccount = {
+    /** 活动期间累计获得的抽奖次数。 */
+    totalCount: number;
+
+    /** 活动期间当前剩余的抽奖次数。 */
+    totalCountSurplus: number;
+
+    /** 当日累计获得的抽奖次数。 */
+    dayCount: number;
+
+    /** 当日当前剩余的抽奖次数。 */
+    dayCountSurplus: number;
+
+    /** 当月累计获得的抽奖次数。 */
+    monthCount: number;
+
+    /** 当月当前剩余的抽奖次数。 */
+    monthCountSurplus: number;
+};
+
+/**
+ * 用户完成日历签到后创建的返利任务信息。
+ *
+ * 一次签到可能同时命中积分和活动 SKU 等多条返利配置，
+ * 因此后端以列表返回返利订单号和可靠消息事件号。
+ */
+export type CalendarSignResult = {
+    /** 本次签到创建的返利订单号。 */
+    orderIds: string[];
+
+    /** 本次签到创建的可靠消息事件标识。 */
+    eventIds: string[];
+};
