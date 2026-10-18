@@ -7,6 +7,8 @@ import {
     drawActivityRaffle,
     queryActivityAwards,
 } from "@/features/raffle/api/activity-raffle-api";
+import {describeUnlockState, normalizeAwards,} from "@/features/raffle/model/raffle-award-view";
+import Link from "next/link";
 import {useEffect, useRef, useState} from "react";
 import styles from "./raffle-page.module.css";
 
@@ -24,7 +26,7 @@ type DrawOutcome = {
     awardTitle: string;
 };
 
-type Phase = "idle" | "requesting" | "animating";
+type Phase = "idle" | "requesting" | "animating" | "refreshing";
 type ArmoryStatus = "idle" | "assembling" | "success" | "error";
 
 /**
@@ -71,44 +73,6 @@ function playAnimation(count: number,
             clearTimeout(timer)
         }
     }
-}
-
-/**
- * 生成人类可读的奖品解锁状态。
- *
- * 次数锁按照活动配置区分当日和累计口径；权重规则始终使用累计抽奖次数。
- *
- * @param award 当前用户视角下的活动奖品
- * @returns 页面展示的解锁状态
- */
-function describeUnlockState(award: ActivityAward): string {
-    if (!award.isAwardUnlock) {
-        const scope = award.awardUnlockScope === "day" ? "今日" : "累计";
-        return `${scope}还差 ${award.waitUnLockCount} 次解锁`;
-    }
-
-    if (!award.isAwardWeightUnlock) {
-        return `累计还差 ${award.waitAwardWeightCount} 次进入权重奖池`;
-    }
-
-    return award.awardSubtitle || "已解锁";
-}
-
-/**
- * 校验奖品标识唯一性，并按展示顺序生成新的奖品数组。
- *
- * @param awards Java 服务返回的活动奖品
- * @returns 可直接渲染的有序奖品数组
- * @throws Error 奖品列表包含重复奖品标识时抛出
- */
-function normalizeAwards(awards: ActivityAward[]): ActivityAward[] {
-    const uniqueIds = new Set(awards.map((award) => award.awardId));
-
-    if (uniqueIds.size !== awards.length) {
-        throw new Error("活动奖品列表存在重复奖品编号");
-    }
-
-    return [...awards].sort((left, right) => left.sort - right.sort || left.awardId - right.awardId);
 }
 
 export default function RafflePage({activityId}: RafflePageProp) {
@@ -174,6 +138,38 @@ export default function RafflePage({activityId}: RafflePageProp) {
 
         if (mountedRef.current) {
             setPhase("idle");
+        }
+    }
+
+    /**
+     * 保存服务端确认的中奖结果，并重新查询用户视角下的奖品解锁状态。
+     *
+     * 抽奖结果已经产生后，刷新失败只能作为展示状态异常处理，不能提示用户重新抽奖，
+     * 否则可能产生重复订单和重复扣减额度。
+     *
+     * @param nextOutcome 服务端已经确认的中奖结果
+     */
+    async function completeDraw(nextOutcome: DrawOutcome) {
+        if (!mountedRef.current) {
+            inFlightRef.current = false;
+            return;
+        }
+
+        setOutcome(nextOutcome);
+        setPhase("refreshing");
+
+        try {
+            const refreshedAwards = await queryActivityAwards(activityId);
+
+            if (mountedRef.current) {
+                setPageData({awards: normalizeAwards(refreshedAwards), error: null});
+            }
+        } catch {
+            if (mountedRef.current) {
+                setDrawError("抽奖结果已经生成，但奖品解锁状态刷新失败，请刷新页面核实，不要重复抽奖");
+            }
+        } finally {
+            finishDraw();
         }
     }
 
@@ -264,8 +260,7 @@ export default function RafflePage({activityId}: RafflePageProp) {
 
             if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
                 setActiveIndex(targetIndex);
-                setOutcome(nextOutcome);
-                finishDraw();
+                void completeDraw(nextOutcome);
                 return;
             }
 
@@ -276,11 +271,7 @@ export default function RafflePage({activityId}: RafflePageProp) {
                 targetIndex,
                 setActiveIndex,
                 () => {
-                    if (mountedRef.current) {
-                        setOutcome(nextOutcome);
-                    }
-
-                    finishDraw();
+                    void completeDraw(nextOutcome);
                 },
             );
         } catch (error) {
@@ -299,6 +290,8 @@ export default function RafflePage({activityId}: RafflePageProp) {
             ? "正在获取抽奖结果……"
             : phase === "animating"
                 ? "正在揭晓……"
+                : phase === "refreshing"
+                    ? "正在刷新奖品状态……"
                 : "开始抽奖";
     return (
         <main className={styles.page}>
@@ -307,7 +300,10 @@ export default function RafflePage({activityId}: RafflePageProp) {
                     <span className={styles.kicker}>MARKET FORGE</span>
                     <h1>幸运抽奖</h1>
                     <p>奖品来自真实策略配置，抽奖结果由服务端决定。</p>
-                    <small>当前活动：{activityId}</small>
+                    <div className={styles.headerMeta}>
+                        <small>当前活动：{activityId}</small>
+                        <Link href="/slot-machine">老虎机模式</Link>
+                    </div>
                 </header>
 
                 <section
