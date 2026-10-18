@@ -2,32 +2,29 @@ import {defineConfig} from '@umijs/max';
 
 export default defineConfig({
     antd: {},
-    access: {},
     model: {},
     initialState: {},
     request: {},
     layout: {
-        title: '@umijs/max',
+        title: 'Market Forge 运营后台',
+        locale: false,
     },
     routes: [
         {
             path: '/',
-            redirect: '/home',
+            redirect: '/activity/order',
         },
         {
-            name: '首页',
-            path: '/home',
-            component: './Home',
-        },
+            name: '活动运营',
+            path: '/activity',
+            icon: 'GiftOutlined',
+            routes: [
         {
-            name: '权限演示',
-            path: '/access',
-            component: './Access',
+            name: '抽奖订单',
+            path: '/activity/order',
+            component: './Activity/Order',
         },
-        {
-            name: ' CRUD 示例',
-            path: '/table',
-            component: './Table',
+            ],
         },
     ],
     npmClient: 'pnpm',
