@@ -23,6 +23,7 @@
     requires curator.client;
     requires org.slf4j;
     requires market.forge.api;
+    requires market.forge.domain;
     requires market.forge.infrastructure;
     requires market.forge.trigger;
     requires micrometer.tracing;

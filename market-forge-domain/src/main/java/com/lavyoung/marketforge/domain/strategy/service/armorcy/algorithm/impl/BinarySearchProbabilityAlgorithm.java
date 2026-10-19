@@ -9,6 +9,7 @@ import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
@@ -43,6 +44,7 @@ public class BinarySearchProbabilityAlgorithm implements IProbabilityAlgorithm {
      * @param repository 策略仓储端口
      * @throws NullPointerException 策略仓储为空时抛出
      */
+    @Autowired
     public BinarySearchProbabilityAlgorithm(IStrategyRepository repository) {
         this(repository, new SecureRandom());
     }
