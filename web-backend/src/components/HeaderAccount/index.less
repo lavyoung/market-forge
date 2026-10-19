@@ -1,0 +1,30 @@
+.account {
+  min-height: 48px;
+  padding-inline: 8px;
+}
+
+.identity {
+  display: flex;
+  min-width: 96px;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.displayName,
+.username {
+  display: block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.username {
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .identity {
+    display: none;
+  }
+}

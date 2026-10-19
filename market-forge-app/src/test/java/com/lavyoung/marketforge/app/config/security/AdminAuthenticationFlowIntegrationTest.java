@@ -2,6 +2,7 @@ package com.lavyoung.marketforge.app.config.security;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lavyoung.marketforge.app.config.WebConfig;
 import com.lavyoung.marketforge.trigger.security.AdminOperatorDetails;
 import com.lavyoung.marketforge.types.model.CommonResponseCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,7 +36,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.method.HandlerTypePredicate;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.Map;
 import java.util.Set;
@@ -71,6 +75,7 @@ class AdminAuthenticationFlowIntegrationTest {
 
     private static final String USERNAME = "admin";
     private static final String PASSWORD = "integration-test-password";
+    private static final String ADMIN_AUTH_PATH = WebConfig.API_PATH_PREFIX + "/admin/auth";
 
     @Autowired
     private WebApplicationContext applicationContext;
@@ -100,7 +105,7 @@ class AdminAuthenticationFlowIntegrationTest {
         String loginBody = objectMapper.writeValueAsString(Map.of("username", USERNAME, "password", PASSWORD));
 
         // When: 登录并沿用获取 CSRF Token 时创建的 Session
-        MvcResult loginResult = mockMvc.perform(post("/admin/auth/login")
+        MvcResult loginResult = mockMvc.perform(post(ADMIN_AUTH_PATH + "/login")
                         .session(csrf.session())
                         .header(csrf.headerName(), csrf.token())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -115,13 +120,13 @@ class AdminAuthenticationFlowIntegrationTest {
         assertNotNull(authenticatedSession);
 
         // Then: 后续请求可以从同一 Session 恢复认证身份
-        mockMvc.perform(get("/admin/auth/me").session(authenticatedSession))
+        mockMvc.perform(get(ADMIN_AUTH_PATH + "/me").session(authenticatedSession))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.username").value(USERNAME))
                 .andExpect(jsonPath("$.data.displayName").value("系统管理员"));
 
         // When: 携带同一 CSRF Token 注销
-        mockMvc.perform(post("/admin/auth/logout")
+        mockMvc.perform(post(ADMIN_AUTH_PATH + "/logout")
                         .session(authenticatedSession)
                         .header(csrf.headerName(), csrf.token()))
                 .andExpect(status().isOk())
@@ -129,7 +134,7 @@ class AdminAuthenticationFlowIntegrationTest {
 
         // Then: 原 Session 已失效，匿名请求无法再访问当前用户接口
         assertTrue(authenticatedSession.isInvalid());
-        mockMvc.perform(get("/admin/auth/me"))
+        mockMvc.perform(get(ADMIN_AUTH_PATH + "/me"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(CommonResponseCode.AUTHENTICATION_REQUIRED.getCode()));
     }
@@ -146,7 +151,7 @@ class AdminAuthenticationFlowIntegrationTest {
         String loginBody = objectMapper.writeValueAsString(Map.of("username", USERNAME, "password", "incorrect-password"));
 
         // When & Then
-        mockMvc.perform(post("/admin/auth/login")
+        mockMvc.perform(post(ADMIN_AUTH_PATH + "/login")
                         .session(csrf.session())
                         .header(csrf.headerName(), csrf.token())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -163,7 +168,7 @@ class AdminAuthenticationFlowIntegrationTest {
      * @throws Exception MockMvc 请求或 JSON 解析失败时抛出
      */
     private CsrfExchange requestCsrfToken() throws Exception {
-        MvcResult result = mockMvc.perform(get("/admin/auth/csrf"))
+        MvcResult result = mockMvc.perform(get(ADMIN_AUTH_PATH + "/csrf"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.headerName").isNotEmpty())
                 .andExpect(jsonPath("$.data.token").isNotEmpty())
@@ -199,7 +204,20 @@ class AdminAuthenticationFlowIntegrationTest {
                     pattern = "com\\.lavyoung\\.marketforge\\.trigger\\.(controller\\.AdminAuthController|security\\.(AdminSessionManager|AdminAuthenticationMapper)|exception\\.GlobalExceptionHandler)"
             )
     )
-    static class TestWebConfiguration {
+    static class TestWebConfiguration implements WebMvcConfigurer {
+
+        /**
+         * 为测试中的触发器 Controller 添加与生产环境一致的 API 版本前缀。
+         *
+         * @param configurer Spring MVC 路径匹配配置器
+         */
+        @Override
+        public void configurePathMatch(PathMatchConfigurer configurer) {
+            configurer.addPathPrefix(
+                    WebConfig.API_PATH_PREFIX,
+                    HandlerTypePredicate.forBasePackage("com.lavyoung.marketforge.trigger.controller")
+            );
+        }
 
         /**
          * 创建统一响应序列化使用的 JSON 映射器。

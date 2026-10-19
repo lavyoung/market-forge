@@ -1,6 +1,7 @@
 package com.lavyoung.marketforge.app.config.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lavyoung.marketforge.app.config.WebConfig;
 import com.lavyoung.marketforge.types.model.CommonResponseCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,6 +51,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 class AdminSecurityConfigurationTest {
 
+    private static final String ADMIN_AUTH_PATH = WebConfig.API_PATH_PREFIX + "/admin/auth";
+    private static final String ADMIN_ACTIVITY_ORDER_PATH = WebConfig.API_PATH_PREFIX + "/admin/activity/orders";
+
     @Autowired
     private WebApplicationContext applicationContext;
 
@@ -70,7 +74,7 @@ class AdminSecurityConfigurationTest {
      */
     @Test
     void shouldAllowAnonymousCsrfTokenRequest() throws Exception {
-        mockMvc.perform(get("/admin/auth/csrf")).andExpect(status().isOk());
+        mockMvc.perform(get(ADMIN_AUTH_PATH + "/csrf")).andExpect(status().isOk());
     }
 
     /**
@@ -80,7 +84,7 @@ class AdminSecurityConfigurationTest {
      */
     @Test
     void shouldRejectLoginWithoutCsrfToken() throws Exception {
-        mockMvc.perform(post("/admin/auth/login"))
+        mockMvc.perform(post(ADMIN_AUTH_PATH + "/login"))
                 .andExpect(status().isForbidden())
                 .andExpect(content().contentTypeCompatibleWith("application/json"))
                 .andExpect(jsonPath("$.code").value(CommonResponseCode.CSRF_TOKEN_INVALID.getCode()))
@@ -95,7 +99,7 @@ class AdminSecurityConfigurationTest {
      */
     @Test
     void shouldAllowLoginWithCsrfToken() throws Exception {
-        mockMvc.perform(post("/admin/auth/login").with(csrf())).andExpect(status().isOk());
+        mockMvc.perform(post(ADMIN_AUTH_PATH + "/login").with(csrf())).andExpect(status().isOk());
     }
 
     /**
@@ -105,7 +109,7 @@ class AdminSecurityConfigurationTest {
      */
     @Test
     void shouldRejectProtectedAdminRequestWithoutLogin() throws Exception {
-        mockMvc.perform(get("/admin/activity/orders"))
+        mockMvc.perform(get(ADMIN_ACTIVITY_ORDER_PATH))
                 .andExpect(status().isUnauthorized())
                 .andExpect(header().doesNotExist("Location"))
                 .andExpect(content().contentTypeCompatibleWith("application/json"))
@@ -121,7 +125,7 @@ class AdminSecurityConfigurationTest {
      */
     @Test
     void shouldAllowProtectedAdminRequestForAuthenticatedUser() throws Exception {
-        mockMvc.perform(get("/admin/activity/orders").with(user("admin"))).andExpect(status().isOk());
+        mockMvc.perform(get(ADMIN_ACTIVITY_ORDER_PATH).with(user("admin"))).andExpect(status().isOk());
     }
 
     /**
@@ -179,17 +183,17 @@ class AdminSecurityConfigurationTest {
     @RestController
     static class TestEndpointController {
 
-        @GetMapping("/admin/auth/csrf")
+        @GetMapping(WebConfig.API_PATH_PREFIX + "/admin/auth/csrf")
         String csrf() {
             return "csrf";
         }
 
-        @PostMapping("/admin/auth/login")
+        @PostMapping(WebConfig.API_PATH_PREFIX + "/admin/auth/login")
         String login() {
             return "login";
         }
 
-        @GetMapping("/admin/activity/orders")
+        @GetMapping(WebConfig.API_PATH_PREFIX + "/admin/activity/orders")
         String adminOrders() {
             return "orders";
         }

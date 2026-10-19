@@ -1,0 +1,26 @@
+.page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background: #f4f6f8;
+}
+
+.loginPanel {
+  width: min(400px, 100%);
+  padding: 32px;
+  background: #ffffff;
+  border: 1px solid #d9dee5;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 8%);
+}
+
+@media (max-width: 480px) {
+  .page {
+    padding: 16px;
+  }
+
+  .loginPanel {
+    padding: 24px 20px;
+  }
+}

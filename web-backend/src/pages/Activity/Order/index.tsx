@@ -25,6 +25,18 @@ const columns: ProColumns<ActivityOrderItem>[] = [
             complete: {text: '已完成', status: 'Success'},
         },
     },
+    {
+        title: '下单时间',
+        dataIndex: 'orderTimeRange',
+        valueType: 'dateTimeRange',
+        hideInTable: true,
+        search: {
+            transform: (value: string[]) => ({
+                startTime: value?.[0],
+                endTime: value?.[1],
+            }),
+        },
+    },
     {title: '下单时间', dataIndex: 'orderTime', valueType: 'dateTime', hideInSearch: true, width: 170},
     {title: '创建时间', dataIndex: 'createTime', valueType: 'dateTime', hideInSearch: true, width: 170},
     {title: '更新时间', dataIndex: 'updateTime', valueType: 'dateTime', hideInSearch: true, width: 170},

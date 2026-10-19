@@ -1,5 +1,6 @@
 package com.lavyoung.marketforge.app.config.security;
 
+import com.lavyoung.marketforge.app.config.WebConfig;
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,6 +32,10 @@ import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 @AllArgsConstructor
 public class AdminSecurityConfiguration {
 
+    private static final String ADMIN_API_PATTERN = WebConfig.API_PATH_PREFIX + "/admin/**";
+    private static final String ADMIN_CSRF_PATH = WebConfig.API_PATH_PREFIX + "/admin/auth/csrf";
+    private static final String ADMIN_LOGIN_PATH = WebConfig.API_PATH_PREFIX + "/admin/auth/login";
+
     private final AdminAuthenticationEntryPoint authenticationEntryPoint;
     private final AdminAccessDeniedHandler adminAccessDeniedHandler;
 
@@ -39,10 +44,10 @@ public class AdminSecurityConfiguration {
     /**
      * 创建运营后台安全过滤链。
      *
-     * <p>过滤链只匹配 {@code /admin/**}，因此 CSRF、Session 和认证规则不会
+     * <p>过滤链只匹配 {@code /api/v1/admin/**}，因此 CSRF、Session 和认证规则不会
      * 影响现有抽奖、积分等用户侧接口。路径匹配不包含应用上下文路径，
-     * 浏览器访问 {@code /api/v1/admin/auth/login} 时，实际匹配路径仍是
-     * {@code /admin/auth/login}。</p>
+     * {@code /api/v1} 是 Spring MVC 通过 {@link WebConfig} 添加的统一接口前缀，
+     * 也是 Spring Security 过滤器看到的实际请求路径。</p>
      *
      * @param http Spring Security HTTP 配置入口
      * @return 仅作用于运营后台接口的安全过滤链
@@ -55,9 +60,9 @@ public class AdminSecurityConfiguration {
         csrfTokenRequestAttributeHandler.setCsrfRequestAttributeName("_csrf");
 
         return http
-                .securityMatcher("/admin/**")
+                .securityMatcher(ADMIN_API_PATTERN)
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/admin/auth/csrf", "/admin/auth/login").permitAll()
+                        .requestMatchers(ADMIN_CSRF_PATH, ADMIN_LOGIN_PATH).permitAll()
                         .anyRequest().authenticated())
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository)

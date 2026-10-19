@@ -215,7 +215,7 @@ market-forge:
     admin:
       username: ${MARKET_FORGE_ADMIN_USERNAME:admin}
       # 不提供默认值，缺少环境变量时应阻止认证模块启动。
-      password-hash: ${MARKET_FORGE_ADMIN_PASSWORD_HASH}
+      password-hash: ${MARKET_FORGE_ADMIN_PASSWORD_HASH:$2a$12$m5MPtgHdS/8hymQOVxVUYuozHRvhH/j1FVMSPGzZvCl9lr9VJGtDe}
       display-name: ${MARKET_FORGE_ADMIN_DISPLAY_NAME:系统管理员}
       authorities:
         - ROLE_ADMIN

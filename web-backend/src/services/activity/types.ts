@@ -1,19 +1,14 @@
 /**
  * 活动订单状态。
- *
- * `create`、`used`、`cancel` 属于用户抽奖参与订单；
- * `wait_pay`、`complete` 属于活动 SKU 额度订单。
  */
 export type ActivityOrderState = 'create' | 'used' | 'cancel' | 'wait_pay' | 'complete';
 
 /**
  * 活动订单列表项。
  *
- * 所有 ID 均使用字符串，避免 JavaScript `number` 无法安全承载 Java `long`。
+ * 业务标识使用字符串，避免 JavaScript number 无法安全承载 Java long。
  */
 export interface ActivityOrderItem {
-    /** 数据库主键。 */
-    id: string;
     /** 用户唯一标识。 */
     userId: string;
     /** 活动唯一标识。 */
@@ -26,18 +21,18 @@ export interface ActivityOrderItem {
     strategyId: string;
     /** 全业务唯一订单号。 */
     orderId: string;
-    /** 订单创建时间。 */
+    /** 业务下单时间。 */
     orderTime: string;
-    /** 订单增加的总额度。 */
+    /** 订单授予的总抽奖次数。 */
     totalCount: number;
-    /** 订单增加的日额度。 */
+    /** 订单授予的日抽奖次数。 */
     dayCount: number;
-    /** 订单增加的月额度。 */
+    /** 订单授予的月抽奖次数。 */
     monthCount: number;
     /** 当前订单状态。 */
     orderState: ActivityOrderState;
     /** 外部业务幂等号。 */
-    outBusinessNo?: string;
+    outBusinessNo: string | null;
     /** 数据创建时间。 */
     createTime: string;
     /** 数据最后更新时间。 */
@@ -45,30 +40,48 @@ export interface ActivityOrderItem {
 }
 
 /**
- * 活动订单分页查询条件。
+ * ProTable 提交的活动订单查询条件。
  */
 export interface ActivityOrderQuery {
-    /** 当前页，从 1 开始。 */
+    /** ProTable 当前页，从 1 开始。 */
     current?: number;
     /** 每页记录数。 */
     pageSize?: number;
-    /** 用户唯一标识，支持模糊匹配。 */
+    /** 用户唯一标识，精确匹配。 */
     userId?: string;
     /** 活动唯一标识。 */
     activityId?: string;
-    /** 订单号，支持模糊匹配。 */
+    /** 全业务唯一订单号，精确匹配。 */
     orderId?: string;
     /** 订单状态。 */
     orderState?: ActivityOrderState;
+    /** 下单时间起点，包含该时间。 */
+    startTime?: string;
+    /** 下单时间终点，不包含该时间。 */
+    endTime?: string;
 }
 
 /**
- * ProTable 使用的活动订单分页响应。
+ * Java 服务端通用分页结构。
+ */
+export interface PageResult<T> {
+    /** 当前页记录。 */
+    records: T[];
+    /** 符合查询条件的记录总数。 */
+    total: number;
+    /** 当前页码。 */
+    pageNumber: number;
+    /** 每页记录数。 */
+    pageSize: number;
+}
+
+/**
+ * ProTable 要求的分页响应结构。
  */
 export interface ActivityOrderPage {
-    /** 当前页订单数据。 */
+    /** 当前页订单。 */
     data: ActivityOrderItem[];
-    /** 符合查询条件的记录总数。 */
+    /** 符合查询条件的总记录数。 */
     total: number;
     /** 请求是否成功。 */
     success: boolean;
