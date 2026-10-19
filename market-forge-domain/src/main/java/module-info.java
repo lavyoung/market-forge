@@ -53,6 +53,7 @@ module market.forge.domain {
     requires market.forge.types;
     requires jakarta.annotation;
     requires spring.boot;
+    requires spring.beans;
 
 
     opens com.lavyoung.marketforge.domain.strategy.service.impl;
@@ -63,6 +64,7 @@ module market.forge.domain {
     opens com.lavyoung.marketforge.domain.strategy.service.rule.chain.impl;
     opens com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory;
     opens com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm;
+    opens com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.impl;
     opens com.lavyoung.marketforge.domain.strategy.service.rule.tree.impl;
     opens com.lavyoung.marketforge.domain.activity.service.armory;
     opens com.lavyoung.marketforge.domain.activity.service.armory.impl;
