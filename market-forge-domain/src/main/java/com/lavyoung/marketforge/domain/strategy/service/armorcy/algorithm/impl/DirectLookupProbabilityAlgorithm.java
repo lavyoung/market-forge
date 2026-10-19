@@ -7,7 +7,6 @@ import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.StrategyProbabilitySpace;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
-import com.lavyoung.marketforge.types.model.CommonResponseCode;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -35,6 +34,14 @@ public class DirectLookupProbabilityAlgorithm implements IProbabilityAlgorithm {
     private final int maximumTableSize;
     private final SecureRandom secureRandom = new SecureRandom();
 
+    /**
+     * 创建直接查表算法。
+     *
+     * @param repository       策略仓储端口
+     * @param maximumTableSize 允许展开的最大查找表元素数量
+     * @throws NullPointerException     策略仓储为空时抛出
+     * @throws IllegalArgumentException 最大查找表容量小于等于零时抛出
+     */
     public DirectLookupProbabilityAlgorithm(IStrategyRepository repository,
                                             @Value("${market-forge.strategy.algorithm.direct-lookup-max-size:10000}")
                                             int maximumTableSize) {
@@ -68,11 +75,11 @@ public class DirectLookupProbabilityAlgorithm implements IProbabilityAlgorithm {
 
         List<Long> lookupTable = createLookupTable(probabilitySpace);
         // 避免 Redis 中连续区段直接暴露奖品概率分布 不会对概率产生影响
-        Collections.shuffle(lookupTable);
+        Collections.shuffle(lookupTable, secureRandom);
 
         Map<Integer, Long> indexedLookupTable = new HashMap<>(hashCapacity(lookupTable.size()));
         for (int index = 0; index < lookupTable.size(); index++) {
-            indexedLookupTable.put(index, indexedLookupTable.get(index));
+            indexedLookupTable.put(index, lookupTable.get(index));
         }
 
         // 缓存查找表
@@ -82,7 +89,7 @@ public class DirectLookupProbabilityAlgorithm implements IProbabilityAlgorithm {
     @Override
     public long dispatch(String assembleKey) {
         if (StringUtils.isBlank(assembleKey)) {
-            throw BusinessException.of(CommonResponseCode.PARAM_INVALID, assembleKey);
+            throw new IllegalArgumentException("assembleKey must not be blank");
         }
 
         int rateRange = repository.getRateRange(assembleKey);
