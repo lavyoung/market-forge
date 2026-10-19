@@ -62,20 +62,6 @@ export interface ActivityOrderQuery {
 }
 
 /**
- * Java 服务端通用分页结构。
- */
-export interface PageResult<T> {
-    /** 当前页记录。 */
-    records: T[];
-    /** 符合查询条件的记录总数。 */
-    total: number;
-    /** 当前页码。 */
-    pageNumber: number;
-    /** 每页记录数。 */
-    pageSize: number;
-}
-
-/**
  * ProTable 要求的分页响应结构。
  */
 export interface ActivityOrderPage {

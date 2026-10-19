@@ -1,7 +1,7 @@
 import {request} from '@umijs/max';
-import type {ApiResponse} from '../types';
+import type {ApiResponse, PageResult} from '../types';
 import {requireResponseData} from '../types';
-import type {ActivityOrderItem, ActivityOrderPage, ActivityOrderQuery, PageResult} from './types';
+import type {ActivityOrderItem, ActivityOrderPage, ActivityOrderQuery} from './types';
 
 const ACTIVITY_ORDER_PATH = '/api/admin/activity/orders';
 

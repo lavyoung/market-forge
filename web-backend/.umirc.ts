@@ -34,11 +34,23 @@ export default defineConfig({
             path: '/activity',
             icon: 'GiftOutlined',
             routes: [
-        {
-            name: '抽奖订单',
-            path: '/activity/order',
-            component: './Activity/Order',
+                {
+                    name: '抽奖订单',
+                    path: '/activity/order',
+                    component: './Activity/Order',
+                },
+            ],
         },
+        {
+            name: '发奖运营',
+            path: '/award',
+            icon: 'TrophyOutlined',
+            routes: [
+                {
+                    name: '中奖记录',
+                    path: '/award/record',
+                    component: './Award/Record',
+                },
             ],
         },
     ],

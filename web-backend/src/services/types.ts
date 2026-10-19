@@ -11,11 +11,25 @@ export interface ApiResponse<T> {
 }
 
 /**
+ * 服务端统一分页结构。
+ */
+export interface PageResult<T> {
+    /** 当前页记录。 */
+    records: T[];
+    /** 符合查询条件的记录总数。 */
+    total: number;
+    /** 当前页码，从 1 开始。 */
+    pageNumber: number;
+    /** 每页记录数。 */
+    pageSize: number;
+}
+
+/**
  * 从统一响应中读取成功数据。
  *
  * @param response 服务端统一响应
  * @returns 非空业务数据
- * @throws Error 服务端业务处理失败或数据为空时抛出
+ * @throws Error 服务端业务处理失败或成功响应未返回数据时抛出
  */
 export function requireResponseData<T>(response: ApiResponse<T>): T {
     if (response.code !== 0 || response.data === null) {

@@ -53,6 +53,7 @@ class AdminSecurityConfigurationTest {
 
     private static final String ADMIN_AUTH_PATH = WebConfig.API_PATH_PREFIX + "/admin/auth";
     private static final String ADMIN_ACTIVITY_ORDER_PATH = WebConfig.API_PATH_PREFIX + "/admin/activity/orders";
+    private static final String ADMIN_AWARD_RECORD_PATH = WebConfig.API_PATH_PREFIX + "/admin/award/records";
 
     @Autowired
     private WebApplicationContext applicationContext;
@@ -129,6 +130,31 @@ class AdminSecurityConfigurationTest {
     }
 
     /**
+     * Given 匿名客户端，When 查询用户中奖记录，Then 安全过滤链拒绝数据访问。
+     *
+     * @throws Exception MockMvc 请求执行失败时抛出
+     */
+    @Test
+    void shouldRejectAwardRecordRequestWithoutLogin() throws Exception {
+        mockMvc.perform(get(ADMIN_AWARD_RECORD_PATH))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().doesNotExist("Location"))
+                .andExpect(content().contentTypeCompatibleWith("application/json"))
+                .andExpect(jsonPath("$.code").value(CommonResponseCode.AUTHENTICATION_REQUIRED.getCode()))
+                .andExpect(jsonPath("$.message").value(CommonResponseCode.AUTHENTICATION_REQUIRED.getMsg()));
+    }
+
+    /**
+     * Given 已认证运营用户，When 查询用户中奖记录，Then 请求通过认证校验。
+     *
+     * @throws Exception MockMvc 请求执行失败时抛出
+     */
+    @Test
+    void shouldAllowAwardRecordRequestForAuthenticatedUser() throws Exception {
+        mockMvc.perform(get(ADMIN_AWARD_RECORD_PATH).with(user("admin"))).andExpect(status().isOk());
+    }
+
+    /**
      * Given 非运营后台写接口，When 未携带 CSRF 令牌提交请求，Then 不受 Admin 安全链影响。
      *
      * @throws Exception MockMvc 请求执行失败时抛出
@@ -196,6 +222,11 @@ class AdminSecurityConfigurationTest {
         @GetMapping(WebConfig.API_PATH_PREFIX + "/admin/activity/orders")
         String adminOrders() {
             return "orders";
+        }
+
+        @GetMapping(WebConfig.API_PATH_PREFIX + "/admin/award/records")
+        String adminAwardRecords() {
+            return "award-records";
         }
 
         @PostMapping("/public/action")
