@@ -8,6 +8,8 @@ module market.forge.domain {
     exports com.lavyoung.marketforge.domain.strategy.model.vo;
     exports com.lavyoung.marketforge.domain.strategy.service;
     exports com.lavyoung.marketforge.domain.strategy.service.armorcy;
+    exports com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm;
+    exports com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model;
     exports com.lavyoung.marketforge.domain.activity.repository;
     exports com.lavyoung.marketforge.domain.activity.model.aggregate;
     exports com.lavyoung.marketforge.domain.activity.service.quota.rule.factory;
@@ -75,5 +77,6 @@ module market.forge.domain {
     opens com.lavyoung.marketforge.domain.credit.service.impl;
     opens com.lavyoung.marketforge.domain.activity.model.entity to com.fasterxml.jackson.databind;
     opens com.lavyoung.marketforge.domain.strategy.model.entity to com.fasterxml.jackson.databind;
+    opens com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model to com.fasterxml.jackson.databind;
 
 }

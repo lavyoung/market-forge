@@ -7,6 +7,8 @@ import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.ProbabilityAlgorithmType;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AwardProbabilityRange;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.AwardAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyAwardAssembler;
@@ -118,6 +120,30 @@ public class StrategyRepository implements IStrategyRepository {
     @Override
     public long getStrategyAwardAssemble(String key, int rateKey) {
         return redisService.getHashValue(Constants.RedisKeys.STRATEGY_RATE_TABLE_KEY + key, rateKey, Long.class).orElse(0L);
+    }
+
+    @Override
+    public void storeStrategyAwardProbabilityRanges(String key, int totalWeight, List<AwardProbabilityRange> probabilityRanges) {
+        redisService.setValue(Constants.RedisKeys.STRATEGY_RATE_RANGE_KEY + key, totalWeight);
+        redisService.setValue(Constants.RedisKeys.STRATEGY_PROBABILITY_RANGE_TABLE_KEY + key, List.copyOf(probabilityRanges));
+    }
+
+    @Override
+    public List<AwardProbabilityRange> getStrategyAwardProbabilityRanges(String key) {
+        return redisService.getValueList(Constants.RedisKeys.STRATEGY_PROBABILITY_RANGE_TABLE_KEY + key,
+                AwardProbabilityRange.class).orElseGet(List::of);
+    }
+
+    @Override
+    public void storeStrategyProbabilityAlgorithm(String key, ProbabilityAlgorithmType algorithmType) {
+        Objects.requireNonNull(algorithmType, "algorithmType must not be null");
+        redisService.setValue(Constants.RedisKeys.STRATEGY_PROBABILITY_ALGORITHM_KEY + key, algorithmType.getCode());
+    }
+
+    @Override
+    public Optional<ProbabilityAlgorithmType> getStrategyProbabilityAlgorithm(String key) {
+        return redisService.getValue(Constants.RedisKeys.STRATEGY_PROBABILITY_ALGORITHM_KEY + key,
+                String.class).flatMap(ProbabilityAlgorithmType::fromCode);
     }
 
     /**

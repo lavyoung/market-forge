@@ -5,6 +5,8 @@ import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.ProbabilityAlgorithmType;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AwardProbabilityRange;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 
 import java.time.LocalDateTime;
@@ -72,6 +74,46 @@ public interface IStrategyRepository {
      * @return 奖品标识；查找表中不存在对应下标时返回 {@code 0}
      */
     long getStrategyAwardAssemble(String key, int rateKey);
+
+    /**
+     * 保存二分算法使用的累计概率区间。
+     * <p>
+     * 区间必须按照累计上界升序排列，最后一个区间的累计上界必须等于
+     * {@code totalWeight}。装配键可以表示普通策略或权重奖池。
+     *
+     * @param key               策略装配键
+     * @param totalWeight       随机数上界
+     * @param probabilityRanges 按累计上界升序排列的奖品概率区间
+     */
+    void storeStrategyAwardProbabilityRanges(String key, int totalWeight, List<AwardProbabilityRange> probabilityRanges);
+
+    /**
+     * 获取二分算法使用的累计概率区间。
+     *
+     * @param key 策略装配键
+     * @return 按累计上界升序排列的不可变区间列表；没有装配数据时返回空列表
+     */
+    List<AwardProbabilityRange> getStrategyAwardProbabilityRanges(String key);
+
+    /**
+     * 保存策略装配使用的概率算法类型。
+     *
+     * <p>算法数据写入完成后再保存该元数据，使抽奖阶段能够选择与装配阶段
+     * 相同的查询算法。</p>
+     *
+     * @param key           策略装配键
+     * @param algorithmType 本次装配使用的算法类型
+     * @throws NullPointerException 算法类型为空时抛出
+     */
+    void storeStrategyProbabilityAlgorithm(String key, ProbabilityAlgorithmType algorithmType);
+
+    /**
+     * 查询策略装配使用的概率算法类型。
+     *
+     * @param key 策略装配键
+     * @return 已保存的算法类型；策略尚未装配或编码无法识别时返回空
+     */
+    Optional<ProbabilityAlgorithmType> getStrategyProbabilityAlgorithm(String key);
 
     /**
      * 查询指定策略的基础配置。

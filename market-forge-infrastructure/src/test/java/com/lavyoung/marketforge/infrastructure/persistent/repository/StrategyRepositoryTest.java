@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.lavyoung.marketforge.domain.strategy.event.AwardStockDeductedEvent;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardStockKeyVO;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.ProbabilityAlgorithmType;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AwardProbabilityRange;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.AwardAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyAwardAssembler;
@@ -46,6 +48,8 @@ class StrategyRepositoryTest {
     private static final long AWARD_ID = 100_011L;
     private static final String STOCK_KEY = "strategy_award_stock:100001_100011";
     private static final String STOCK_LOCK_KEY = STOCK_KEY + ":lock";
+    private static final String PROBABILITY_KEY = "100001";
+    private static final int TOTAL_WEIGHT = 100;
     private static final Duration DEFAULT_STOCK_LOCK_LEASE_TIME = Duration.ofSeconds(30);
 
     @Mock
@@ -287,6 +291,100 @@ class StrategyRepositoryTest {
                         () -> repository.subtractAwardStock(STRATEGY_ID, AWARD_ID, 0))
         );
         verify(redisService, never()).lock(STOCK_LOCK_KEY);
+    }
+
+    /**
+     * Given 已完成装配的累计概率区间，When 持久化二分算法数据，Then 分别写入总权重和不可变区间快照。
+     */
+    @Test
+    void shouldStoreStrategyAwardProbabilityRanges() {
+        // Given
+        List<AwardProbabilityRange> probabilityRanges = List.of(
+                new AwardProbabilityRange(60, 100_011L),
+                new AwardProbabilityRange(90, 100_012L),
+                new AwardProbabilityRange(100, 100_013L)
+        );
+
+        // When
+        repository.storeStrategyAwardProbabilityRanges(PROBABILITY_KEY, TOTAL_WEIGHT, probabilityRanges);
+
+        // Then
+        verify(redisService).setValue(Constants.RedisKeys.STRATEGY_RATE_RANGE_KEY + PROBABILITY_KEY, TOTAL_WEIGHT);
+        verify(redisService).setValue(Constants.RedisKeys.STRATEGY_PROBABILITY_RANGE_TABLE_KEY + PROBABILITY_KEY, probabilityRanges);
+    }
+
+    /**
+     * Given Redis 存在累计概率区间，When 查询二分算法数据，Then 返回类型安全且顺序不变的区间列表。
+     */
+    @Test
+    void shouldGetStrategyAwardProbabilityRanges() {
+        // Given
+        List<AwardProbabilityRange> probabilityRanges = List.of(
+                new AwardProbabilityRange(60, 100_011L),
+                new AwardProbabilityRange(100, 100_012L)
+        );
+        String cacheKey = Constants.RedisKeys.STRATEGY_PROBABILITY_RANGE_TABLE_KEY + PROBABILITY_KEY;
+        when(redisService.getValueList(cacheKey, AwardProbabilityRange.class)).thenReturn(Optional.of(probabilityRanges));
+
+        // When
+        List<AwardProbabilityRange> result = repository.getStrategyAwardProbabilityRanges(PROBABILITY_KEY);
+
+        // Then
+        assertEquals(probabilityRanges, result);
+        verify(redisService).getValueList(cacheKey, AwardProbabilityRange.class);
+    }
+
+    /**
+     * Given Redis 尚未装配累计概率区间，When 查询二分算法数据，Then 返回空列表而不是空引用。
+     */
+    @Test
+    void shouldReturnEmptyProbabilityRangesWhenCacheIsMissing() {
+        // Given
+        String cacheKey = Constants.RedisKeys.STRATEGY_PROBABILITY_RANGE_TABLE_KEY + PROBABILITY_KEY;
+        when(redisService.getValueList(cacheKey, AwardProbabilityRange.class)).thenReturn(Optional.empty());
+
+        // When
+        List<AwardProbabilityRange> result = repository.getStrategyAwardProbabilityRanges(PROBABILITY_KEY);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    /**
+     * Given 策略选择了二分算法，When 保存装配元数据，Then Redis 仅保存稳定算法编码。
+     */
+    @Test
+    void shouldStoreStrategyProbabilityAlgorithmCode() {
+        repository.storeStrategyProbabilityAlgorithm(PROBABILITY_KEY, ProbabilityAlgorithmType.BINARY_SEARCH);
+
+        verify(redisService).setValue(Constants.RedisKeys.STRATEGY_PROBABILITY_ALGORITHM_KEY + PROBABILITY_KEY, "binary_search");
+    }
+
+    /**
+     * Given Redis 存在已知算法编码，When 查询装配元数据，Then 转换为对应算法类型。
+     */
+    @Test
+    void shouldGetStrategyProbabilityAlgorithm() {
+        String cacheKey = Constants.RedisKeys.STRATEGY_PROBABILITY_ALGORITHM_KEY + PROBABILITY_KEY;
+        when(redisService.getValue(cacheKey, String.class)).thenReturn(Optional.of("direct_lookup"));
+
+        Optional<ProbabilityAlgorithmType> result = repository.getStrategyProbabilityAlgorithm(PROBABILITY_KEY);
+
+        assertEquals(Optional.of(ProbabilityAlgorithmType.DIRECT_LOOKUP), result);
+    }
+
+    /**
+     * Given Redis 中存在无法识别的算法编码，When 查询装配元数据，Then 返回空结果避免误用其他算法。
+     */
+    @Test
+    void shouldReturnEmptyWhenProbabilityAlgorithmCodeIsUnknown() {
+        String cacheKey = Constants.RedisKeys.STRATEGY_PROBABILITY_ALGORITHM_KEY + PROBABILITY_KEY;
+        when(redisService.getValue(cacheKey, String.class)).thenReturn(Optional.of("unknown_algorithm"));
+
+        Optional<ProbabilityAlgorithmType> result = repository.getStrategyProbabilityAlgorithm(PROBABILITY_KEY);
+
+        assertTrue(result.isEmpty());
     }
 
     /**

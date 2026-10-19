@@ -42,9 +42,9 @@ public class DirectLookupProbabilityAlgorithm implements IProbabilityAlgorithm {
      * @throws NullPointerException     策略仓储为空时抛出
      * @throws IllegalArgumentException 最大查找表容量小于等于零时抛出
      */
-    public DirectLookupProbabilityAlgorithm(IStrategyRepository repository,
-                                            @Value("${market-forge.strategy.algorithm.direct-lookup-max-size:10000}")
-                                            int maximumTableSize) {
+    public DirectLookupProbabilityAlgorithm(
+            IStrategyRepository repository,
+            @Value("${market-forge.strategy.algorithm.direct-lookup-max-size:10000}") int maximumTableSize) {
         this.repository = Objects.requireNonNull(repository, "repository must not be null");
         if (maximumTableSize <= 0) {
             throw new IllegalArgumentException("maximumTableSize must be greater than zero");

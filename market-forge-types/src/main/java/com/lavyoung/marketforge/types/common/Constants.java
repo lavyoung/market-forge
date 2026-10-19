@@ -77,6 +77,18 @@ public class Constants {
         public static final String STRATEGY_RATE_TABLE_KEY = "strategy_rate_table_key:";
 
         /**
+         * 二分查找算法累计概率区间表的缓存键前缀。
+         *
+         * <p>缓存内容为按累计概率上界升序排列的奖品区间列表。</p>
+         */
+        public static final String STRATEGY_PROBABILITY_RANGE_TABLE_KEY = "strategy_probability_range_table_key:";
+
+        /**
+         * 策略概率算法类型的缓存键前缀。
+         */
+        public static final String STRATEGY_PROBABILITY_ALGORITHM_KEY = "strategy_probability_algorithm_key:";
+
+        /**
          * 策略奖品 Redis 库存计数器键前缀。
          */
         public static final String STRATEGY_AWARD_STOCK = "strategy_award_stock:";
