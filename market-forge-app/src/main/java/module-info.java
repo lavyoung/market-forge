@@ -36,9 +36,16 @@
     requires dynamic.config.center.zookeeper;
     requires dynamic.config.center.spring.boot.starter;
     requires dynamic.config.center.rate.limiter.spring.boot.starter;
+    requires jakarta.validation;
+    requires spring.security.core;
+    requires spring.security.crypto;
+    requires elasticsearch.java;
+    requires spring.security.config;
+    requires spring.security.web;
 
     opens com.lavyoung.marketforge.app;
     opens com.lavyoung.marketforge.app.config;
     opens com.lavyoung.marketforge.app.interceptor to spring.beans;
     opens com.lavyoung.marketforge.app.config.dcc;
+    opens com.lavyoung.marketforge.app.config.security;
 }

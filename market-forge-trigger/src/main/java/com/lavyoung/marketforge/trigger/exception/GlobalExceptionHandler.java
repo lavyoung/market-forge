@@ -9,6 +9,7 @@ import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -134,6 +135,21 @@ public class GlobalExceptionHandler {
                 CommonResponseCode.RESOURCE_NOT_FOUND,
                 CommonResponseCode.RESOURCE_NOT_FOUND.getMsg()
         ));
+    }
+
+    /**
+     * 将身份认证失败转换为统一的 HTTP 401 响应。
+     *
+     * <p>无论用户名不存在、密码错误还是账号状态异常，都返回相同错误信息，
+     * 防止调用方根据响应差异枚举后台账号。</p>
+     *
+     * @param exception Spring Security 认证异常
+     * @return 不暴露认证失败细节的统一响应
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<Response<Void>> handleAuthenticationException(AuthenticationException exception) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Response.fail(CommonResponseCode.AUTHENTICATION_FAILED));
     }
 
 }

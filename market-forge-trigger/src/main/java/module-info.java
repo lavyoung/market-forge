@@ -19,6 +19,10 @@ module market.forge.trigger {
     requires spring.cloud.commons;
     requires spring.webmvc;
     requires org.apache.tomcat.embed.core;
+    requires spring.security.core;
+    requires spring.security.web;
+
+    exports com.lavyoung.marketforge.trigger.security;
 
     opens com.lavyoung.marketforge.trigger.assembler;
     opens com.lavyoung.marketforge.trigger.circuitbreaker;

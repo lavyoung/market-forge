@@ -23,6 +23,15 @@ module market.forge.api {
     exports com.lavyoung.marketforge.api.behavior;
     exports com.lavyoung.marketforge.api.behavior.request;
     exports com.lavyoung.marketforge.api.behavior.response;
+    exports com.lavyoung.marketforge.api.admin.auth;
+    exports com.lavyoung.marketforge.api.admin.auth.request;
+    exports com.lavyoung.marketforge.api.admin.auth.response;
+    exports com.lavyoung.marketforge.api.credit.request;
+    exports com.lavyoung.marketforge.api.credit.response;
+    exports com.lavyoung.marketforge.api.credit;
+    exports com.lavyoung.marketforge.api.award;
+    exports com.lavyoung.marketforge.api.award.request;
+    exports com.lavyoung.marketforge.api.award.response;
 
     opens com.lavyoung.marketforge.api.activity.request;
     opens com.lavyoung.marketforge.api.activity.response;
@@ -32,13 +41,9 @@ module market.forge.api {
     opens com.lavyoung.marketforge.api.behavior.response;
     opens com.lavyoung.marketforge.api.credit.request;
 
-    exports com.lavyoung.marketforge.api.credit.request;
-    exports com.lavyoung.marketforge.api.credit.response;
-    exports com.lavyoung.marketforge.api.credit;
-    exports com.lavyoung.marketforge.api.award;
-    exports com.lavyoung.marketforge.api.award.request;
-    exports com.lavyoung.marketforge.api.award.response;
 
     opens com.lavyoung.marketforge.api.award.request;
     opens com.lavyoung.marketforge.api.award.response;
+    opens com.lavyoung.marketforge.api.admin.auth.request;
+    opens com.lavyoung.marketforge.api.admin.auth.response;
 }

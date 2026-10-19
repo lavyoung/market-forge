@@ -37,10 +37,35 @@ public enum CommonResponseCode implements IResponseCode {
     RESOURCE_NOT_FOUND(1_004, "common.resource.not-found", "请求的资源不存在"),
 
     /**
+     * 当前请求没有有效的登录身份。
+     *
+     * <p>用户未登录和服务端会话已经失效都使用该编码，避免前端为两种
+     * 本质相同的状态维护不同处理分支。</p>
+     */
+    AUTHENTICATION_REQUIRED(1_005, "common.authentication.required", "请先登录"),
+
+    /**
+     * 登录凭证校验失败。
+     *
+     * <p>不区分用户名不存在和密码错误，防止攻击者根据错误信息枚举
+     * 系统中已经存在的运营账号。</p>
+     */
+    AUTHENTICATION_FAILED(1_006, "common.authentication.failed", "用户名或密码错误"),
+
+    /**
+     * 当前登录用户没有访问目标资源所需的权限。
+     */
+    ACCESS_DENIED(1_007, "common.access.denied", "无权访问该资源"),
+
+    /**
+     * 请求携带的 CSRF 令牌缺失、失效或与当前会话不匹配。
+     */
+    CSRF_TOKEN_INVALID(1_008, "common.csrf-token.invalid", "请求安全校验失败"),
+
+    /**
      * 未被业务规则识别的系统异常。
      */
     SYSTEM_ERROR(900_000_001, "system.error", "系统异常，请稍后重试");
-
 
     private final int code;
     private final String i18nKey;

@@ -3,6 +3,8 @@ package com.lavyoung.marketforge.types.model;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -28,6 +30,45 @@ class ResponseContractTest {
         assertEquals(CommonResponseCode.SUCCESS.getCode(), response.code());
         assertEquals(CommonResponseCode.SUCCESS.getMsg(), response.message());
         assertEquals(data, response.data());
+    }
+
+    /**
+     * Given 运营后台认证协议，When 读取公共认证错误码，Then 返回稳定的编码、国际化键和默认文案。
+     */
+    @Test
+    void shouldExposeStableAuthenticationResponseCodes() {
+        // Given & When
+        CommonResponseCode authenticationRequired = CommonResponseCode.AUTHENTICATION_REQUIRED;
+        CommonResponseCode authenticationFailed = CommonResponseCode.AUTHENTICATION_FAILED;
+        CommonResponseCode accessDenied = CommonResponseCode.ACCESS_DENIED;
+        CommonResponseCode csrfTokenInvalid = CommonResponseCode.CSRF_TOKEN_INVALID;
+
+        // Then
+        assertAll(
+                () -> assertResponseCode(authenticationRequired, 1_005, "common.authentication.required", "请先登录"),
+                () -> assertResponseCode(authenticationFailed, 1_006, "common.authentication.failed", "用户名或密码错误"),
+                () -> assertResponseCode(accessDenied, 1_007, "common.access.denied", "无权访问该资源"),
+                () -> assertResponseCode(csrfTokenInvalid, 1_008, "common.csrf-token.invalid", "请求安全校验失败")
+        );
+    }
+
+    /**
+     * Given 全部公共响应编码，When 检查编码和国际化键，Then 每个定义都保持唯一。
+     */
+    @Test
+    void shouldKeepCommonResponseCodesUnique() {
+        // Given
+        CommonResponseCode[] responseCodes = CommonResponseCode.values();
+
+        // When
+        long uniqueCodeCount = Arrays.stream(responseCodes).mapToInt(CommonResponseCode::getCode).distinct().count();
+        long uniqueI18nKeyCount = Arrays.stream(responseCodes).map(CommonResponseCode::getI18nKey).distinct().count();
+
+        // Then
+        assertAll(
+                () -> assertEquals(responseCodes.length, uniqueCodeCount),
+                () -> assertEquals(responseCodes.length, uniqueI18nKeyCount)
+        );
     }
 
     /**
@@ -142,6 +183,22 @@ class ResponseContractTest {
     void shouldRejectNullResponseCode() {
         // Given & When & Then
         assertThrows(NullPointerException.class, () -> new BusinessException((IResponseCode) null));
+    }
+
+    /**
+     * 断言响应编码的完整协议内容。
+     *
+     * @param responseCode 待校验的响应编码
+     * @param code         预期数值编码
+     * @param i18nKey      预期国际化键
+     * @param message      预期默认文案
+     */
+    private static void assertResponseCode(IResponseCode responseCode, int code, String i18nKey, String message) {
+        assertAll(
+                () -> assertEquals(code, responseCode.getCode()),
+                () -> assertEquals(i18nKey, responseCode.getI18nKey()),
+                () -> assertEquals(message, responseCode.getMsg())
+        );
     }
 
     /**

@@ -33,6 +33,11 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful
+  servlet:
+    session:
+      cookie:
+        # 生产环境必须通过 HTTPS 访问运营后台。
+        secure: true
 
 springdoc:
   api-docs:
@@ -163,3 +168,11 @@ market-forge:
     connect-timeout: ${ELASTICSEARCH_CONNECT_TIMEOUT:3s}
     socket-timeout: ${ELASTICSEARCH_SOCKET_TIMEOUT:10s}
     connection-request-timeout: ${ELASTICSEARCH_CONNECTION_REQUEST_TIMEOUT:3s}
+  security:
+    admin:
+      username: ${MARKET_FORGE_ADMIN_USERNAME}
+      password-hash: ${MARKET_FORGE_ADMIN_PASSWORD_HASH}
+      display-name: ${MARKET_FORGE_ADMIN_DISPLAY_NAME}
+      authorities:
+        - ROLE_ADMIN
+        - ACTIVITY_ORDER_READ

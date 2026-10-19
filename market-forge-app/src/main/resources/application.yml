@@ -1,9 +1,26 @@
 spring:
   application:
     name: market-forge
+  session:
+    # 用户连续 30 分钟没有访问后台后，服务端会话失效。
+    timeout: ${MARKET_FORGE_ADMIN_SESSION_TIMEOUT:30m}
+    redis:
+      # 与抽奖库存、动态配置等业务 Redis Key 隔离。
+      namespace: ${MARKET_FORGE_ADMIN_SESSION_NAMESPACE:market-forge:admin:session}
+      # 请求结束时统一写入 Redis，避免一次请求产生多次网络写入。
+      flush-mode: on-save
+      # 只有 Session 属性发生变化时才保存对应内容。
+      save-mode: on-set-attribute
+
 
 server:
   port: 8080
+  servlet:
+    session:
+      cookie:
+        name: MARKET_FORGE_SESSION
+        http-only: true
+        same-site: lax
 
 
 mybatis-plus:
