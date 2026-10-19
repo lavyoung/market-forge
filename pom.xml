@@ -51,6 +51,7 @@
         <module>market-forge-infrastructure</module>
         <module>market-forge-trigger</module>
         <module>market-forge-app</module>
+        <module>market-forge-benchmark</module>
     </modules>
 
     <properties>
@@ -82,6 +83,10 @@
 
         <!-- Architecture Test -->
         <archunit.version>1.2.1</archunit.version>
+
+        <!-- Java Microbenchmark Harness -->
+        <jmh.version>1.37</jmh.version>
+        <maven-shade-plugin.version>3.6.1</maven-shade-plugin.version>
 
         <!-- MyBatis -->
         <mybatis.version>3.5.19</mybatis.version>
@@ -204,6 +209,18 @@
                 <groupId>cn.hutool</groupId>
                 <artifactId>hutool-all</artifactId>
                 <version>${hutool.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.openjdk.jmh</groupId>
+                <artifactId>jmh-core</artifactId>
+                <version>${jmh.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.openjdk.jmh</groupId>
+                <artifactId>jmh-generator-annprocess</artifactId>
+                <version>${jmh.version}</version>
             </dependency>
 
             <dependency>
