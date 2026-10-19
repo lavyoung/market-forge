@@ -62,6 +62,7 @@ module market.forge.domain {
     opens com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory;
     opens com.lavyoung.marketforge.domain.strategy.service.rule.chain.impl;
     opens com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory;
+    opens com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm;
     opens com.lavyoung.marketforge.domain.strategy.service.rule.tree.impl;
     opens com.lavyoung.marketforge.domain.activity.service.armory;
     opens com.lavyoung.marketforge.domain.activity.service.armory.impl;
