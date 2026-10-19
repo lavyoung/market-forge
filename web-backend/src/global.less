@@ -1,0 +1,127 @@
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html {
+  background: #f5f7fa;
+}
+
+body {
+  margin: 0;
+  background: #f5f7fa;
+  color: #1d1d1f;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.app-brand-mark {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 7px;
+  background: #1677ff;
+  color: #fff;
+  font-size: 17px;
+  box-shadow: 0 5px 14px rgb(22 119 255 / 20%);
+}
+
+.ant-pro-layout .ant-layout-header {
+  border-bottom: 1px solid rgb(0 0 0 / 6%);
+  backdrop-filter: saturate(160%) blur(18px);
+}
+
+.ant-pro-layout .ant-layout-sider {
+  border-inline-end: 1px solid #e8eaed;
+}
+
+.ant-pro-layout .ant-menu-item,
+.ant-pro-layout .ant-menu-submenu-title {
+  transition: color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.ant-pro-layout .ant-menu-item:active,
+.ant-pro-layout .ant-menu-submenu-title:active {
+  transform: scale(0.985);
+}
+
+.ant-pro-page-container .ant-pro-page-container-warp-page-header {
+  padding-block-start: 20px;
+}
+
+.ant-pro-page-container .ant-page-header-heading-title {
+  color: #1d1d1f;
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.ant-pro-page-container .ant-page-header-heading-sub-title {
+  color: #6e6e73;
+}
+
+.ant-pro-card {
+  overflow: hidden;
+  border: 1px solid #e7e9ec;
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgb(29 29 31 / 5%);
+}
+
+.ant-pro-card .ant-table-tbody > tr > td {
+  transition: background-color 160ms ease;
+}
+
+.ant-pro-table-search {
+  box-shadow: none;
+}
+
+.ant-btn,
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-select-selector,
+.ant-picker {
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease, color 160ms ease;
+}
+
+.ant-btn-primary {
+  box-shadow: 0 5px 14px rgb(22 119 255 / 16%);
+}
+
+.ant-pagination .ant-pagination-item {
+  border-radius: 6px;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.ant-pagination .ant-pagination-item:active {
+  transform: scale(0.96);
+}
+
+@media (max-width: 768px) {
+  .ant-pro-page-container .ant-pro-page-container-children-container {
+    padding-inline: 12px;
+  }
+
+  .ant-pro-card {
+    border-radius: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

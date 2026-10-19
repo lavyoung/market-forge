@@ -3,6 +3,11 @@
   padding-inline: 8px;
 }
 
+.avatar {
+  background: #1677ff;
+  box-shadow: 0 4px 12px rgb(22 119 255 / 18%);
+}
+
 .identity {
   display: flex;
   min-width: 96px;
@@ -23,8 +28,24 @@
   font-size: 12px;
 }
 
+.logout {
+  color: #6e6e73;
+  transition: color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.logout:hover {
+  color: #1677ff !important;
+  transform: translateY(-1px);
+}
+
 @media (max-width: 640px) {
   .identity {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logout {
+    transition: none;
   }
 }

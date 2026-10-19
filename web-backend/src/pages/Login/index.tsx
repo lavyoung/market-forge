@@ -1,6 +1,7 @@
+import loginArtwork from '@/assets/login-architecture.png';
 import {loginAdminOperator} from '@/services/auth/auth';
 import type {AdminLoginRequest} from '@/services/auth/types';
-import {LockOutlined, UserOutlined} from '@ant-design/icons';
+import {ArrowRightOutlined, DeploymentUnitOutlined, LockOutlined, UserOutlined} from '@ant-design/icons';
 import {LoginForm, ProFormText} from '@ant-design/pro-components';
 import {history, useLocation, useModel} from '@umijs/max';
 import {message} from 'antd';
@@ -48,36 +49,65 @@ function LoginPage() {
 
     return (
         <main className={styles.page}>
-            <section className={styles.loginPanel} aria-label="运营后台登录">
-                <LoginForm<AdminLoginRequest>
-                    title="Market Forge"
-                    subTitle="运营后台"
-                    onFinish={handleLogin}
-                    submitter={{
-                        searchConfig: {submitText: '登录'},
-                        submitButtonProps: {loading: submitting, block: true},
-                    }}
-                >
-                    <ProFormText
-                        name="username"
-                        fieldProps={{size: 'large', prefix: <UserOutlined/>}}
-                        placeholder="登录名"
-                        rules={[
-                            {required: true, message: '请输入登录名'},
-                            {max: 64, message: '登录名不能超过 64 个字符'},
-                        ]}
-                    />
+            <section className={styles.artwork} aria-hidden="true">
+                <img className={styles.artworkImage} src={loginArtwork} alt=""/>
+                <div className={styles.artworkBrand}>
+                    <span className={styles.brandMark}><DeploymentUnitOutlined/></span>
+                    <span>Market Forge</span>
+                </div>
+                <p className={styles.artworkCaption}>专注每一次营销活动的稳定运行</p>
+            </section>
 
-                    <ProFormText.Password
-                        name="password"
-                        fieldProps={{size: 'large', prefix: <LockOutlined/>}}
-                        placeholder="登录密码"
-                        rules={[
-                            {required: true, message: '请输入登录密码'},
-                            {max: 128, message: '登录密码不能超过 128 个字符'},
-                        ]}
-                    />
-                </LoginForm>
+            <section className={styles.loginRegion} aria-label="运营后台登录">
+                <div className={styles.mobileBrand}>
+                    <span className={styles.brandMark}><DeploymentUnitOutlined/></span>
+                    <span>Market Forge</span>
+                </div>
+
+                <div className={styles.loginPanel}>
+                    <header className={styles.heading}>
+                        <span className={styles.eyebrow}>OPERATIONS CONSOLE</span>
+                        <h1>欢迎回来</h1>
+                        <p>登录 Market Forge 运营后台</p>
+                    </header>
+
+                    <LoginForm<AdminLoginRequest>
+                        className={styles.loginForm}
+                        onFinish={handleLogin}
+                        submitter={{
+                            searchConfig: {submitText: '登录'},
+                            submitButtonProps: {
+                                loading: submitting,
+                                block: true,
+                                icon: <ArrowRightOutlined/>,
+                            },
+                        }}
+                    >
+                        <ProFormText
+                            name="username"
+                            label="账号"
+                            fieldProps={{size: 'large', prefix: <UserOutlined/>, autoComplete: 'username'}}
+                            placeholder="请输入登录账号"
+                            rules={[
+                                {required: true, message: '请输入登录账号'},
+                                {max: 64, message: '登录账号不能超过 64 个字符'},
+                            ]}
+                        />
+
+                        <ProFormText.Password
+                            name="password"
+                            label="密码"
+                            fieldProps={{size: 'large', prefix: <LockOutlined/>, autoComplete: 'current-password'}}
+                            placeholder="请输入登录密码"
+                            rules={[
+                                {required: true, message: '请输入登录密码'},
+                                {max: 128, message: '登录密码不能超过 128 个字符'},
+                            ]}
+                        />
+                    </LoginForm>
+
+                    <p className={styles.copyright}>© 2026 Market Forge</p>
+                </div>
             </section>
         </main>
     );

@@ -1,6 +1,7 @@
 import {defineConfig} from '@umijs/max';
 
 export default defineConfig({
+    title: 'Market Forge',
     antd: {},
     model: {},
     initialState: {},
@@ -9,8 +10,13 @@ export default defineConfig({
         type: 'hash',
     },
     layout: {
-        title: 'Market Forge 运营后台',
+        title: 'Market Forge',
         locale: false,
+        navTheme: 'light',
+        fixedHeader: true,
+        fixSiderbar: true,
+        siderWidth: 224,
+        colorPrimary: '#1677ff',
     },
     proxy: {
         '/api': {

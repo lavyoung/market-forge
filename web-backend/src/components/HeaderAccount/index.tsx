@@ -41,7 +41,7 @@ function HeaderAccount() {
 
     return (
         <Space className={styles.account} size={10}>
-            <Avatar size={32} icon={<UserOutlined/>}/>
+            <Avatar className={styles.avatar} size={32} icon={<UserOutlined/>}/>
 
             <span className={styles.identity}>
                 <Text strong className={styles.displayName}>
@@ -54,6 +54,7 @@ function HeaderAccount() {
 
             <Tooltip title="退出登录">
                 <Button
+                    className={styles.logout}
                     type="text"
                     icon={<LogoutOutlined/>}
                     loading={loggingOut}
