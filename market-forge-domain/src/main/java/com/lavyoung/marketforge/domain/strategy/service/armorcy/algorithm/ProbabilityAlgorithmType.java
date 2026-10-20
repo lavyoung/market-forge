@@ -29,13 +29,21 @@ public enum ProbabilityAlgorithmType {
     DIRECT_LOOKUP("direct_lookup"),
 
     /**
+     * Alias Method 别名抽样算法。
+     *
+     * <p>装配阶段为每个奖品建立一个接受概率和候补别名列，抽样查询复杂度为
+     * O(1)，空间复杂度为 O(n)。适合候选奖品数量较大的静态概率空间。</p>
+     */
+    ALIAS_METHOD("alias_method"),
+
+    /**
      * 累计区间二分算法。
-     * <p>
-     * 每个奖品只保存一个累计概率上界，抽奖查询复杂度为 O(log n)，
-     * 空间复杂度为 O(n)。
+     *
+     * <p>每个奖品只保存一个累计概率上界，抽奖查询复杂度为 O(log n)，
+     * 空间复杂度为 O(n)。</p>
      */
     BINARY_SEARCH("binary_search");
-
+    
     private final String code;
 
     /**

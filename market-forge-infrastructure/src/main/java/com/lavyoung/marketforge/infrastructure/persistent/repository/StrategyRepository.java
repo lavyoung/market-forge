@@ -8,6 +8,7 @@ import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.ProbabilityAlgorithmType;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AliasProbabilityTable;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AwardProbabilityRange;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.AwardAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyAssembler;
@@ -132,6 +133,17 @@ public class StrategyRepository implements IStrategyRepository {
     public List<AwardProbabilityRange> getStrategyAwardProbabilityRanges(String key) {
         return redisService.getValueList(Constants.RedisKeys.STRATEGY_PROBABILITY_RANGE_TABLE_KEY + key,
                 AwardProbabilityRange.class).orElseGet(List::of);
+    }
+
+    @Override
+    public void storeStrategyAwardAliasTable(String key, AliasProbabilityTable aliasTable) {
+        Objects.requireNonNull(aliasTable, "aliasTable must not be null");
+        redisService.setValue(Constants.RedisKeys.STRATEGY_ALIAS_TABLE_KEY + key, aliasTable);
+    }
+
+    @Override
+    public Optional<AliasProbabilityTable> getStrategyAwardAliasTable(String key) {
+        return redisService.getValue(Constants.RedisKeys.STRATEGY_ALIAS_TABLE_KEY + key, AliasProbabilityTable.class);
     }
 
     @Override

@@ -57,7 +57,6 @@ module market.forge.domain {
     requires spring.boot;
     requires spring.beans;
 
-
     opens com.lavyoung.marketforge.domain.strategy.service.impl;
     opens com.lavyoung.marketforge.domain.strategy.service.armorcy.impl;
     opens com.lavyoung.marketforge.domain.strategy.service.rule.filter.factory;

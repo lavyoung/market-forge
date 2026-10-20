@@ -7,6 +7,7 @@ import com.lavyoung.marketforge.domain.strategy.event.AwardStockDeductedEvent;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardStockKeyVO;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.ProbabilityAlgorithmType;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AliasProbabilityTable;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AwardProbabilityRange;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.AwardAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyAssembler;
@@ -352,6 +353,74 @@ class StrategyRepositoryTest {
     }
 
     /**
+     * Given 已完成装配的 Alias 概率表，When 保存概率快照，Then 使用独立 Redis Key 写入完整对象。
+     */
+    @Test
+    void shouldStoreStrategyAwardAliasTable() {
+        // Given
+        AliasProbabilityTable aliasTable = aliasProbabilityTable();
+        String cacheKey = Constants.RedisKeys.STRATEGY_ALIAS_TABLE_KEY + PROBABILITY_KEY;
+
+        // When
+        repository.storeStrategyAwardAliasTable(PROBABILITY_KEY, aliasTable);
+
+        // Then
+        verify(redisService).setValue(cacheKey, aliasTable);
+    }
+
+    /**
+     * Given Redis 中存在 Alias 概率表，When 按装配键读取，Then 返回完整概率快照。
+     */
+    @Test
+    void shouldGetStrategyAwardAliasTable() {
+        // Given
+        AliasProbabilityTable aliasTable = aliasProbabilityTable();
+        String cacheKey = Constants.RedisKeys.STRATEGY_ALIAS_TABLE_KEY + PROBABILITY_KEY;
+        when(redisService.getValue(cacheKey, AliasProbabilityTable.class)).thenReturn(Optional.of(aliasTable));
+
+        // When
+        Optional<AliasProbabilityTable> result = repository.getStrategyAwardAliasTable(PROBABILITY_KEY);
+
+        // Then
+        assertEquals(Optional.of(aliasTable), result);
+        verify(redisService).getValue(cacheKey, AliasProbabilityTable.class);
+    }
+
+    /**
+     * Given Redis 中没有 Alias 概率表，When 按装配键读取，Then 返回空结果表示尚未装配。
+     */
+    @Test
+    void shouldReturnEmptyWhenAliasTableDoesNotExist() {
+        // Given
+        String cacheKey = Constants.RedisKeys.STRATEGY_ALIAS_TABLE_KEY + PROBABILITY_KEY;
+        when(redisService.getValue(cacheKey, AliasProbabilityTable.class)).thenReturn(Optional.empty());
+
+        // When
+        Optional<AliasProbabilityTable> result = repository.getStrategyAwardAliasTable(PROBABILITY_KEY);
+
+        // Then
+        assertTrue(result.isEmpty());
+        verify(redisService).getValue(cacheKey, AliasProbabilityTable.class);
+    }
+
+    /**
+     * Given Alias 概率表为空，When 尝试保存，Then 在访问 Redis 前立即拒绝无效数据。
+     */
+    @Test
+    void shouldRejectNullAliasTable() {
+        // Given
+        AliasProbabilityTable aliasTable = null;
+
+        // When
+        NullPointerException exception = assertThrows(NullPointerException.class,
+                () -> repository.storeStrategyAwardAliasTable(PROBABILITY_KEY, aliasTable));
+
+        // Then
+        assertEquals("aliasTable must not be null", exception.getMessage());
+        verifyNoInteractions(redisService);
+    }
+
+    /**
      * Given 策略选择了二分算法，When 保存装配元数据，Then Redis 仅保存稳定算法编码。
      */
     @Test
@@ -477,5 +546,14 @@ class StrategyRepositoryTest {
         rule.setRuleModel(RuleModel.LOCK.getCode());
         rule.setRuleValue(ruleValue);
         return rule;
+    }
+
+    /**
+     * 构造仓储读写测试使用的两列 Alias 概率表。
+     *
+     * @return 包含两个奖品列的不可变 Alias 概率表
+     */
+    private AliasProbabilityTable aliasProbabilityTable() {
+        return new AliasProbabilityTable(List.of(100_011L, 100_012L), new double[]{0.5D, 1D}, new int[]{1, 1});
     }
 }

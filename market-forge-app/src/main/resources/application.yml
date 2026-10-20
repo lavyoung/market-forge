@@ -46,6 +46,8 @@ market-forge:
     algorithm:
       # O(1) 算法允许展开的最大查找表元素数量，超过后由二分算法处理。
       direct-lookup-max-size: ${MARKET_FORGE_DIRECT_LOOKUP_MAX_SIZE:10000}
+      # Alias Method 启用所需的最小候选奖品数，最终值需要结合 JMH 基线调整。
+      alias-min-award-count: ${MARKET_FORGE_ALIAS_MIN_AWARD_COUNT:1000}
   thread-pool:
     enabled: true
     pools:

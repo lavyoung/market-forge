@@ -43,14 +43,36 @@ class ProbabilityAlgorithmRegistryTest {
     }
 
     /**
-     * Given 直接查表算法不支持大概率空间，When 选择装配算法，Then 回退到二分算法。
+     * Given 直接查表不支持且 Alias 支持大型候选奖池，When 选择装配算法，Then 在二分算法之前选择 Alias。
      */
     @Test
-    void shouldFallbackToBinarySearchWhenDirectLookupIsUnsupported() {
+    void shouldSelectAliasWhenDirectLookupIsUnsupported() {
         // Given
         IProbabilityAlgorithm directLookup = algorithm(ProbabilityAlgorithmType.DIRECT_LOOKUP, false);
+        IProbabilityAlgorithm aliasMethod = algorithm(ProbabilityAlgorithmType.ALIAS_METHOD, true);
         IProbabilityAlgorithm binarySearch = algorithm(ProbabilityAlgorithmType.BINARY_SEARCH, true);
-        ProbabilityAlgorithmRegistry registry = new ProbabilityAlgorithmRegistry(List.of(directLookup, binarySearch));
+        ProbabilityAlgorithmRegistry registry = new ProbabilityAlgorithmRegistry(List.of(binarySearch, aliasMethod, directLookup));
+
+        // When
+        IProbabilityAlgorithm selected = registry.select(PROBABILITY_SPACE);
+
+        // Then
+        assertSame(aliasMethod, selected);
+        verify(directLookup).supports(PROBABILITY_SPACE);
+        verify(aliasMethod).supports(PROBABILITY_SPACE);
+        verify(binarySearch, never()).supports(PROBABILITY_SPACE);
+    }
+
+    /**
+     * Given 直接查表和 Alias 都不支持当前空间，When 选择装配算法，Then 使用二分算法通用兜底。
+     */
+    @Test
+    void shouldFallbackToBinarySearchWhenEarlierAlgorithmsAreUnsupported() {
+        // Given
+        IProbabilityAlgorithm directLookup = algorithm(ProbabilityAlgorithmType.DIRECT_LOOKUP, false);
+        IProbabilityAlgorithm aliasMethod = algorithm(ProbabilityAlgorithmType.ALIAS_METHOD, false);
+        IProbabilityAlgorithm binarySearch = algorithm(ProbabilityAlgorithmType.BINARY_SEARCH, true);
+        ProbabilityAlgorithmRegistry registry = new ProbabilityAlgorithmRegistry(List.of(aliasMethod, binarySearch, directLookup));
 
         // When
         IProbabilityAlgorithm selected = registry.select(PROBABILITY_SPACE);
@@ -58,6 +80,7 @@ class ProbabilityAlgorithmRegistryTest {
         // Then
         assertSame(binarySearch, selected);
         verify(directLookup).supports(PROBABILITY_SPACE);
+        verify(aliasMethod).supports(PROBABILITY_SPACE);
         verify(binarySearch).supports(PROBABILITY_SPACE);
     }
 

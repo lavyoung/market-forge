@@ -17,7 +17,8 @@ import java.util.Objects;
  * 支持当前概率空间的算法，并支持抽奖阶段按已保存的算法类型恢复实现。</p>
  *
  * <p>{@link ProbabilityAlgorithmType} 的声明顺序同时代表算法选择优先级。
- * 当前先尝试空间换时间的直接查表算法，容量不满足时再使用二分算法。</p>
+ * 当前先尝试空间换时间的直接查表算法；直接查表容量不足时，大型候选奖池
+ * 使用 Alias Method；候选数量较少但总权重较大的概率空间使用二分算法兜底。</p>
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -55,8 +56,9 @@ public class ProbabilityAlgorithmRegistry {
     /**
      * 为概率空间选择第一个可安全装配的算法。
      *
-     * <p>算法按照 {@link ProbabilityAlgorithmType} 的声明顺序判断，因此直接
-     * 查表算法拥有更高优先级，二分算法作为大概率空间的通用兜底实现。</p>
+     * <p>算法按照 {@link ProbabilityAlgorithmType} 的声明顺序判断。直接查表
+     * 优先处理可安全展开的小概率空间；Alias Method 处理中大型候选奖池；
+     * 二分算法作为不展开总权重的通用兜底实现。</p>
      *
      * @param probabilitySpace 已完成校验和整数化的概率空间
      * @return 首个支持该概率空间的算法实现

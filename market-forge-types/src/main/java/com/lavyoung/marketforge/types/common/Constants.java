@@ -84,6 +84,14 @@ public class Constants {
         public static final String STRATEGY_PROBABILITY_RANGE_TABLE_KEY = "strategy_probability_range_table_key:";
 
         /**
+         * Alias Method 别名概率表的缓存键前缀。
+         *
+         * <p>缓存值包含奖品列、原奖品接受概率和候补别名列，作为一次策略
+         * 装配生成的完整不可变快照。</p>
+         */
+        public static final String STRATEGY_ALIAS_TABLE_KEY = "strategy_alias_table_key:";
+
+        /**
          * 策略概率算法类型的缓存键前缀。
          */
         public static final String STRATEGY_PROBABILITY_ALGORITHM_KEY = "strategy_probability_algorithm_key:";

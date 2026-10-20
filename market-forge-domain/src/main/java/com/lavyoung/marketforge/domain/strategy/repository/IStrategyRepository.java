@@ -6,6 +6,7 @@ import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.ProbabilityAlgorithmType;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AliasProbabilityTable;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AwardProbabilityRange;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 
@@ -94,6 +95,33 @@ public interface IStrategyRepository {
      * @return 按累计上界升序排列的不可变区间列表；没有装配数据时返回空列表
      */
     List<AwardProbabilityRange> getStrategyAwardProbabilityRanges(String key);
+
+    /**
+     * 保存 Alias Method 使用的别名概率表。
+     *
+     * <p>概率表包含奖品列、原奖品接受概率和候补别名列。装配实现必须先完整
+     * 保存概率表，再更新算法类型元数据，避免抽奖阶段读取到尚未写完的数据。</p>
+     *
+     * @param key        普通策略或权重奖池使用的策略装配键
+     * @param aliasTable 已完成配平且通过结构校验的不可变别名概率表
+     * @throws NullPointerException 别名概率表为空时抛出
+     */
+    void storeStrategyAwardAliasTable(String key, AliasProbabilityTable aliasTable);
+
+    /**
+     * 查询 Alias Method 使用的别名概率表。
+     *
+     * <p>抽奖阶段必须读取装配阶段生成的完整概率快照，不能根据数据库权重临时
+     * 重建概率表。这样可以保证一次抽奖只使用同一个版本的奖品、接受概率和
+     * 别名下标，避免策略重装过程中出现概率数据混用。</p>
+     *
+     * <p>缓存不存在代表当前装配键尚未完成 Alias Method 装配。调用方应将其
+     * 识别为策略未装配或装配数据不完整，而不是使用空概率表继续抽奖。</p>
+     *
+     * @param key 普通策略或权重奖池使用的策略装配键
+     * @return 已装配的不可变别名概率表；缓存不存在时返回空
+     */
+    Optional<AliasProbabilityTable> getStrategyAwardAliasTable(String key);
 
     /**
      * 保存策略装配使用的概率算法类型。

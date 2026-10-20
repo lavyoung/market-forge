@@ -7,14 +7,12 @@ import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.ProbabilityAlgorithmType;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AliasProbabilityTable;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AwardProbabilityRange;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * JMH 基准使用的内存策略仓储。
@@ -31,6 +29,7 @@ final class InMemoryStrategyRepository implements IStrategyRepository {
     private final Map<String, Map<Integer, Long>> lookupTables = new HashMap<>();
     private final Map<String, List<AwardProbabilityRange>> probabilityRanges = new HashMap<>();
     private final Map<String, ProbabilityAlgorithmType> algorithmTypes = new HashMap<>();
+    private final Map<String, AliasProbabilityTable> aliasTables = new HashMap<>();
 
     @Override
     public List<StrategyAwardEntity> queryStrategyAwardList(Long strategyId) {
@@ -67,6 +66,18 @@ final class InMemoryStrategyRepository implements IStrategyRepository {
     @Override
     public List<AwardProbabilityRange> getStrategyAwardProbabilityRanges(String key) {
         return probabilityRanges.getOrDefault(key, List.of());
+    }
+
+    @Override
+    public void storeStrategyAwardAliasTable(String key, AliasProbabilityTable aliasTable) {
+        validateAliasTableKey(key);
+        aliasTables.put(key, Objects.requireNonNull(aliasTable, "aliasTable must not be null"));
+    }
+
+    @Override
+    public Optional<AliasProbabilityTable> getStrategyAwardAliasTable(String key) {
+        validateAliasTableKey(key);
+        return Optional.ofNullable(aliasTables.get(key));
     }
 
     @Override
@@ -145,10 +156,27 @@ final class InMemoryStrategyRepository implements IStrategyRepository {
         if (lookupTable != null) {
             return lookupTable.size();
         }
-        return probabilityRanges.getOrDefault(key, List.of()).size();
+        List<AwardProbabilityRange> ranges = probabilityRanges.get(key);
+        if (ranges != null) {
+            return ranges.size();
+        }
+        return Optional.ofNullable(aliasTables.get(key)).map(AliasProbabilityTable::size).orElse(0);
     }
 
     private UnsupportedOperationException unsupported() {
         return new UnsupportedOperationException("The benchmark repository only supports probability algorithm storage");
     }
+
+    /**
+     * 校验 JMH 内存仓储使用的 Alias 表装配键。
+     *
+     * @param key 普通策略或权重奖池使用的策略装配键
+     * @throws IllegalArgumentException 装配键为空白时抛出
+     */
+    private void validateAliasTableKey(String key) {
+        if (key == null || key.isBlank()) {
+            throw new IllegalArgumentException("key must not be blank");
+        }
+    }
+
 }

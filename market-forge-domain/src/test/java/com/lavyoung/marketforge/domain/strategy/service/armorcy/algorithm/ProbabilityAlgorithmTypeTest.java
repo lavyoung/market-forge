@@ -21,13 +21,13 @@ class ProbabilityAlgorithmTypeTest {
     @Test
     void shouldResolveAlgorithmTypeByCode() {
         // Given
-        String code = ProbabilityAlgorithmType.BINARY_SEARCH.getCode();
+        String code = ProbabilityAlgorithmType.ALIAS_METHOD.getCode();
 
         // When
         Optional<ProbabilityAlgorithmType> algorithmType = ProbabilityAlgorithmType.fromCode(code);
 
         // Then
-        assertEquals(Optional.of(ProbabilityAlgorithmType.BINARY_SEARCH), algorithmType);
+        assertEquals(Optional.of(ProbabilityAlgorithmType.ALIAS_METHOD), algorithmType);
     }
 
     /**
