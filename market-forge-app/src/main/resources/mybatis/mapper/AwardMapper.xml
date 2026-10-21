@@ -4,19 +4,39 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.lavyoung.marketforge.infrastructure.persistent.dao.IAwardDao">
 
-    <resultMap id="awardResultMap" type="com.lavyoung.marketforge.infrastructure.persistent.po.AwardPO">
+    <resultMap id="awardResultMap"
+               type="com.lavyoung.marketforge.infrastructure.persistent.po.AwardPO">
         <id column="id" property="id"/>
         <result column="award_id" property="awardId"/>
         <result column="award_key" property="awardKey"/>
+        <result column="award_name" property="awardName"/>
+        <result column="award_type" property="awardType"/>
+        <result column="claim_mode" property="claimMode"/>
+        <result column="provider_code" property="providerCode"/>
         <result column="award_config" property="awardConfig"/>
+        <result column="config_version" property="configVersion"/>
         <result column="award_desc" property="awardDesc"/>
+        <result column="state" property="state"/>
+        <result column="version" property="version"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="updated_by" property="updatedBy"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
     </resultMap>
 
     <sql id="awardColumns">
-        id, award_key, award_config, award_desc, create_time, update_time
+        id, award_id, award_key, award_name, award_type, claim_mode,
+        provider_code, award_config, config_version, award_desc,
+        state, version, created_by, updated_by, create_time, update_time
     </sql>
+
+    <select id="queryAwardByAwardId" resultMap="awardResultMap">
+        SELECT
+        <include refid="awardColumns"/>
+        FROM award
+        WHERE award_id = #{awardId}
+        LIMIT 1
+    </select>
 
     <select id="queryAwardByAwardKey" resultMap="awardResultMap">
         SELECT
@@ -26,12 +46,44 @@
         LIMIT 1
     </select>
 
-    <update id="updateByAwardKey" parameterType="com.lavyoung.marketforge.infrastructure.persistent.po.AwardPO">
+    <update id="updateByAwardKey"
+            parameterType="com.lavyoung.marketforge.infrastructure.persistent.po.AwardPO">
         UPDATE award
         SET award_config = #{awardConfig},
         award_desc = #{awardDesc},
         update_time = CURRENT_TIMESTAMP
         WHERE award_key = #{awardKey}
+    </update>
+
+    <update id="updateDraftDefinition"
+            parameterType="com.lavyoung.marketforge.infrastructure.persistent.po.AwardPO">
+        UPDATE award
+        SET award_key = #{awardKey},
+        award_name = #{awardName},
+        award_type = #{awardType},
+        claim_mode = #{claimMode},
+        provider_code = #{providerCode},
+        award_config = #{awardConfig},
+        config_version = #{configVersion},
+        award_desc = #{awardDesc},
+        updated_by = #{updatedBy},
+        update_time = CURRENT_TIMESTAMP,
+        version = version + 1
+        WHERE award_id = #{awardId}
+        AND state = 'draft'
+        AND version = #{version}
+    </update>
+
+    <update id="changeDefinitionState"
+            parameterType="com.lavyoung.marketforge.infrastructure.persistent.model.AwardDefinitionStateUpdateParam">
+        UPDATE award
+        SET state = #{targetState},
+        updated_by = #{operator},
+        update_time = CURRENT_TIMESTAMP,
+        version = version + 1
+        WHERE award_id = #{awardId}
+        AND state = #{currentState}
+        AND version = #{expectedVersion}
     </update>
 
 </mapper>

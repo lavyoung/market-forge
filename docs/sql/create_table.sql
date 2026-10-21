@@ -18,16 +18,26 @@ USE `market-forge-001`;
 
 CREATE TABLE award
 (
-    id           int          NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-    award_id     bigint       NOT NULL COMMENT '奖品业务ID',
-    award_key    varchar(32)  NOT NULL COMMENT '奖品业务Key',
-    award_config varchar(128) NOT NULL COMMENT '奖品配置',
-    award_desc   varchar(256) NULL COMMENT '奖品描述',
-    create_time  datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time  datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    id             bigint       NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    award_id       bigint       NOT NULL COMMENT '奖品业务ID',
+    award_key      varchar(64)  NOT NULL COMMENT '奖品业务编码',
+    award_name     varchar(128) NOT NULL COMMENT '奖品名称',
+    award_type     varchar(32)  NOT NULL COMMENT '奖品发放类型',
+    claim_mode     varchar(16)  NOT NULL COMMENT '领取模式：automatic-自动发放、manual-人工领取',
+    provider_code  varchar(32)  NULL COMMENT '履约供应商编码；内部奖品可以为空',
+    award_config   text         NOT NULL COMMENT '奖品发放配置快照',
+    config_version int          NOT NULL DEFAULT 1 COMMENT '奖品配置结构版本',
+    award_desc     varchar(256) NULL COMMENT '奖品描述',
+    state          varchar(16)  NOT NULL DEFAULT 'draft' COMMENT '定义状态：draft、active、disabled',
+    version        int          NOT NULL DEFAULT 1 COMMENT '乐观锁版本',
+    created_by     varchar(64)  NOT NULL COMMENT '创建人标识',
+    updated_by     varchar(64)  NOT NULL COMMENT '最后修改人标识',
+    create_time    datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time    datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uq_award_id (award_id),
-    KEY idx_award_key (award_key)
+    UNIQUE KEY uq_award_key (award_key),
+    KEY idx_award_state (state)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='奖品表';
 

@@ -4,16 +4,30 @@
 
 USE `market-forge-001`;
 
-INSERT INTO award (id, award_id, award_key, award_config, award_desc)
-VALUES (900901011, 900901011, 'integral', '10', '10 积分'),
-       (900901012, 900901012, 'course_coupon_50', 'discount=50', '课程 5 折兑换券'),
-       (900901013, 900901013, 'mentholatum_lip_balm', 'sku=MF-LIP-001', '曼秀雷敦唇膏'),
-       (900901014, 900901014, 'blind_box_4201', 'series=4201', '4201 随机盲盒'),
-       (900901015, 900901015, 'sleep_night_light', 'sku=MF-LIGHT-001', '睡眠日小夜灯'),
-       (900901016, 900901016, 'gold_eye_mask', 'sku=MF-EYE-001', '金眼罩'),
-       (900901017, 900901017, 'pico_neo3', 'sku=PICO-NEO3', 'Pico Neo3 VR 一体机'),
-       (900901018, 900901018, 'xbox_controller', 'sku=XBOX-CONTROLLER', 'Xbox 无线手柄'),
-       (900901019, 900901019, 'apple_airpods', 'sku=APPLE-AIRPODS', 'Apple AirPods4');
+INSERT INTO award
+(id, award_id, award_key, award_name, award_type, claim_mode, provider_code,
+ award_config, config_version, award_desc, state, version, created_by, updated_by)
+VALUES (900901011, 900901011, 'integral', '10 积分', 'internal_credit', 'automatic', NULL,
+        '10', 1, '抽奖后自动发放 10 积分', 'active', 1, 'system_seed', 'system_seed'),
+       (900901012, 900901012, 'course_coupon_50', '课程 5 折兑换券', 'third_party_coupon', 'automatic',
+        'course_center', 'discount=50', 1, '指定课程可用的 5 折兑换券', 'active', 1, 'system_seed', 'system_seed'),
+       (900901013, 900901013, 'mentholatum_lip_balm', '曼秀雷敦唇膏', 'physical_goods', 'manual',
+        'internal_fulfillment', 'sku=MF-LIP-001', 1, '需要用户填写收货信息', 'active', 1, 'system_seed', 'system_seed'),
+       (900901014, 900901014, 'blind_box_4201', '4201 随机盲盒', 'physical_goods', 'manual',
+        'internal_fulfillment', 'series=4201', 1, '需要用户填写收货信息', 'active', 1, 'system_seed', 'system_seed'),
+       (900901015, 900901015, 'sleep_night_light', '睡眠日小夜灯', 'physical_goods', 'manual',
+        'internal_fulfillment', 'sku=MF-LIGHT-001', 1, '需要用户填写收货信息', 'active', 1, 'system_seed',
+        'system_seed'),
+       (900901016, 900901016, 'gold_eye_mask', '金眼罩', 'physical_goods', 'manual',
+        'internal_fulfillment', 'sku=MF-EYE-001', 1, '需要用户填写收货信息', 'active', 1, 'system_seed', 'system_seed'),
+       (900901017, 900901017, 'pico_neo3', 'Pico Neo3 VR 一体机', 'physical_goods', 'manual',
+        'internal_fulfillment', 'sku=PICO-NEO3', 1, '需要用户填写收货信息', 'active', 1, 'system_seed', 'system_seed'),
+       (900901018, 900901018, 'xbox_controller', 'Xbox 无线手柄', 'physical_goods', 'manual',
+        'internal_fulfillment', 'sku=XBOX-CONTROLLER', 1, '需要用户填写收货信息', 'active', 1, 'system_seed',
+        'system_seed'),
+       (900901019, 900901019, 'apple_airpods', 'Apple AirPods4', 'physical_goods', 'manual',
+        'internal_fulfillment', 'sku=APPLE-AIRPODS', 1, '需要用户填写收货信息', 'active', 1, 'system_seed',
+        'system_seed');
 
 INSERT INTO strategy (id, strategy_id, strategy_desc, rule_models)
 VALUES (900902001, 900901001, '九宫格抽奖：黑名单、权重、次数锁、库存和幸运奖综合验证策略',
