@@ -77,3 +77,13 @@ market-forge:
         keep-alive-seconds: 60
         await-termination-seconds: 30
         rejected-policy: abort
+      strategy-refresh:
+        # 策略刷新通常是低并发重任务，核心线程不宜过多。
+        core-pool-size: 2
+        maximum-pool-size: 4
+        # 配合应用层同策略合并，只需要承载不同策略的短时突发。
+        queue-capacity: 256
+        keep-alive-seconds: 60
+        await-termination-seconds: 30
+        # 禁止调用线程执行重建；容量不足时应立即暴露过载。
+        rejected-policy: abort

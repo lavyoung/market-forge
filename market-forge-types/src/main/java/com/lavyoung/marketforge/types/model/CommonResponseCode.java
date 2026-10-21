@@ -65,7 +65,15 @@ public enum CommonResponseCode implements IResponseCode {
     /**
      * 未被业务规则识别的系统异常。
      */
-    SYSTEM_ERROR(900_000_001, "system.error", "系统异常，请稍后重试");
+    SYSTEM_ERROR(900_000_001, "system.error", "系统异常，请稍后重试"),
+
+    /**
+     * 服务端暂时没有足够容量处理当前请求。
+     *
+     * <p>该编码用于线程池队列已满等短暂过载场景。调用方可以在退避后重试，
+     * 不应将其理解为业务参数错误或永久性系统故障。</p>
+     */
+    SERVICE_UNAVAILABLE(900_000_002, "system.service-unavailable", "服务繁忙，请稍后重试");
 
     private final int code;
     private final String i18nKey;

@@ -6,10 +6,13 @@ import com.lavyoung.marketforge.types.model.CommonResponseCode;
 import com.lavyoung.marketforge.types.model.Response;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import java.util.concurrent.RejectedExecutionException;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -66,6 +69,26 @@ class GlobalExceptionHandlerTest {
                 () -> assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, result.getStatusCode()),
                 () -> assertEquals(CommonResponseCode.SYSTEM_ERROR.getCode(), result.getBody().code()),
                 () -> assertEquals("System error", result.getBody().message())
+        );
+    }
+
+    /**
+     * Given 异步执行器拒绝任务，When 转换为 HTTP 响应，Then 返回 503、统一容量错误码和重试提示。
+     */
+    @Test
+    void shouldMapRejectedExecutionToServiceUnavailable() {
+        // Given
+        RejectedExecutionException exception = new RejectedExecutionException("strategy-refresh queue full");
+
+        // When
+        ResponseEntity<Response<Void>> result = handler.handleRejectedExecutionException(exception);
+
+        // Then
+        assertAll(
+                () -> assertEquals(HttpStatus.SERVICE_UNAVAILABLE, result.getStatusCode()),
+                () -> assertEquals(CommonResponseCode.SERVICE_UNAVAILABLE.getCode(), result.getBody().code()),
+                () -> assertEquals(CommonResponseCode.SERVICE_UNAVAILABLE.getMsg(), result.getBody().message()),
+                () -> assertEquals("1", result.getHeaders().getFirst(HttpHeaders.RETRY_AFTER))
         );
     }
 

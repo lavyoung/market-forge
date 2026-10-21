@@ -6,6 +6,7 @@ import com.lavyoung.marketforge.types.model.Response;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -15,6 +16,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * 将应用异常转换为统一 HTTP 响应。
@@ -100,6 +103,27 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.badRequest().body(Response.fail(
                 CommonResponseCode.REQUEST_BODY_INVALID, "Request body is invalid"));
+    }
+
+    /**
+     * 处理异步执行器容量耗尽产生的任务拒绝异常。
+     *
+     * <p>线程池拒绝任务表示服务端当前没有足够处理容量，属于暂时性过载，
+     * 因此返回 HTTP 503。响应同时携带 {@code Retry-After}，提示调用方至少
+     * 等待一秒后再重试，避免立即重放请求进一步加剧队列压力。</p>
+     *
+     * <p>该异常属于预期的容量保护结果，只记录简洁警告日志，不输出完整异常
+     * 堆栈，避免高负载期间大量堆栈日志继续消耗 CPU 和磁盘资源。</p>
+     *
+     * @param exception 线程池拒绝执行异常
+     * @return HTTP 503、重试提示头和统一服务不可用响应
+     */
+    @ExceptionHandler(RejectedExecutionException.class)
+    public ResponseEntity<Response<Void>> handleRejectedExecutionException(RejectedExecutionException exception) {
+        log.warn("异步任务执行器拒绝任务 message={}", exception.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header(HttpHeaders.RETRY_AFTER, "1")
+                .body(Response.fail(CommonResponseCode.SERVICE_UNAVAILABLE));
     }
 
     /**

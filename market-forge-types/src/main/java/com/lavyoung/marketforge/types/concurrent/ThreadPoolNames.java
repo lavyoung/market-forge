@@ -20,6 +20,11 @@ public final class ThreadPoolNames {
      */
     public static final String AWARD_GRANT = "award-grant";
 
+    /**
+     * 策略概率快照刷新线程池。
+     */
+    public static final String STRATEGY_REFRESH = "strategy-refresh";
+
     private ThreadPoolNames() {
     }
 }
