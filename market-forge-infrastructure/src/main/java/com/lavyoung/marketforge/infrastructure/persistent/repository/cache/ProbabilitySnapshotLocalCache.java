@@ -53,6 +53,7 @@ public class ProbabilitySnapshotLocalCache {
         rateRanges = Caffeine.<ProbabilitySnapshotKey, Integer>newBuilder()
                 .maximumSize(config.maximumSnapshots())
                 .expireAfterAccess(config.expireAfterAccess())
+                .recordStats()
                 .build();
         directLookupTables = buildWeightedCache(config, Map::size);
         probabilityRanges = buildWeightedCache(config, List::size);
@@ -141,6 +142,7 @@ public class ProbabilitySnapshotLocalCache {
                 .maximumWeight(properties.maximumDataElements())
                 .weigher((ProbabilitySnapshotKey key, V value) -> Math.max(1, weigher.applyAsInt(value)))
                 .expireAfterAccess(properties.expireAfterAccess())
+                .recordStats()
                 .build();
     }
 
@@ -155,5 +157,21 @@ public class ProbabilitySnapshotLocalCache {
             V loaded = loader.get();
             return cacheable.test(loaded) ? loaded : null;
         });
+    }
+
+    Cache<ProbabilitySnapshotKey, Integer> rateRangeCache() {
+        return rateRanges;
+    }
+
+    Cache<ProbabilitySnapshotKey, Map<Integer, Long>> directLookupTableCache() {
+        return directLookupTables;
+    }
+
+    Cache<ProbabilitySnapshotKey, List<AwardProbabilityRange>> probabilityRangeCache() {
+        return probabilityRanges;
+    }
+
+    Cache<ProbabilitySnapshotKey, AliasProbabilityTable> aliasTableCache() {
+        return aliasTables;
     }
 }

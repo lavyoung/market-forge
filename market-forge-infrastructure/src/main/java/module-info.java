@@ -39,6 +39,7 @@ module market.forge.infrastructure {
     requires market.forge.application;
     requires org.apache.commons.lang3;
     requires com.github.benmanes.caffeine;
+    requires micrometer.core;
 
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler;
     opens com.lavyoung.marketforge.infrastructure.persistent.dao;
