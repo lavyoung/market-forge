@@ -49,6 +49,7 @@ module market.forge.infrastructure {
     opens com.lavyoung.marketforge.infrastructure.persistent.po.activity;
     opens com.lavyoung.marketforge.infrastructure.persistent.redis;
     opens com.lavyoung.marketforge.infrastructure.persistent.repository;
+    opens com.lavyoung.marketforge.infrastructure.persistent.repository.config;
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler.activity;
     opens com.lavyoung.marketforge.infrastructure.messaging;
     opens com.lavyoung.marketforge.infrastructure.messaging.rabbitmq;
@@ -63,5 +64,6 @@ module market.forge.infrastructure {
     opens com.lavyoung.marketforge.infrastructure.persistent.elasticsearch.document to com.fasterxml.jackson.databind;
     opens com.lavyoung.marketforge.infrastructure.persistent.elasticsearch.assembler;
     opens com.lavyoung.marketforge.infrastructure.persistent.elasticsearch.query;
+
 
 }

@@ -97,6 +97,29 @@ public class Constants {
         public static final String STRATEGY_PROBABILITY_ALGORITHM_KEY = "strategy_probability_algorithm_key:";
 
         /**
+         * 概率快照版本计数器的 Redis Key 前缀。
+         *
+         * <p>每个装配键拥有独立计数器，通过 Redis 原子递增生成单调版本。
+         * 版本允许不连续，例如装配失败可以消耗版本但不发布。</p>
+         */
+        public static final String STRATEGY_PROBABILITY_SNAPSHOT_VERSION_KEY = "strategy_probability_snapshot_version_key:";
+
+        /**
+         * 当前生效概率快照指针的 Redis Key 前缀。
+         *
+         * <p>缓存值同时包含装配键、算法类型和快照版本，保证算法选择与概率数据
+         * 版本能够作为一个整体发布。</p>
+         */
+        public static final String STRATEGY_PROBABILITY_SNAPSHOT_POINTER_KEY = "strategy_probability_snapshot_pointer_key:";
+
+        /**
+         * 概率快照发布锁的 Redis Key 前缀。
+         *
+         * <p>锁只保护低频装配阶段的指针比较和替换，不参与高频抽奖派发。</p>
+         */
+        public static final String STRATEGY_PROBABILITY_SNAPSHOT_PUBLISH_LOCK_KEY = "strategy_probability_snapshot_publish_lock_key:";
+
+        /**
          * 策略奖品 Redis 库存计数器键前缀。
          */
         public static final String STRATEGY_AWARD_STOCK = "strategy_award_stock:";

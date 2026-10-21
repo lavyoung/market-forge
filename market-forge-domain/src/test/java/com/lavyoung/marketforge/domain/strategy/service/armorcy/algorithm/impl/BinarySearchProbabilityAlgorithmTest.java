@@ -4,6 +4,7 @@ import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.ProbabilityAlgorithmType;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AwardProbabilityRange;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AwardProbabilityWeight;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.ProbabilitySnapshotKey;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.StrategyProbabilitySpace;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
@@ -31,6 +32,7 @@ import static org.mockito.Mockito.*;
 class BinarySearchProbabilityAlgorithmTest {
 
     private static final String ASSEMBLE_KEY = "100006";
+    private static final ProbabilitySnapshotKey SNAPSHOT_KEY = new ProbabilitySnapshotKey(ASSEMBLE_KEY, 7L);
 
     @Mock
     private IStrategyRepository repository;
@@ -69,17 +71,30 @@ class BinarySearchProbabilityAlgorithmTest {
         StrategyProbabilitySpace probabilitySpace = probabilitySpace();
 
         // When
-        algorithm.assemble(probabilitySpace);
+        algorithm.assemble(probabilitySpace, SNAPSHOT_KEY);
 
         // Then
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<AwardProbabilityRange>> rangesCaptor = ArgumentCaptor.forClass(List.class);
-        verify(repository).storeStrategyAwardProbabilityRanges(eq(ASSEMBLE_KEY), eq(10), rangesCaptor.capture());
+        verify(repository).storeStrategyAwardProbabilityRanges(eq(SNAPSHOT_KEY), eq(10), rangesCaptor.capture());
         assertEquals(List.of(
                 new AwardProbabilityRange(6, 101L),
                 new AwardProbabilityRange(9, 102L),
                 new AwardProbabilityRange(10, 103L)
         ), rangesCaptor.getValue());
+    }
+
+    /**
+     * Given 概率空间与快照属于不同装配键，When 执行装配，Then 不允许把区间写入其他概率空间。
+     */
+    @Test
+    void shouldRejectMismatchedSnapshotKey() {
+        StrategyProbabilitySpace probabilitySpace = probabilitySpace();
+        ProbabilitySnapshotKey mismatchedKey = new ProbabilitySnapshotKey("another-strategy", 7L);
+
+        assertThrows(IllegalArgumentException.class, () -> algorithm.assemble(probabilitySpace, mismatchedKey));
+
+        verifyNoInteractions(repository);
     }
 
     /**
@@ -93,17 +108,17 @@ class BinarySearchProbabilityAlgorithmTest {
                 new AwardProbabilityRange(9, 102L),
                 new AwardProbabilityRange(10, 103L)
         );
-        when(repository.getRateRange(ASSEMBLE_KEY)).thenReturn(10);
-        when(repository.getStrategyAwardProbabilityRanges(ASSEMBLE_KEY)).thenReturn(ranges);
+        when(repository.getRateRange(SNAPSHOT_KEY)).thenReturn(10);
+        when(repository.getStrategyAwardProbabilityRanges(SNAPSHOT_KEY)).thenReturn(ranges);
         when(randomGenerator.nextInt(10)).thenReturn(0, 5, 6, 8, 9);
 
         // When
         List<Long> results = List.of(
-                algorithm.dispatch(ASSEMBLE_KEY),
-                algorithm.dispatch(ASSEMBLE_KEY),
-                algorithm.dispatch(ASSEMBLE_KEY),
-                algorithm.dispatch(ASSEMBLE_KEY),
-                algorithm.dispatch(ASSEMBLE_KEY)
+                algorithm.dispatch(SNAPSHOT_KEY),
+                algorithm.dispatch(SNAPSHOT_KEY),
+                algorithm.dispatch(SNAPSHOT_KEY),
+                algorithm.dispatch(SNAPSHOT_KEY),
+                algorithm.dispatch(SNAPSHOT_KEY)
         );
 
         // Then
@@ -111,11 +126,11 @@ class BinarySearchProbabilityAlgorithmTest {
     }
 
     /**
-     * Given 空白装配键，When 派发奖品，Then 在访问仓储前拒绝请求。
+     * Given 快照键为空，When 派发奖品，Then 在访问仓储前拒绝请求。
      */
     @Test
-    void shouldRejectBlankAssembleKey() {
-        assertThrows(IllegalArgumentException.class, () -> algorithm.dispatch(" "));
+    void shouldRejectNullSnapshotKey() {
+        assertThrows(NullPointerException.class, () -> algorithm.dispatch(null));
         verifyNoInteractions(repository, randomGenerator);
     }
 
@@ -124,12 +139,12 @@ class BinarySearchProbabilityAlgorithmTest {
      */
     @Test
     void shouldRejectDispatchWhenStrategyIsNotAssembled() {
-        when(repository.getRateRange(ASSEMBLE_KEY)).thenReturn(0);
+        when(repository.getRateRange(SNAPSHOT_KEY)).thenReturn(0);
 
-        BusinessException exception = assertThrows(BusinessException.class, () -> algorithm.dispatch(ASSEMBLE_KEY));
+        BusinessException exception = assertThrows(BusinessException.class, () -> algorithm.dispatch(SNAPSHOT_KEY));
 
         assertSame(BusinessResponseCode.STRATEGY_NOT_ASSEMBLED, exception.getResponseCode());
-        verify(repository, never()).getStrategyAwardProbabilityRanges(ASSEMBLE_KEY);
+        verify(repository, never()).getStrategyAwardProbabilityRanges(SNAPSHOT_KEY);
         verifyNoInteractions(randomGenerator);
     }
 
@@ -138,10 +153,10 @@ class BinarySearchProbabilityAlgorithmTest {
      */
     @Test
     void shouldRejectEmptyProbabilityRanges() {
-        when(repository.getRateRange(ASSEMBLE_KEY)).thenReturn(10);
-        when(repository.getStrategyAwardProbabilityRanges(ASSEMBLE_KEY)).thenReturn(List.of());
+        when(repository.getRateRange(SNAPSHOT_KEY)).thenReturn(10);
+        when(repository.getStrategyAwardProbabilityRanges(SNAPSHOT_KEY)).thenReturn(List.of());
 
-        BusinessException exception = assertThrows(BusinessException.class, () -> algorithm.dispatch(ASSEMBLE_KEY));
+        BusinessException exception = assertThrows(BusinessException.class, () -> algorithm.dispatch(SNAPSHOT_KEY));
 
         assertSame(BusinessResponseCode.STRATEGY_ASSEMBLY_FAILED, exception.getResponseCode());
         verifyNoInteractions(randomGenerator);
@@ -152,10 +167,10 @@ class BinarySearchProbabilityAlgorithmTest {
      */
     @Test
     void shouldRejectIncompleteProbabilityCoverage() {
-        when(repository.getRateRange(ASSEMBLE_KEY)).thenReturn(10);
-        when(repository.getStrategyAwardProbabilityRanges(ASSEMBLE_KEY)).thenReturn(List.of(new AwardProbabilityRange(9, 101L)));
+        when(repository.getRateRange(SNAPSHOT_KEY)).thenReturn(10);
+        when(repository.getStrategyAwardProbabilityRanges(SNAPSHOT_KEY)).thenReturn(List.of(new AwardProbabilityRange(9, 101L)));
 
-        BusinessException exception = assertThrows(BusinessException.class, () -> algorithm.dispatch(ASSEMBLE_KEY));
+        BusinessException exception = assertThrows(BusinessException.class, () -> algorithm.dispatch(SNAPSHOT_KEY));
 
         assertSame(BusinessResponseCode.STRATEGY_ASSEMBLY_FAILED, exception.getResponseCode());
         verifyNoInteractions(randomGenerator);

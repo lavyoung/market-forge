@@ -10,6 +10,8 @@ import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.ProbabilityAlgorithmType;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AliasProbabilityTable;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AwardProbabilityRange;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.ProbabilitySnapshotKey;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.ProbabilitySnapshotPointer;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.AwardAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.assembler.StrategyAwardAssembler;
@@ -20,6 +22,7 @@ import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyAwardPO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyRulePO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.UserAwardRecordPO;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
+import com.lavyoung.marketforge.infrastructure.persistent.repository.config.ProbabilitySnapshotRetentionProperties;
 import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import com.lavyoung.marketforge.types.exception.BusinessException;
@@ -57,6 +60,10 @@ public class StrategyRepository implements IStrategyRepository {
     private final IAwardDao awardDao;
 
     private final IRedisService redisService;
+    /**
+     * 概率快照退役宽限期配置。
+     */
+    private final ProbabilitySnapshotRetentionProperties probabilitySnapshotRetentionProperties;
 
     private final StrategyAwardAssembler strategyAwardAssembler;
     private final StrategyAssembler strategyAssembler;
@@ -100,6 +107,14 @@ public class StrategyRepository implements IStrategyRepository {
         redisService.putHashValues(Constants.RedisKeys.STRATEGY_RATE_TABLE_KEY + key, shuffleStrategyAwardSearchTables);
     }
 
+    @Override
+    public void storeStrategyAwardSearchTables(ProbabilitySnapshotKey snapshotKey, Integer rateRange, Map<Integer, Long> strategyAwardSearchTables) {
+        Objects.requireNonNull(snapshotKey, "snapshotKey must not be null");
+        String suffix = snapshotKey.assembleKey() + Constants.COLON + snapshotKey.version();
+        redisService.setValue(Constants.RedisKeys.STRATEGY_RATE_RANGE_KEY + suffix, rateRange);
+        redisService.putHashValues(Constants.RedisKeys.STRATEGY_RATE_TABLE_KEY + suffix, strategyAwardSearchTables);
+    }
+
     /**
      * {@inheritDoc}
      *
@@ -109,6 +124,13 @@ public class StrategyRepository implements IStrategyRepository {
     @Override
     public int getRateRange(String key) {
         return redisService.getValue(Constants.RedisKeys.STRATEGY_RATE_RANGE_KEY + key, Integer.class).orElse(0);
+    }
+
+    @Override
+    public int getRateRange(ProbabilitySnapshotKey snapshotKey) {
+        Objects.requireNonNull(snapshotKey, "snapshotKey must not be null");
+        String suffix = snapshotKey.assembleKey() + Constants.COLON + snapshotKey.version();
+        return redisService.getValue(Constants.RedisKeys.STRATEGY_RATE_RANGE_KEY + suffix, Integer.class).orElse(0);
     }
 
     /**
@@ -124,14 +146,37 @@ public class StrategyRepository implements IStrategyRepository {
     }
 
     @Override
+    public long getStrategyAwardAssemble(ProbabilitySnapshotKey snapshotKey, int rateKey) {
+        Objects.requireNonNull(snapshotKey, "snapshotKey must not be null");
+        String suffix = snapshotKey.assembleKey() + Constants.COLON + snapshotKey.version();
+        return redisService.getHashValue(Constants.RedisKeys.STRATEGY_RATE_TABLE_KEY + suffix, rateKey, Long.class).orElse(0L);
+    }
+
+    @Override
     public void storeStrategyAwardProbabilityRanges(String key, int totalWeight, List<AwardProbabilityRange> probabilityRanges) {
         redisService.setValue(Constants.RedisKeys.STRATEGY_RATE_RANGE_KEY + key, totalWeight);
         redisService.setValue(Constants.RedisKeys.STRATEGY_PROBABILITY_RANGE_TABLE_KEY + key, List.copyOf(probabilityRanges));
     }
 
     @Override
+    public void storeStrategyAwardProbabilityRanges(ProbabilitySnapshotKey snapshotKey, int totalWeight, List<AwardProbabilityRange> probabilityRanges) {
+        Objects.requireNonNull(snapshotKey, "snapshotKey must not be null");
+        String suffix = snapshotKey.assembleKey() + Constants.COLON + snapshotKey.version();
+        redisService.setValue(Constants.RedisKeys.STRATEGY_RATE_RANGE_KEY + suffix, totalWeight);
+        redisService.setValue(Constants.RedisKeys.STRATEGY_PROBABILITY_RANGE_TABLE_KEY + suffix, List.copyOf(probabilityRanges));
+    }
+
+    @Override
     public List<AwardProbabilityRange> getStrategyAwardProbabilityRanges(String key) {
         return redisService.getValueList(Constants.RedisKeys.STRATEGY_PROBABILITY_RANGE_TABLE_KEY + key,
+                AwardProbabilityRange.class).orElseGet(List::of);
+    }
+
+    @Override
+    public List<AwardProbabilityRange> getStrategyAwardProbabilityRanges(ProbabilitySnapshotKey snapshotKey) {
+        Objects.requireNonNull(snapshotKey, "snapshotKey must not be null");
+        String suffix = snapshotKey.assembleKey() + Constants.COLON + snapshotKey.version();
+        return redisService.getValueList(Constants.RedisKeys.STRATEGY_PROBABILITY_RANGE_TABLE_KEY + suffix,
                 AwardProbabilityRange.class).orElseGet(List::of);
     }
 
@@ -142,8 +187,23 @@ public class StrategyRepository implements IStrategyRepository {
     }
 
     @Override
+    public void storeStrategyAwardAliasTable(ProbabilitySnapshotKey snapshotKey, AliasProbabilityTable aliasTable) {
+        Objects.requireNonNull(snapshotKey, "snapshotKey must not be null");
+        Objects.requireNonNull(aliasTable, "aliasTable must not be null");
+        String suffix = snapshotKey.assembleKey() + Constants.COLON + snapshotKey.version();
+        redisService.setValue(Constants.RedisKeys.STRATEGY_ALIAS_TABLE_KEY + suffix, aliasTable);
+    }
+
+    @Override
     public Optional<AliasProbabilityTable> getStrategyAwardAliasTable(String key) {
         return redisService.getValue(Constants.RedisKeys.STRATEGY_ALIAS_TABLE_KEY + key, AliasProbabilityTable.class);
+    }
+
+    @Override
+    public Optional<AliasProbabilityTable> getStrategyAwardAliasTable(ProbabilitySnapshotKey snapshotKey) {
+        Objects.requireNonNull(snapshotKey, "snapshotKey must not be null");
+        String suffix = snapshotKey.assembleKey() + Constants.COLON + snapshotKey.version();
+        return redisService.getValue(Constants.RedisKeys.STRATEGY_ALIAS_TABLE_KEY + suffix, AliasProbabilityTable.class);
     }
 
     @Override
@@ -156,6 +216,68 @@ public class StrategyRepository implements IStrategyRepository {
     public Optional<ProbabilityAlgorithmType> getStrategyProbabilityAlgorithm(String key) {
         return redisService.getValue(Constants.RedisKeys.STRATEGY_PROBABILITY_ALGORITHM_KEY + key,
                 String.class).flatMap(ProbabilityAlgorithmType::fromCode);
+    }
+
+    @Override
+    public long nextProbabilitySnapshotVersion(String key) {
+        if (StringUtils.isBlank(key)) {
+            throw new IllegalArgumentException("key must not be blank");
+        }
+        return redisService.incrementAndGetAtomicLong(
+                Constants.RedisKeys.STRATEGY_PROBABILITY_SNAPSHOT_VERSION_KEY + key);
+    }
+
+    @Override
+    public boolean publishProbabilitySnapshotPointer(ProbabilitySnapshotPointer pointer) {
+        Objects.requireNonNull(pointer, "pointer must not be null");
+
+        String assembleKey = pointer.assembleKey();
+        String pointerKey = Constants.RedisKeys.STRATEGY_PROBABILITY_SNAPSHOT_POINTER_KEY + assembleKey;
+        String lockKey = Constants.RedisKeys.STRATEGY_PROBABILITY_SNAPSHOT_PUBLISH_LOCK_KEY + assembleKey;
+
+        redisService.lock(lockKey);
+        try {
+            Optional<ProbabilitySnapshotPointer> activePointer =
+                    redisService.getValue(pointerKey, ProbabilitySnapshotPointer.class);
+
+            if (activePointer.filter(active -> active.version() >= pointer.version()).isPresent()) {
+                return false;
+            }
+
+            redisService.setValue(pointerKey, pointer);
+            // 发布新指针后退役旧指针
+            activePointer.ifPresent(this::retireProbabilitySnapshot);
+            return true;
+        } finally {
+            redisService.unlock(lockKey);
+        }
+    }
+
+    @Override
+    public Optional<ProbabilitySnapshotPointer> getProbabilitySnapshotPointer(String key) {
+        if (StringUtils.isBlank(key)) {
+            throw new IllegalArgumentException("key must not be blank");
+        }
+        return redisService.getValue(
+                Constants.RedisKeys.STRATEGY_PROBABILITY_SNAPSHOT_POINTER_KEY + key,
+                ProbabilitySnapshotPointer.class);
+    }
+
+    @Override
+    public void retireProbabilitySnapshot(ProbabilitySnapshotPointer pointer) {
+        Objects.requireNonNull(pointer, "pointer must not be null");
+        Duration gracePeriod = probabilitySnapshotRetentionProperties.retirementGracePeriod();
+
+        for (String snapshotDataKey : probabilitySnapshotDataKeys(pointer)) {
+            try {
+                boolean expired = redisService.expire(snapshotDataKey, gracePeriod);
+                if (!expired) {
+                    log.debug("概率快照数据不存在，无需设置退役时间 key: {}", snapshotDataKey);
+                }
+            } catch (RuntimeException exception) {
+                log.warn("设置概率快照退役时间失败 key: {} gracePeriod: {}", snapshotDataKey, gracePeriod, exception);
+            }
+        }
     }
 
     /**
@@ -384,5 +506,32 @@ public class StrategyRepository implements IStrategyRepository {
         } catch (NumberFormatException exception) {
             throw BusinessException.of(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, exception, rulePO.getStrategyId(), rulePO.getAwardId(), ruleValue);
         }
+    }
+
+    /**
+     * 根据算法类型计算一份概率快照实际占用的 Redis Key。
+     *
+     * <p>直接查表和二分查找都包含两部分数据，必须使用相同宽限期一起退役。
+     * Alias Method 的概率表是一个完整对象，因此只占用一个 Redis Key。</p>
+     *
+     * @param pointer 包含装配键、算法类型和版本的快照指针
+     * @return 当前算法快照占用的全部 Redis Key
+     */
+    private List<String> probabilitySnapshotDataKeys(ProbabilitySnapshotPointer pointer) {
+        String suffix = pointer.assembleKey() + Constants.COLON + pointer.version();
+
+        return switch (pointer.algorithmType()) {
+            case DIRECT_LOOKUP -> List.of(
+                    Constants.RedisKeys.STRATEGY_RATE_RANGE_KEY + suffix,
+                    Constants.RedisKeys.STRATEGY_RATE_TABLE_KEY + suffix
+            );
+            case BINARY_SEARCH -> List.of(
+                    Constants.RedisKeys.STRATEGY_RATE_RANGE_KEY + suffix,
+                    Constants.RedisKeys.STRATEGY_PROBABILITY_RANGE_TABLE_KEY + suffix
+            );
+            case ALIAS_METHOD -> List.of(
+                    Constants.RedisKeys.STRATEGY_ALIAS_TABLE_KEY + suffix
+            );
+        };
     }
 }

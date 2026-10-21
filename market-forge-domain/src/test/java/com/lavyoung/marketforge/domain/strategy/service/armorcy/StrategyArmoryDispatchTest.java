@@ -9,6 +9,8 @@ import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.Probab
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.ProbabilityAlgorithmType;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.ProbabilitySpaceFactory;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AwardProbabilityWeight;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.ProbabilitySnapshotKey;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.ProbabilitySnapshotPointer;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.StrategyProbabilitySpace;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.impl.StrategyArmoryDispatch;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
@@ -43,6 +45,7 @@ class StrategyArmoryDispatchTest {
     private static final String RULE_WEIGHT_VALUE = "4000";
     private static final String WEIGHT_ASSEMBLE_KEY = "100001_4000";
     private static final long EXPECTED_AWARD_ID = 100_011L;
+    private static final long SNAPSHOT_VERSION = 7L;
 
     @Mock
     private IStrategyRepository repository;
@@ -70,7 +73,7 @@ class StrategyArmoryDispatchTest {
     }
 
     /**
-     * Given 未配置权重规则的普通策略，When 执行装配，Then 初始化库存并在算法数据完成后保存算法类型。
+     * Given 未配置权重规则的普通策略，When 执行装配，Then 初始化库存并在算法数据完成后发布快照指针。
      */
     @Test
     void shouldAssembleDefaultProbabilitySpaceAndStoreAlgorithmMetadataLast() {
@@ -82,6 +85,11 @@ class StrategyArmoryDispatchTest {
         when(probabilitySpaceFactory.create(ASSEMBLE_KEY, awards)).thenReturn(probabilitySpace);
         when(probabilityAlgorithmRegistry.select(probabilitySpace)).thenReturn(directLookupAlgorithm);
         when(directLookupAlgorithm.type()).thenReturn(ProbabilityAlgorithmType.DIRECT_LOOKUP);
+        when(repository.nextProbabilitySnapshotVersion(ASSEMBLE_KEY)).thenReturn(SNAPSHOT_VERSION);
+        ProbabilitySnapshotKey snapshotKey = new ProbabilitySnapshotKey(ASSEMBLE_KEY, SNAPSHOT_VERSION);
+        ProbabilitySnapshotPointer pointer = new ProbabilitySnapshotPointer(
+                ASSEMBLE_KEY, ProbabilityAlgorithmType.DIRECT_LOOKUP, SNAPSHOT_VERSION);
+        when(repository.publishProbabilitySnapshotPointer(pointer)).thenReturn(true);
 
         // When
         boolean assembled = strategyArmoryDispatch.assembleLotteryStrategy(STRATEGY_ID);
@@ -92,8 +100,10 @@ class StrategyArmoryDispatchTest {
             verify(repository).cacheStrategyAwardStock(award.strategyId(), award.awardId(), award.awardCountSurplus());
         }
         InOrder assemblyOrder = inOrder(directLookupAlgorithm, repository);
-        assemblyOrder.verify(directLookupAlgorithm).assemble(probabilitySpace);
-        assemblyOrder.verify(repository).storeStrategyProbabilityAlgorithm(ASSEMBLE_KEY, ProbabilityAlgorithmType.DIRECT_LOOKUP);
+        assemblyOrder.verify(repository).nextProbabilitySnapshotVersion(ASSEMBLE_KEY);
+        assemblyOrder.verify(directLookupAlgorithm).assemble(probabilitySpace, snapshotKey);
+        assemblyOrder.verify(repository).publishProbabilitySnapshotPointer(pointer);
+        verify(repository, never()).storeStrategyProbabilityAlgorithm(anyString(), any());
     }
 
     /**
@@ -121,58 +131,193 @@ class StrategyArmoryDispatchTest {
         when(probabilityAlgorithmRegistry.select(weightSpace)).thenReturn(binarySearchAlgorithm);
         when(directLookupAlgorithm.type()).thenReturn(ProbabilityAlgorithmType.DIRECT_LOOKUP);
         when(binarySearchAlgorithm.type()).thenReturn(ProbabilityAlgorithmType.BINARY_SEARCH);
+        when(repository.nextProbabilitySnapshotVersion(ASSEMBLE_KEY)).thenReturn(7L);
+        when(repository.nextProbabilitySnapshotVersion(WEIGHT_ASSEMBLE_KEY)).thenReturn(8L);
+        ProbabilitySnapshotKey defaultSnapshotKey = new ProbabilitySnapshotKey(ASSEMBLE_KEY, 7L);
+        ProbabilitySnapshotKey weightSnapshotKey = new ProbabilitySnapshotKey(WEIGHT_ASSEMBLE_KEY, 8L);
+        ProbabilitySnapshotPointer defaultPointer = new ProbabilitySnapshotPointer(
+                ASSEMBLE_KEY, ProbabilityAlgorithmType.DIRECT_LOOKUP, 7L);
+        ProbabilitySnapshotPointer weightPointer = new ProbabilitySnapshotPointer(
+                WEIGHT_ASSEMBLE_KEY, ProbabilityAlgorithmType.BINARY_SEARCH, 8L);
+        when(repository.publishProbabilitySnapshotPointer(defaultPointer)).thenReturn(true);
+        when(repository.publishProbabilitySnapshotPointer(weightPointer)).thenReturn(true);
 
         // When
         boolean assembled = strategyArmoryDispatch.assembleLotteryStrategy(STRATEGY_ID);
 
         // Then
         assertTrue(assembled);
-        verify(binarySearchAlgorithm).assemble(weightSpace);
-        verify(repository).storeStrategyProbabilityAlgorithm(WEIGHT_ASSEMBLE_KEY, ProbabilityAlgorithmType.BINARY_SEARCH);
+        verify(directLookupAlgorithm).assemble(defaultSpace, defaultSnapshotKey);
+        verify(binarySearchAlgorithm).assemble(weightSpace, weightSnapshotKey);
+        verify(repository).publishProbabilitySnapshotPointer(defaultPointer);
+        verify(repository).publishProbabilitySnapshotPointer(weightPointer);
         verify(probabilitySpaceFactory).create(WEIGHT_ASSEMBLE_KEY, eligibleAwards);
     }
 
     /**
-     * Given 普通策略保存了二分算法元数据，When 获取随机奖品，Then 路由到对应算法并返回结果。
+     * Given 普通策略存在二分算法快照指针，When 获取随机奖品，Then 使用指针中的固定版本派发。
      */
     @Test
-    void shouldDispatchDefaultStrategyByStoredAlgorithmType() {
-        when(repository.getStrategyProbabilityAlgorithm(ASSEMBLE_KEY)).thenReturn(Optional.of(ProbabilityAlgorithmType.BINARY_SEARCH));
+    void shouldDispatchDefaultStrategyByActiveSnapshotPointer() {
+        ProbabilitySnapshotPointer pointer = new ProbabilitySnapshotPointer(
+                ASSEMBLE_KEY, ProbabilityAlgorithmType.BINARY_SEARCH, SNAPSHOT_VERSION);
+        when(repository.getProbabilitySnapshotPointer(ASSEMBLE_KEY)).thenReturn(Optional.of(pointer));
         when(probabilityAlgorithmRegistry.getRequired(ProbabilityAlgorithmType.BINARY_SEARCH)).thenReturn(binarySearchAlgorithm);
-        when(binarySearchAlgorithm.dispatch(ASSEMBLE_KEY)).thenReturn(EXPECTED_AWARD_ID);
+        when(binarySearchAlgorithm.dispatch(pointer.snapshotKey())).thenReturn(EXPECTED_AWARD_ID);
 
         long awardId = strategyArmoryDispatch.getRandomAwardId(STRATEGY_ID);
 
         assertEquals(EXPECTED_AWARD_ID, awardId);
-        verify(binarySearchAlgorithm).dispatch(ASSEMBLE_KEY);
+        verify(binarySearchAlgorithm).dispatch(pointer.snapshotKey());
     }
 
     /**
-     * Given 权重策略保存了直接查表算法元数据，When 按权重档位抽奖，Then 使用组合装配键路由算法。
+     * Given 权重策略存在直接查表快照指针，When 按权重档位抽奖，Then 使用组合装配键和固定版本派发。
      */
     @Test
-    void shouldDispatchWeightStrategyByStoredAlgorithmType() {
-        when(repository.getStrategyProbabilityAlgorithm(WEIGHT_ASSEMBLE_KEY)).thenReturn(Optional.of(ProbabilityAlgorithmType.DIRECT_LOOKUP));
+    void shouldDispatchWeightStrategyByActiveSnapshotPointer() {
+        ProbabilitySnapshotPointer pointer = new ProbabilitySnapshotPointer(
+                WEIGHT_ASSEMBLE_KEY, ProbabilityAlgorithmType.DIRECT_LOOKUP, SNAPSHOT_VERSION);
+        when(repository.getProbabilitySnapshotPointer(WEIGHT_ASSEMBLE_KEY)).thenReturn(Optional.of(pointer));
         when(probabilityAlgorithmRegistry.getRequired(ProbabilityAlgorithmType.DIRECT_LOOKUP)).thenReturn(directLookupAlgorithm);
-        when(directLookupAlgorithm.dispatch(WEIGHT_ASSEMBLE_KEY)).thenReturn(EXPECTED_AWARD_ID);
+        when(directLookupAlgorithm.dispatch(pointer.snapshotKey())).thenReturn(EXPECTED_AWARD_ID);
 
         long awardId = strategyArmoryDispatch.getRandomAwardIdAndWeight(STRATEGY_ID, RULE_WEIGHT_VALUE);
 
         assertEquals(EXPECTED_AWARD_ID, awardId);
-        verify(directLookupAlgorithm).dispatch(WEIGHT_ASSEMBLE_KEY);
+        verify(directLookupAlgorithm).dispatch(pointer.snapshotKey());
     }
 
     /**
-     * Given 策略没有算法元数据，When 获取随机奖品，Then 返回策略尚未装配业务错误且不调用任何算法。
+     * Given 策略没有生效快照指针，When 获取随机奖品，Then 返回策略尚未装配业务错误且不调用任何算法。
      */
     @Test
-    void shouldRejectDispatchWhenAlgorithmMetadataIsMissing() {
-        when(repository.getStrategyProbabilityAlgorithm(ASSEMBLE_KEY)).thenReturn(Optional.empty());
+    void shouldRejectDispatchWhenSnapshotPointerIsMissing() {
+        when(repository.getProbabilitySnapshotPointer(ASSEMBLE_KEY)).thenReturn(Optional.empty());
 
         BusinessException exception = assertThrows(BusinessException.class, () -> strategyArmoryDispatch.getRandomAwardId(STRATEGY_ID));
 
         assertSame(BusinessResponseCode.STRATEGY_NOT_ASSEMBLED, exception.getResponseCode());
         verifyNoInteractions(directLookupAlgorithm, binarySearchAlgorithm);
+    }
+
+    /**
+     * Given 算法写入新快照时失败，When 执行策略装配，Then 退役候选快照且不发布不完整版本。
+     */
+    @Test
+    void shouldNotPublishPointerWhenSnapshotAssemblyFails() {
+        // Given
+        List<StrategyAwardEntity> awards = strategyAwards();
+        StrategyProbabilitySpace probabilitySpace = defaultProbabilitySpace();
+        ProbabilitySnapshotKey snapshotKey = new ProbabilitySnapshotKey(ASSEMBLE_KEY, SNAPSHOT_VERSION);
+        ProbabilitySnapshotPointer pointer = new ProbabilitySnapshotPointer(
+                ASSEMBLE_KEY, ProbabilityAlgorithmType.DIRECT_LOOKUP, SNAPSHOT_VERSION);
+        RuntimeException failure = new RuntimeException("snapshot write failed");
+        when(repository.queryStrategyAwardList(STRATEGY_ID)).thenReturn(awards);
+        when(probabilitySpaceFactory.create(ASSEMBLE_KEY, awards)).thenReturn(probabilitySpace);
+        when(probabilityAlgorithmRegistry.select(probabilitySpace)).thenReturn(directLookupAlgorithm);
+        when(directLookupAlgorithm.type()).thenReturn(ProbabilityAlgorithmType.DIRECT_LOOKUP);
+        when(repository.nextProbabilitySnapshotVersion(ASSEMBLE_KEY)).thenReturn(SNAPSHOT_VERSION);
+        doThrow(failure).when(directLookupAlgorithm).assemble(probabilitySpace, snapshotKey);
+
+        // When
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> strategyArmoryDispatch.assembleLotteryStrategy(STRATEGY_ID));
+
+        // Then
+        assertSame(failure, exception);
+        verify(repository).retireProbabilitySnapshot(pointer);
+        verify(repository, never()).publishProbabilitySnapshotPointer(any());
+    }
+
+    /**
+     * Given 算法装配和候选快照退役都失败，When 执行策略装配，Then 保留并抛出最初的装配异常。
+     */
+    @Test
+    void shouldPreserveAssemblyFailureWhenCandidateRetirementFails() {
+        // Given
+        List<StrategyAwardEntity> awards = strategyAwards();
+        StrategyProbabilitySpace probabilitySpace = defaultProbabilitySpace();
+        ProbabilitySnapshotKey snapshotKey = new ProbabilitySnapshotKey(ASSEMBLE_KEY, SNAPSHOT_VERSION);
+        ProbabilitySnapshotPointer pointer = new ProbabilitySnapshotPointer(
+                ASSEMBLE_KEY, ProbabilityAlgorithmType.DIRECT_LOOKUP, SNAPSHOT_VERSION);
+        RuntimeException assemblyFailure = new RuntimeException("snapshot write failed");
+        RuntimeException retirementFailure = new RuntimeException("redis unavailable");
+        when(repository.queryStrategyAwardList(STRATEGY_ID)).thenReturn(awards);
+        when(probabilitySpaceFactory.create(ASSEMBLE_KEY, awards)).thenReturn(probabilitySpace);
+        when(probabilityAlgorithmRegistry.select(probabilitySpace)).thenReturn(directLookupAlgorithm);
+        when(directLookupAlgorithm.type()).thenReturn(ProbabilityAlgorithmType.DIRECT_LOOKUP);
+        when(repository.nextProbabilitySnapshotVersion(ASSEMBLE_KEY)).thenReturn(SNAPSHOT_VERSION);
+        doThrow(assemblyFailure).when(directLookupAlgorithm).assemble(probabilitySpace, snapshotKey);
+        doThrow(retirementFailure).when(repository).retireProbabilitySnapshot(pointer);
+
+        // When
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> strategyArmoryDispatch.assembleLotteryStrategy(STRATEGY_ID));
+
+        // Then
+        assertSame(assemblyFailure, exception);
+        verify(repository).retireProbabilitySnapshot(pointer);
+        verify(repository, never()).publishProbabilitySnapshotPointer(any());
+    }
+
+    /**
+     * Given 更高版本已经生效，When 当前装配任务发布旧版本被拒绝，Then 不覆盖指针且装配流程正常结束。
+     */
+    @Test
+    void shouldIgnoreStaleSnapshotPublication() {
+        // Given
+        List<StrategyAwardEntity> awards = strategyAwards();
+        StrategyProbabilitySpace probabilitySpace = defaultProbabilitySpace();
+        ProbabilitySnapshotKey snapshotKey = new ProbabilitySnapshotKey(ASSEMBLE_KEY, SNAPSHOT_VERSION);
+        ProbabilitySnapshotPointer pointer = new ProbabilitySnapshotPointer(
+                ASSEMBLE_KEY, ProbabilityAlgorithmType.DIRECT_LOOKUP, SNAPSHOT_VERSION);
+        when(repository.queryStrategyAwardList(STRATEGY_ID)).thenReturn(awards);
+        when(repository.queryStrategyEntityByStrategyId(STRATEGY_ID)).thenReturn(
+                StrategyEntity.builder().strategyId(STRATEGY_ID).build());
+        when(probabilitySpaceFactory.create(ASSEMBLE_KEY, awards)).thenReturn(probabilitySpace);
+        when(probabilityAlgorithmRegistry.select(probabilitySpace)).thenReturn(directLookupAlgorithm);
+        when(directLookupAlgorithm.type()).thenReturn(ProbabilityAlgorithmType.DIRECT_LOOKUP);
+        when(repository.nextProbabilitySnapshotVersion(ASSEMBLE_KEY)).thenReturn(SNAPSHOT_VERSION);
+        when(repository.publishProbabilitySnapshotPointer(pointer)).thenReturn(false);
+
+        // When
+        boolean assembled = strategyArmoryDispatch.assembleLotteryStrategy(STRATEGY_ID);
+
+        // Then
+        assertTrue(assembled);
+        verify(directLookupAlgorithm).assemble(probabilitySpace, snapshotKey);
+        verify(repository).publishProbabilitySnapshotPointer(pointer);
+        verify(repository).retireProbabilitySnapshot(pointer);
+    }
+
+    /**
+     * Given 快照数据写入成功但发布操作抛出异常，When 执行策略装配，Then 保留候选数据并传播发布异常。
+     */
+    @Test
+    void shouldNotRetireCandidateWhenSnapshotPublicationResultIsUnknown() {
+        // Given
+        List<StrategyAwardEntity> awards = strategyAwards();
+        StrategyProbabilitySpace probabilitySpace = defaultProbabilitySpace();
+        ProbabilitySnapshotKey snapshotKey = new ProbabilitySnapshotKey(ASSEMBLE_KEY, SNAPSHOT_VERSION);
+        ProbabilitySnapshotPointer pointer = new ProbabilitySnapshotPointer(
+                ASSEMBLE_KEY, ProbabilityAlgorithmType.DIRECT_LOOKUP, SNAPSHOT_VERSION);
+        RuntimeException publicationFailure = new RuntimeException("publication result unknown");
+        when(repository.queryStrategyAwardList(STRATEGY_ID)).thenReturn(awards);
+        when(probabilitySpaceFactory.create(ASSEMBLE_KEY, awards)).thenReturn(probabilitySpace);
+        when(probabilityAlgorithmRegistry.select(probabilitySpace)).thenReturn(directLookupAlgorithm);
+        when(directLookupAlgorithm.type()).thenReturn(ProbabilityAlgorithmType.DIRECT_LOOKUP);
+        when(repository.nextProbabilitySnapshotVersion(ASSEMBLE_KEY)).thenReturn(SNAPSHOT_VERSION);
+        when(repository.publishProbabilitySnapshotPointer(pointer)).thenThrow(publicationFailure);
+
+        // When
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> strategyArmoryDispatch.assembleLotteryStrategy(STRATEGY_ID));
+
+        // Then
+        assertSame(publicationFailure, exception);
+        verify(directLookupAlgorithm).assemble(probabilitySpace, snapshotKey);
+        verify(repository, never()).retireProbabilitySnapshot(any());
     }
 
     /**

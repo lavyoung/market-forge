@@ -5,6 +5,7 @@ import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.AliasP
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.ProbabilityAlgorithmType;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AliasProbabilityTable;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AwardProbabilityWeight;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.ProbabilitySnapshotKey;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.StrategyProbabilitySpace;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
@@ -31,6 +32,7 @@ import static org.mockito.Mockito.*;
 class AliasMethodProbabilityAlgorithmTest {
 
     private static final String ASSEMBLE_KEY = "100006";
+    private static final ProbabilitySnapshotKey SNAPSHOT_KEY = new ProbabilitySnapshotKey(ASSEMBLE_KEY, 7L);
     private static final int MINIMUM_AWARD_COUNT = 3;
 
     @Mock
@@ -81,11 +83,11 @@ class AliasMethodProbabilityAlgorithmTest {
         when(probabilityTableFactory.create(probabilitySpace)).thenReturn(aliasTable);
 
         // When
-        algorithm.assemble(probabilitySpace);
+        algorithm.assemble(probabilitySpace, SNAPSHOT_KEY);
 
         // Then
         verify(probabilityTableFactory).create(probabilitySpace);
-        verify(repository).storeStrategyAwardAliasTable(ASSEMBLE_KEY, aliasTable);
+        verify(repository).storeStrategyAwardAliasTable(SNAPSHOT_KEY, aliasTable);
     }
 
     /**
@@ -97,10 +99,23 @@ class AliasMethodProbabilityAlgorithmTest {
         StrategyProbabilitySpace probabilitySpace = probabilitySpace(2);
 
         // When
-        BusinessException exception = assertThrows(BusinessException.class, () -> algorithm.assemble(probabilitySpace));
+        BusinessException exception = assertThrows(BusinessException.class, () -> algorithm.assemble(probabilitySpace, SNAPSHOT_KEY));
 
         // Then
         assertSame(BusinessResponseCode.STRATEGY_RATE_TOTAL_INVALID, exception.getResponseCode());
+        verifyNoInteractions(probabilityTableFactory, repository);
+    }
+
+    /**
+     * Given 概率空间与快照属于不同装配键，When 执行装配，Then 不允许把 Alias 表写入其他概率空间。
+     */
+    @Test
+    void shouldRejectMismatchedSnapshotKey() {
+        StrategyProbabilitySpace probabilitySpace = probabilitySpace(3);
+        ProbabilitySnapshotKey mismatchedKey = new ProbabilitySnapshotKey("another-strategy", 7L);
+
+        assertThrows(IllegalArgumentException.class, () -> algorithm.assemble(probabilitySpace, mismatchedKey));
+
         verifyNoInteractions(probabilityTableFactory, repository);
     }
 
@@ -111,15 +126,35 @@ class AliasMethodProbabilityAlgorithmTest {
     void shouldDispatchOriginalAwardWhenColumnIsAccepted() {
         // Given
         AliasProbabilityTable aliasTable = aliasProbabilityTable();
-        when(repository.getStrategyAwardAliasTable(ASSEMBLE_KEY)).thenReturn(Optional.of(aliasTable));
-        when(randomGenerator.nextInt(aliasTable.size())).thenReturn(0);
-        when(randomGenerator.nextDouble()).thenReturn(0.2D);
+        when(repository.getStrategyAwardAliasTable(SNAPSHOT_KEY)).thenReturn(Optional.of(aliasTable));
+        when(randomGenerator.nextDouble(aliasTable.size())).thenReturn(0.2D);
 
         // When
-        long awardId = algorithm.dispatch(ASSEMBLE_KEY);
+        long awardId = algorithm.dispatch(SNAPSHOT_KEY);
 
         // Then
         assertEquals(101L, awardId);
+        verify(randomGenerator).nextDouble(aliasTable.size());
+        verifyNoMoreInteractions(randomGenerator);
+    }
+
+    /**
+     * Given 随机样本整数部分为第二列，When 执行抽样，Then 从第二列返回对应奖品。
+     */
+    @Test
+    void shouldSelectColumnFromIntegerPartOfRandomSample() {
+        // Given
+        AliasProbabilityTable aliasTable = aliasProbabilityTable();
+        when(repository.getStrategyAwardAliasTable(SNAPSHOT_KEY)).thenReturn(Optional.of(aliasTable));
+        when(randomGenerator.nextDouble(aliasTable.size())).thenReturn(1.2D);
+
+        // When
+        long awardId = algorithm.dispatch(SNAPSHOT_KEY);
+
+        // Then
+        assertEquals(102L, awardId);
+        verify(randomGenerator).nextDouble(aliasTable.size());
+        verifyNoMoreInteractions(randomGenerator);
     }
 
     /**
@@ -129,27 +164,24 @@ class AliasMethodProbabilityAlgorithmTest {
     void shouldDispatchAliasAwardWhenColumnIsRejected() {
         // Given
         AliasProbabilityTable aliasTable = aliasProbabilityTable();
-        when(repository.getStrategyAwardAliasTable(ASSEMBLE_KEY)).thenReturn(Optional.of(aliasTable));
-        when(randomGenerator.nextInt(aliasTable.size())).thenReturn(0);
-        when(randomGenerator.nextDouble()).thenReturn(0.5D);
+        when(repository.getStrategyAwardAliasTable(SNAPSHOT_KEY)).thenReturn(Optional.of(aliasTable));
+        when(randomGenerator.nextDouble(aliasTable.size())).thenReturn(0.5D);
 
         // When
-        long awardId = algorithm.dispatch(ASSEMBLE_KEY);
+        long awardId = algorithm.dispatch(SNAPSHOT_KEY);
 
         // Then
         assertEquals(102L, awardId);
+        verify(randomGenerator).nextDouble(aliasTable.size());
+        verifyNoMoreInteractions(randomGenerator);
     }
 
     /**
-     * Given 空白装配键，When 派发奖品，Then 在访问仓储和随机源前拒绝请求。
+     * Given 快照键为空，When 派发奖品，Then 在访问仓储和随机源前拒绝请求。
      */
     @Test
-    void shouldRejectBlankAssembleKey() {
-        // Given & When
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> algorithm.dispatch(" "));
-
-        // Then
-        assertEquals("assembleKey must not be blank", exception.getMessage());
+    void shouldRejectNullSnapshotKey() {
+        assertThrows(NullPointerException.class, () -> algorithm.dispatch(null));
         verifyNoInteractions(repository, randomGenerator);
     }
 
@@ -159,15 +191,14 @@ class AliasMethodProbabilityAlgorithmTest {
     @Test
     void shouldRejectDispatchWhenAliasTableIsMissing() {
         // Given
-        when(repository.getStrategyAwardAliasTable(ASSEMBLE_KEY)).thenReturn(Optional.empty());
+        when(repository.getStrategyAwardAliasTable(SNAPSHOT_KEY)).thenReturn(Optional.empty());
 
         // When
-        BusinessException exception = assertThrows(BusinessException.class, () -> algorithm.dispatch(ASSEMBLE_KEY));
+        BusinessException exception = assertThrows(BusinessException.class, () -> algorithm.dispatch(SNAPSHOT_KEY));
 
         // Then
         assertSame(BusinessResponseCode.STRATEGY_NOT_ASSEMBLED, exception.getResponseCode());
-        verify(randomGenerator, never()).nextInt(org.mockito.ArgumentMatchers.anyInt());
-        verify(randomGenerator, never()).nextDouble();
+        verify(randomGenerator, never()).nextDouble(org.mockito.ArgumentMatchers.anyDouble());
     }
 
     /**

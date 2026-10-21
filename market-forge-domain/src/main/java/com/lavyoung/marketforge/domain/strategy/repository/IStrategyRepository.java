@@ -8,6 +8,8 @@ import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelV
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.ProbabilityAlgorithmType;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AliasProbabilityTable;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AwardProbabilityRange;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.ProbabilitySnapshotKey;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.ProbabilitySnapshotPointer;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 
 import java.time.LocalDateTime;
@@ -56,6 +58,16 @@ public interface IStrategyRepository {
     void storeStrategyAwardSearchTables(String key, Integer rateRange, Map<Integer, Long> shuffleStrategyAwardSearchTables);
 
     /**
+     * 保存直接查表算法的版本化概率快照。
+     *
+     * @param snapshotKey               快照装配键和版本
+     * @param rateRange                 随机取值范围
+     * @param strategyAwardSearchTables 概率下标到奖品标识的映射
+     * @throws NullPointerException 快照键为空时抛出
+     */
+    void storeStrategyAwardSearchTables(ProbabilitySnapshotKey snapshotKey, Integer rateRange, Map<Integer, Long> strategyAwardSearchTables);
+
+    /**
      * 获取指定策略装配键对应的随机取值范围。
      * <p>
      * 装配键既可以是普通策略标识，也可以是“策略标识_权重档位”。
@@ -64,6 +76,15 @@ public interface IStrategyRepository {
      * @return 查找表的有效下标数量；策略尚未装配时返回 {@code 0}
      */
     int getRateRange(String key);
+
+    /**
+     * 获取直接查表或二分算法快照的随机取值范围。
+     *
+     * @param snapshotKey 快照装配键和版本
+     * @return 随机取值范围；快照不存在时返回 {@code 0}
+     * @throws NullPointerException 快照键为空时抛出
+     */
+    int getRateRange(ProbabilitySnapshotKey snapshotKey);
 
     /**
      * 从指定策略装配键对应的概率查找表中获取奖品标识。
@@ -75,6 +96,16 @@ public interface IStrategyRepository {
      * @return 奖品标识；查找表中不存在对应下标时返回 {@code 0}
      */
     long getStrategyAwardAssemble(String key, int rateKey);
+
+    /**
+     * 获取直接查表快照中指定下标对应的奖品。
+     *
+     * @param snapshotKey 快照装配键和版本
+     * @param rateKey     概率查找表下标
+     * @return 奖品标识；快照不存在时返回 {@code 0}
+     * @throws NullPointerException 快照键为空时抛出
+     */
+    long getStrategyAwardAssemble(ProbabilitySnapshotKey snapshotKey, int rateKey);
 
     /**
      * 保存二分算法使用的累计概率区间。
@@ -89,12 +120,31 @@ public interface IStrategyRepository {
     void storeStrategyAwardProbabilityRanges(String key, int totalWeight, List<AwardProbabilityRange> probabilityRanges);
 
     /**
+     * 保存二分算法使用的版本化累计概率区间。
+     *
+     * @param snapshotKey       快照装配键和版本
+     * @param totalWeight       随机取值上界
+     * @param probabilityRanges 按累计上界升序排列的概率区间
+     * @throws NullPointerException 快照键或概率区间为空时抛出
+     */
+    void storeStrategyAwardProbabilityRanges(ProbabilitySnapshotKey snapshotKey, int totalWeight, List<AwardProbabilityRange> probabilityRanges);
+
+    /**
      * 获取二分算法使用的累计概率区间。
      *
      * @param key 策略装配键
      * @return 按累计上界升序排列的不可变区间列表；没有装配数据时返回空列表
      */
     List<AwardProbabilityRange> getStrategyAwardProbabilityRanges(String key);
+
+    /**
+     * 获取二分算法使用的版本化累计概率区间。
+     *
+     * @param snapshotKey 快照装配键和版本
+     * @return 不可变概率区间列表；快照不存在时返回空列表
+     * @throws NullPointerException 快照键为空时抛出
+     */
+    List<AwardProbabilityRange> getStrategyAwardProbabilityRanges(ProbabilitySnapshotKey snapshotKey);
 
     /**
      * 保存 Alias Method 使用的别名概率表。
@@ -107,6 +157,15 @@ public interface IStrategyRepository {
      * @throws NullPointerException 别名概率表为空时抛出
      */
     void storeStrategyAwardAliasTable(String key, AliasProbabilityTable aliasTable);
+
+    /**
+     * 保存 Alias Method 使用的版本化概率表。
+     *
+     * @param snapshotKey 快照装配键和版本
+     * @param aliasTable  完整且不可变的 Alias 概率表
+     * @throws NullPointerException 快照键或概率表为空时抛出
+     */
+    void storeStrategyAwardAliasTable(ProbabilitySnapshotKey snapshotKey, AliasProbabilityTable aliasTable);
 
     /**
      * 查询 Alias Method 使用的别名概率表。
@@ -122,6 +181,15 @@ public interface IStrategyRepository {
      * @return 已装配的不可变别名概率表；缓存不存在时返回空
      */
     Optional<AliasProbabilityTable> getStrategyAwardAliasTable(String key);
+
+    /**
+     * 获取 Alias Method 使用的版本化概率表。
+     *
+     * @param snapshotKey 快照装配键和版本
+     * @return 指定版本概率表；快照不存在时返回空
+     * @throws NullPointerException 快照键为空时抛出
+     */
+    Optional<AliasProbabilityTable> getStrategyAwardAliasTable(ProbabilitySnapshotKey snapshotKey);
 
     /**
      * 保存策略装配使用的概率算法类型。
@@ -142,6 +210,54 @@ public interface IStrategyRepository {
      * @return 已保存的算法类型；策略尚未装配或编码无法识别时返回空
      */
     Optional<ProbabilityAlgorithmType> getStrategyProbabilityAlgorithm(String key);
+
+    /**
+     * 为指定概率空间生成下一个快照版本。
+     *
+     * <p>版本由共享存储原子递增，同一装配键下单调增长，但不保证连续。
+     * 装配中途失败时可以放弃已经申请的版本，不得回退版本计数器。</p>
+     *
+     * @param key 普通策略或权重奖池使用的装配键
+     * @return 大于零的新快照版本
+     * @throws IllegalArgumentException 装配键为空白时抛出
+     */
+    long nextProbabilitySnapshotVersion(String key);
+
+    /**
+     * 尝试发布新的生效概率快照指针。
+     *
+     * <p>只有待发布版本严格大于当前生效版本时才能发布成功。该约束用于阻止
+     * 执行较慢的旧装配任务在新装配完成后覆盖新版本。</p>
+     *
+     * @param pointer 已完成概率数据保存、等待生效的快照指针
+     * @return 发布成功返回 {@code true}；当前版本更新或相同时返回 {@code false}
+     * @throws NullPointerException 快照指针为空时抛出
+     */
+    boolean publishProbabilitySnapshotPointer(ProbabilitySnapshotPointer pointer);
+
+    /**
+     * 查询指定概率空间当前生效的快照指针。
+     *
+     * @param key 普通策略或权重奖池使用的装配键
+     * @return 当前生效指针；尚未发布任何版本时返回空
+     * @throws IllegalArgumentException 装配键为空白时抛出
+     */
+    Optional<ProbabilitySnapshotPointer> getProbabilitySnapshotPointer(String key);
+
+    /**
+     * 将指定概率快照标记为退役状态。
+     *
+     * <p>退役不是立即删除。基础设施应为该快照包含的全部概率数据设置宽限期，
+     * 使已经读取该快照指针的在途抽奖请求仍能完成查询。宽限期结束后，
+     * Redis 自动回收对应数据。</p>
+     *
+     * <p>当前生效快照不得调用该方法。调用方只有在新指针发布成功、装配失败
+     * 或候选版本发布被拒绝时才能退役相应快照。</p>
+     *
+     * @param pointer 等待回收的快照指针
+     * @throws NullPointerException 快照指针为空时抛出
+     */
+    void retireProbabilitySnapshot(ProbabilitySnapshotPointer pointer);
 
     /**
      * 查询指定策略的基础配置。

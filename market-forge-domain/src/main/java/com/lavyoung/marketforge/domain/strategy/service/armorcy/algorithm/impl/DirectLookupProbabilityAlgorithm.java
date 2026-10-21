@@ -4,10 +4,10 @@ import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.IProbabilityAlgorithm;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.ProbabilityAlgorithmType;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AwardProbabilityWeight;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.ProbabilitySnapshotKey;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.StrategyProbabilitySpace;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -64,8 +64,12 @@ public class DirectLookupProbabilityAlgorithm implements IProbabilityAlgorithm {
     }
 
     @Override
-    public void assemble(StrategyProbabilitySpace probabilitySpace) {
+    public void assemble(StrategyProbabilitySpace probabilitySpace, ProbabilitySnapshotKey snapshotKey) {
         Objects.requireNonNull(probabilitySpace, "probabilitySpace must not be null");
+        Objects.requireNonNull(snapshotKey, "snapshotKey must not be null");
+        if (!probabilitySpace.assembleKey().equals(snapshotKey.assembleKey())) {
+            throw new IllegalArgumentException("probabilitySpace and snapshotKey must use the same assembleKey");
+        }
         if (!supports(probabilitySpace)) {
             throw BusinessException.of(BusinessResponseCode.STRATEGY_RATE_TOTAL_INVALID,
                     probabilitySpace.assembleKey(),
@@ -82,25 +86,23 @@ public class DirectLookupProbabilityAlgorithm implements IProbabilityAlgorithm {
             indexedLookupTable.put(index, lookupTable.get(index));
         }
 
-        // 缓存查找表
-        repository.storeStrategyAwardSearchTables(probabilitySpace.assembleKey(), probabilitySpace.totalWeight(), indexedLookupTable);
+        repository.storeStrategyAwardSearchTables(snapshotKey, probabilitySpace.totalWeight(), indexedLookupTable);
     }
 
     @Override
-    public long dispatch(String assembleKey) {
-        if (StringUtils.isBlank(assembleKey)) {
-            throw new IllegalArgumentException("assembleKey must not be blank");
-        }
-
-        int rateRange = repository.getRateRange(assembleKey);
+    public long dispatch(ProbabilitySnapshotKey snapshotKey) {
+        Objects.requireNonNull(snapshotKey, "snapshotKey must not be null");
+        int rateRange = repository.getRateRange(snapshotKey);
         if (rateRange <= 0) {
-            throw BusinessException.of(BusinessResponseCode.STRATEGY_NOT_ASSEMBLED);
+            throw BusinessException.of(BusinessResponseCode.STRATEGY_NOT_ASSEMBLED,
+                    snapshotKey.assembleKey(), snapshotKey.version());
         }
 
         int randomIndex = secureRandom.nextInt(rateRange);
-        long awardId = repository.getStrategyAwardAssemble(assembleKey, randomIndex);
+        long awardId = repository.getStrategyAwardAssemble(snapshotKey, randomIndex);
         if (awardId <= 0) {
-            throw BusinessException.of(BusinessResponseCode.STRATEGY_ASSEMBLY_FAILED, assembleKey, randomIndex);
+            throw BusinessException.of(BusinessResponseCode.STRATEGY_ASSEMBLY_FAILED,
+                    snapshotKey.assembleKey(), snapshotKey.version(), randomIndex);
         }
         return awardId;
     }

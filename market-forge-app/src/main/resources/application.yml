@@ -43,6 +43,9 @@ logging:
 
 market-forge:
   strategy:
+    snapshot:
+      # 旧快照切换后继续保留一段时间，保护已经持有旧指针的在途抽奖请求。
+      retirement-grace-period: ${MARKET_FORGE_SNAPSHOT_RETIREMENT_GRACE_PERIOD:10m}
     algorithm:
       # O(1) 算法允许展开的最大查找表元素数量，超过后由二分算法处理。
       direct-lookup-max-size: ${MARKET_FORGE_DIRECT_LOOKUP_MAX_SIZE:10000}

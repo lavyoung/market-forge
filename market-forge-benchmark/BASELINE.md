@@ -19,21 +19,41 @@
 java -jar market-forge-benchmark/target/benchmarks.jar ProbabilityAlgorithmBenchmark -prof gc -rf json -rff market-forge-benchmark/target/probability-algorithm-with-alias-result.json
 ```
 
+Alias Method 合并随机采样后，只复测三种算法的派发延迟：
+
+```powershell
+java -jar market-forge-benchmark/target/benchmarks.jar ".*Dispatch" -prof gc -rf json -rff market-forge-benchmark/target/probability-dispatch-single-sample-result.json
+```
+
+Redis 端到端基准必须连接专用开发或压测实例，连接参数通过环境变量注入：
+
+```powershell
+$env:MARKET_FORGE_BENCHMARK_REDIS_HOST="127.0.0.1"
+$env:MARKET_FORGE_BENCHMARK_REDIS_PORT="6379"
+$env:MARKET_FORGE_BENCHMARK_REDIS_DATABASE="0"
+$env:MARKET_FORGE_BENCHMARK_REDIS_PASSWORD="<redis-password>"
+
+java -jar market-forge-benchmark/target/benchmarks.jar RedisProbabilityDataBenchmark -prof gc -rf json -rff market-forge-benchmark/target/redis-probability-data-result.json
+```
+
+该命令使用随机 Key 命名空间并在每轮 Trial 后清理数据。不得连接生产 Redis。
+
 ## 派发结果
 
 数值为平均单次操作耗时，越低越好。
 
 | 奖品数量 |     直接查表 |     二分查找 | Alias Method |
 |---------:|-------------:|-------------:|-------------:|
-|       10 | 267.73 ns/op | 298.61 ns/op | 815.17 ns/op |
-|      100 | 265.54 ns/op | 314.32 ns/op | 809.87 ns/op |
-|    1,000 | 276.31 ns/op | 333.03 ns/op | 787.12 ns/op |
-|   10,000 | 288.64 ns/op | 361.60 ns/op | 776.67 ns/op |
-|  100,000 | 398.98 ns/op | 408.44 ns/op | 856.88 ns/op |
+|       10 | 264.40 ns/op | 287.64 ns/op | 582.77 ns/op |
+|      100 | 270.83 ns/op | 304.39 ns/op | 530.65 ns/op |
+|    1,000 | 269.46 ns/op | 337.81 ns/op | 521.68 ns/op |
+|   10,000 | 301.76 ns/op | 353.21 ns/op | 532.17 ns/op |
+|  100,000 | 339.74 ns/op | 421.70 ns/op | 570.83 ns/op |
 
-本轮内存仓储基准中，Alias Method 的表内查找虽然是 O (1)，但每次抽样需要一次随机列选择和一次随机接受率判定，
-当前实现的派发延迟约为直接查表的 2.1 至 3.1 倍。奖品数量从 10 增加到 100,000 时，Alias 派发延迟基本稳定，
-说明常数时间特性已生效，但常数项过大，暂时不适合抢占现有算法的生产路由。
+本轮内存仓储基准中，Alias Method 用一个 `[0, n)` 随机样本的整数部分选列、小数部分判断接受率。
+合并随机采样后，派发延迟从优化前的 777 至 857 ns/op 降至 522 至 583 ns/op，提升约 27% 至 35%。
+单次分配量从 504 至 560 B/op 降至 288 至 336 B/op。奖品数量增长到 100,000 时延迟仍基本稳定，
+说明 O (1) 特性已生效，但当前结果仍慢于直接查表和二分查找。
 
 ## 装配结果
 
@@ -54,8 +74,8 @@ java -jar market-forge-benchmark/target/benchmarks.jar ProbabilityAlgorithmBench
 1. 当前 `direct-lookup-max-size=10000` 以总权重而非奖品数量为判断依据，仍是合理的保守阈值。
 2. 小型概率空间使用直接查表能够获得更稳定的低延迟派发。
 3. 总权重超过 10,000 后使用二分算法，可显著降低装配内存、Redis 存储量和初始化成本。
-4. 当前 Alias Method 实现暂未获得派发性能优势，`alias-min-award-count=1000` 只是课程实验值，不应直接作为生产阈值。
-5. Alias Method 的下一步优化点是减少每次抽样的随机数生成次数，然后重新运行同一组 JMH 参数，不能只根据复杂度判断是否上线。
+4. Alias Method 合并随机采样的优化已被基准数据证明有效，但它仍未取得端到端优势。
+5. `alias-min-award-count=1000` 只是课程实验值；在完成本地快照和 Redis 端到端压测前，不应直接作为生产阈值。
 6. 三种生产实现每次都会从仓储读取完整的概率数据；如果奖品规模继续扩大，应增加带版本的本地不可变快照，避免 Redis
    网络和反序列化成本掩盖算法差异。
 7. 本轮派发结果只包含安全随机数、内存仓储访问和算法查找成本，不能替代 Redis 端到端压测。

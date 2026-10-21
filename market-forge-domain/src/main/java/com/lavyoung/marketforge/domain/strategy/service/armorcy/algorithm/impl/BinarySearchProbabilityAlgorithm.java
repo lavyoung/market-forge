@@ -5,10 +5,10 @@ import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.IProba
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.ProbabilityAlgorithmType;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AwardProbabilityRange;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AwardProbabilityWeight;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.ProbabilitySnapshotKey;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.StrategyProbabilitySpace;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -76,25 +76,28 @@ public class BinarySearchProbabilityAlgorithm implements IProbabilityAlgorithm {
     }
 
     @Override
-    public void assemble(StrategyProbabilitySpace probabilitySpace) {
+    public void assemble(StrategyProbabilitySpace probabilitySpace, ProbabilitySnapshotKey snapshotKey) {
         Objects.requireNonNull(probabilitySpace, "probabilitySpace must not be null");
+        Objects.requireNonNull(snapshotKey, "snapshotKey must not be null");
+        if (!probabilitySpace.assembleKey().equals(snapshotKey.assembleKey())) {
+            throw new IllegalArgumentException("probabilitySpace and snapshotKey must use the same assembleKey");
+        }
         List<AwardProbabilityRange> probabilityRanges = createProbabilityRanges(probabilitySpace);
-        repository.storeStrategyAwardProbabilityRanges(probabilitySpace.assembleKey(), probabilitySpace.totalWeight(), probabilityRanges);
+        repository.storeStrategyAwardProbabilityRanges(snapshotKey, probabilitySpace.totalWeight(), probabilityRanges);
     }
 
     @Override
-    public long dispatch(String assembleKey) {
-        if (StringUtils.isBlank(assembleKey)) {
-            throw new IllegalArgumentException("assembleKey must not be blank");
-        }
-        int totalWeight = repository.getRateRange(assembleKey);
+    public long dispatch(ProbabilitySnapshotKey snapshotKey) {
+        Objects.requireNonNull(snapshotKey, "snapshotKey must not be null");
+        int totalWeight = repository.getRateRange(snapshotKey);
         if (totalWeight <= 0) {
-            throw BusinessException.of(BusinessResponseCode.STRATEGY_NOT_ASSEMBLED, assembleKey);
+            throw BusinessException.of(BusinessResponseCode.STRATEGY_NOT_ASSEMBLED,
+                    snapshotKey.assembleKey(), snapshotKey.version());
         }
-        List<AwardProbabilityRange> probabilityRanges = repository.getStrategyAwardProbabilityRanges(assembleKey);
-        validateProbabilityRanges(assembleKey, totalWeight, probabilityRanges);
+        List<AwardProbabilityRange> probabilityRanges = repository.getStrategyAwardProbabilityRanges(snapshotKey);
+        validateProbabilityRanges(snapshotKey.assembleKey(), totalWeight, probabilityRanges);
         int randomIndex = randomGenerator.nextInt(totalWeight);
-        return findAwardId(assembleKey, randomIndex, probabilityRanges);
+        return findAwardId(snapshotKey.assembleKey(), randomIndex, probabilityRanges);
     }
 
     /**

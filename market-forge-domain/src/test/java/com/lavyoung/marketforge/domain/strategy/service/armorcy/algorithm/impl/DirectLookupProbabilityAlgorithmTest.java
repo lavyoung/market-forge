@@ -3,6 +3,7 @@ package com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.impl;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.ProbabilityAlgorithmType;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AwardProbabilityWeight;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.ProbabilitySnapshotKey;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.StrategyProbabilitySpace;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
@@ -30,6 +31,7 @@ import static org.mockito.Mockito.*;
 class DirectLookupProbabilityAlgorithmTest {
 
     private static final String ASSEMBLE_KEY = "100006";
+    private static final ProbabilitySnapshotKey SNAPSHOT_KEY = new ProbabilitySnapshotKey(ASSEMBLE_KEY, 7L);
     private static final int MAXIMUM_TABLE_SIZE = 10;
 
     @Mock
@@ -73,12 +75,12 @@ class DirectLookupProbabilityAlgorithmTest {
         ));
 
         // When
-        algorithm.assemble(probabilitySpace);
+        algorithm.assemble(probabilitySpace, SNAPSHOT_KEY);
 
         // Then
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Map<Integer, Long>> tableCaptor = ArgumentCaptor.forClass(Map.class);
-        verify(repository).storeStrategyAwardSearchTables(eq(ASSEMBLE_KEY), eq(10), tableCaptor.capture());
+        verify(repository).storeStrategyAwardSearchTables(eq(SNAPSHOT_KEY), eq(10), tableCaptor.capture());
 
         Map<Integer, Long> lookupTable = tableCaptor.getValue();
         assertEquals(10, lookupTable.size());
@@ -97,11 +99,24 @@ class DirectLookupProbabilityAlgorithmTest {
         StrategyProbabilitySpace probabilitySpace = probabilitySpace(11);
 
         // When
-        BusinessException exception = assertThrows(BusinessException.class, () -> algorithm.assemble(probabilitySpace));
+        BusinessException exception = assertThrows(BusinessException.class, () -> algorithm.assemble(probabilitySpace, SNAPSHOT_KEY));
 
         // Then
         assertSame(BusinessResponseCode.STRATEGY_RATE_TOTAL_INVALID, exception.getResponseCode());
-        verify(repository, never()).storeStrategyAwardSearchTables(eq(ASSEMBLE_KEY), anyInt(), anyMap());
+        verify(repository, never()).storeStrategyAwardSearchTables(eq(SNAPSHOT_KEY), anyInt(), anyMap());
+    }
+
+    /**
+     * Given 概率空间与快照属于不同装配键，When 执行装配，Then 在写入仓储前拒绝交叉污染。
+     */
+    @Test
+    void shouldRejectMismatchedSnapshotKey() {
+        StrategyProbabilitySpace probabilitySpace = probabilitySpace(10);
+        ProbabilitySnapshotKey mismatchedKey = new ProbabilitySnapshotKey("another-strategy", 7L);
+
+        assertThrows(IllegalArgumentException.class, () -> algorithm.assemble(probabilitySpace, mismatchedKey));
+
+        verifyNoInteractions(repository);
     }
 
     /**
@@ -110,28 +125,27 @@ class DirectLookupProbabilityAlgorithmTest {
     @Test
     void shouldDispatchAwardFromValidRandomIndex() {
         // Given
-        when(repository.getRateRange(ASSEMBLE_KEY)).thenReturn(10);
-        when(repository.getStrategyAwardAssemble(eq(ASSEMBLE_KEY), anyInt())).thenReturn(102L);
+        when(repository.getRateRange(SNAPSHOT_KEY)).thenReturn(10);
+        when(repository.getStrategyAwardAssemble(eq(SNAPSHOT_KEY), anyInt())).thenReturn(102L);
 
         // When
-        long awardId = algorithm.dispatch(ASSEMBLE_KEY);
+        long awardId = algorithm.dispatch(SNAPSHOT_KEY);
 
         // Then
         ArgumentCaptor<Integer> indexCaptor = ArgumentCaptor.forClass(Integer.class);
-        verify(repository).getStrategyAwardAssemble(eq(ASSEMBLE_KEY), indexCaptor.capture());
+        verify(repository).getStrategyAwardAssemble(eq(SNAPSHOT_KEY), indexCaptor.capture());
         assertEquals(102L, awardId);
         assertTrue(indexCaptor.getValue() >= 0);
         assertTrue(indexCaptor.getValue() < 10);
     }
 
     /**
-     * Given 空白装配键，When 执行随机派发，Then 按算法接口契约抛出参数异常。
+     * Given 快照键为空，When 执行随机派发，Then 在访问仓储前拒绝请求。
      */
     @Test
-    void shouldRejectBlankAssembleKey() {
-        // Given & When & Then
-        assertThrows(IllegalArgumentException.class, () -> algorithm.dispatch(" "));
-        verify(repository, never()).getRateRange(ASSEMBLE_KEY);
+    void shouldRejectNullSnapshotKey() {
+        assertThrows(NullPointerException.class, () -> algorithm.dispatch(null));
+        verifyNoInteractions(repository);
     }
 
     /**
@@ -140,14 +154,14 @@ class DirectLookupProbabilityAlgorithmTest {
     @Test
     void shouldRejectDispatchWhenStrategyIsNotAssembled() {
         // Given
-        when(repository.getRateRange(ASSEMBLE_KEY)).thenReturn(0);
+        when(repository.getRateRange(SNAPSHOT_KEY)).thenReturn(0);
 
         // When
-        BusinessException exception = assertThrows(BusinessException.class, () -> algorithm.dispatch(ASSEMBLE_KEY));
+        BusinessException exception = assertThrows(BusinessException.class, () -> algorithm.dispatch(SNAPSHOT_KEY));
 
         // Then
         assertSame(BusinessResponseCode.STRATEGY_NOT_ASSEMBLED, exception.getResponseCode());
-        verify(repository, never()).getStrategyAwardAssemble(eq(ASSEMBLE_KEY), anyInt());
+        verify(repository, never()).getStrategyAwardAssemble(eq(SNAPSHOT_KEY), anyInt());
     }
 
     /**
@@ -156,11 +170,11 @@ class DirectLookupProbabilityAlgorithmTest {
     @Test
     void shouldRejectDispatchWhenLookupTableIsIncomplete() {
         // Given
-        when(repository.getRateRange(ASSEMBLE_KEY)).thenReturn(10);
-        when(repository.getStrategyAwardAssemble(eq(ASSEMBLE_KEY), anyInt())).thenReturn(0L);
+        when(repository.getRateRange(SNAPSHOT_KEY)).thenReturn(10);
+        when(repository.getStrategyAwardAssemble(eq(SNAPSHOT_KEY), anyInt())).thenReturn(0L);
 
         // When
-        BusinessException exception = assertThrows(BusinessException.class, () -> algorithm.dispatch(ASSEMBLE_KEY));
+        BusinessException exception = assertThrows(BusinessException.class, () -> algorithm.dispatch(SNAPSHOT_KEY));
 
         // Then
         assertSame(BusinessResponseCode.STRATEGY_ASSEMBLY_FAILED, exception.getResponseCode());

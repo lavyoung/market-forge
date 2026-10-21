@@ -9,6 +9,8 @@ import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.ProbabilityAlgorithmType;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AliasProbabilityTable;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AwardProbabilityRange;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.ProbabilitySnapshotKey;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.ProbabilitySnapshotPointer;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 
 import java.time.LocalDateTime;
@@ -30,6 +32,8 @@ final class InMemoryStrategyRepository implements IStrategyRepository {
     private final Map<String, List<AwardProbabilityRange>> probabilityRanges = new HashMap<>();
     private final Map<String, ProbabilityAlgorithmType> algorithmTypes = new HashMap<>();
     private final Map<String, AliasProbabilityTable> aliasTables = new HashMap<>();
+    private final Map<String, Long> snapshotVersions = new HashMap<>();
+    private final Map<String, ProbabilitySnapshotPointer> snapshotPointers = new HashMap<>();
 
     @Override
     public List<StrategyAwardEntity> queryStrategyAwardList(Long strategyId) {
@@ -48,13 +52,30 @@ final class InMemoryStrategyRepository implements IStrategyRepository {
     }
 
     @Override
+    public void storeStrategyAwardSearchTables(ProbabilitySnapshotKey snapshotKey, Integer rateRange, Map<Integer, Long> strategyAwardSearchTables) {
+        String storageKey = snapshotKey.assembleKey() + ":" + snapshotKey.version();
+        totalWeights.put(storageKey, rateRange);
+        lookupTables.put(storageKey, strategyAwardSearchTables);
+    }
+
+    @Override
     public int getRateRange(String key) {
         return totalWeights.getOrDefault(key, 0);
     }
 
     @Override
+    public int getRateRange(ProbabilitySnapshotKey snapshotKey) {
+        return totalWeights.getOrDefault(snapshotKey.assembleKey() + ":" + snapshotKey.version(), 0);
+    }
+
+    @Override
     public long getStrategyAwardAssemble(String key, int rateKey) {
         return lookupTables.getOrDefault(key, Map.of()).getOrDefault(rateKey, 0L);
+    }
+
+    @Override
+    public long getStrategyAwardAssemble(ProbabilitySnapshotKey snapshotKey, int rateKey) {
+        return lookupTables.getOrDefault(snapshotKey.assembleKey() + ":" + snapshotKey.version(), Map.of()).getOrDefault(rateKey, 0L);
     }
 
     @Override
@@ -64,8 +85,20 @@ final class InMemoryStrategyRepository implements IStrategyRepository {
     }
 
     @Override
+    public void storeStrategyAwardProbabilityRanges(ProbabilitySnapshotKey snapshotKey, int totalWeight, List<AwardProbabilityRange> ranges) {
+        String storageKey = snapshotKey.assembleKey() + ":" + snapshotKey.version();
+        totalWeights.put(storageKey, totalWeight);
+        probabilityRanges.put(storageKey, ranges);
+    }
+
+    @Override
     public List<AwardProbabilityRange> getStrategyAwardProbabilityRanges(String key) {
         return probabilityRanges.getOrDefault(key, List.of());
+    }
+
+    @Override
+    public List<AwardProbabilityRange> getStrategyAwardProbabilityRanges(ProbabilitySnapshotKey snapshotKey) {
+        return probabilityRanges.getOrDefault(snapshotKey.assembleKey() + ":" + snapshotKey.version(), List.of());
     }
 
     @Override
@@ -75,9 +108,20 @@ final class InMemoryStrategyRepository implements IStrategyRepository {
     }
 
     @Override
+    public void storeStrategyAwardAliasTable(ProbabilitySnapshotKey snapshotKey, AliasProbabilityTable aliasTable) {
+        String storageKey = snapshotKey.assembleKey() + ":" + snapshotKey.version();
+        aliasTables.put(storageKey, Objects.requireNonNull(aliasTable, "aliasTable must not be null"));
+    }
+
+    @Override
     public Optional<AliasProbabilityTable> getStrategyAwardAliasTable(String key) {
         validateAliasTableKey(key);
         return Optional.ofNullable(aliasTables.get(key));
+    }
+
+    @Override
+    public Optional<AliasProbabilityTable> getStrategyAwardAliasTable(ProbabilitySnapshotKey snapshotKey) {
+        return Optional.ofNullable(aliasTables.get(snapshotKey.assembleKey() + ":" + snapshotKey.version()));
     }
 
     @Override
@@ -88,6 +132,36 @@ final class InMemoryStrategyRepository implements IStrategyRepository {
     @Override
     public Optional<ProbabilityAlgorithmType> getStrategyProbabilityAlgorithm(String key) {
         return Optional.ofNullable(algorithmTypes.get(key));
+    }
+
+    @Override
+    public synchronized long nextProbabilitySnapshotVersion(String key) {
+        return snapshotVersions.merge(key, 1L, Long::sum);
+    }
+
+    @Override
+    public synchronized boolean publishProbabilitySnapshotPointer(ProbabilitySnapshotPointer pointer) {
+        ProbabilitySnapshotPointer activePointer = snapshotPointers.get(pointer.assembleKey());
+        if (activePointer != null && activePointer.version() >= pointer.version()) {
+            return false;
+        }
+        snapshotPointers.put(pointer.assembleKey(), pointer);
+        return true;
+    }
+
+    @Override
+    public synchronized Optional<ProbabilitySnapshotPointer> getProbabilitySnapshotPointer(String key) {
+        return Optional.ofNullable(snapshotPointers.get(key));
+    }
+
+    @Override
+    public synchronized void retireProbabilitySnapshot(ProbabilitySnapshotPointer pointer) {
+        Objects.requireNonNull(pointer, "pointer must not be null");
+        String storageKey = pointer.assembleKey() + ":" + pointer.version();
+        totalWeights.remove(storageKey);
+        lookupTables.remove(storageKey);
+        probabilityRanges.remove(storageKey);
+        aliasTables.remove(storageKey);
     }
 
     @Override
@@ -161,6 +235,16 @@ final class InMemoryStrategyRepository implements IStrategyRepository {
             return ranges.size();
         }
         return Optional.ofNullable(aliasTables.get(key)).map(AliasProbabilityTable::size).orElse(0);
+    }
+
+    /**
+     * 获取指定版本概率快照当前保存的元素数量。
+     *
+     * @param snapshotKey 快照装配键和版本
+     * @return 直接查找表、累计区间表或 Alias 表的元素数量
+     */
+    int storedElementCount(ProbabilitySnapshotKey snapshotKey) {
+        return storedElementCount(snapshotKey.assembleKey() + ":" + snapshotKey.version());
     }
 
     private UnsupportedOperationException unsupported() {

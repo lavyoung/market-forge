@@ -6,6 +6,7 @@ import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.impl.A
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.impl.BinarySearchProbabilityAlgorithm;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.impl.DirectLookupProbabilityAlgorithm;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.AwardProbabilityWeight;
+import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.ProbabilitySnapshotKey;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.model.StrategyProbabilitySpace;
 import org.openjdk.jmh.annotations.*;
 
@@ -41,7 +42,7 @@ public class ProbabilityAlgorithmBenchmark {
     @BenchmarkMode(Mode.AverageTime)
     @OutputTimeUnit(TimeUnit.NANOSECONDS)
     public long directLookupDispatch(BenchmarkState state) {
-        return state.directLookupAlgorithm.dispatch(BenchmarkState.DIRECT_LOOKUP_KEY);
+        return state.directLookupAlgorithm.dispatch(state.directLookupSnapshotKey);
     }
 
     /**
@@ -54,7 +55,7 @@ public class ProbabilityAlgorithmBenchmark {
     @BenchmarkMode(Mode.AverageTime)
     @OutputTimeUnit(TimeUnit.NANOSECONDS)
     public long binarySearchDispatch(BenchmarkState state) {
-        return state.binarySearchAlgorithm.dispatch(BenchmarkState.BINARY_SEARCH_KEY);
+        return state.binarySearchAlgorithm.dispatch(state.binarySearchSnapshotKey);
     }
 
     /**
@@ -67,7 +68,7 @@ public class ProbabilityAlgorithmBenchmark {
     @BenchmarkMode(Mode.AverageTime)
     @OutputTimeUnit(TimeUnit.NANOSECONDS)
     public long aliasMethodDispatch(BenchmarkState state) {
-        return state.aliasMethodAlgorithm.dispatch(BenchmarkState.ALIAS_METHOD_KEY);
+        return state.aliasMethodAlgorithm.dispatch(state.aliasMethodSnapshotKey);
     }
 
     /**
@@ -80,8 +81,8 @@ public class ProbabilityAlgorithmBenchmark {
     @BenchmarkMode(Mode.AverageTime)
     @OutputTimeUnit(TimeUnit.MILLISECONDS)
     public int directLookupAssembly(BenchmarkState state) {
-        state.directLookupAlgorithm.assemble(state.directLookupProbabilitySpace);
-        return state.directLookupRepository.storedElementCount(BenchmarkState.DIRECT_LOOKUP_KEY);
+        state.directLookupAlgorithm.assemble(state.directLookupProbabilitySpace, state.directLookupSnapshotKey);
+        return state.directLookupRepository.storedElementCount(state.directLookupSnapshotKey);
     }
 
     /**
@@ -94,8 +95,8 @@ public class ProbabilityAlgorithmBenchmark {
     @BenchmarkMode(Mode.AverageTime)
     @OutputTimeUnit(TimeUnit.MILLISECONDS)
     public int binarySearchAssembly(BenchmarkState state) {
-        state.binarySearchAlgorithm.assemble(state.binarySearchProbabilitySpace);
-        return state.binarySearchRepository.storedElementCount(BenchmarkState.BINARY_SEARCH_KEY);
+        state.binarySearchAlgorithm.assemble(state.binarySearchProbabilitySpace, state.binarySearchSnapshotKey);
+        return state.binarySearchRepository.storedElementCount(state.binarySearchSnapshotKey);
     }
 
     /**
@@ -108,8 +109,8 @@ public class ProbabilityAlgorithmBenchmark {
     @BenchmarkMode(Mode.AverageTime)
     @OutputTimeUnit(TimeUnit.MILLISECONDS)
     public int aliasMethodAssembly(BenchmarkState state) {
-        state.aliasMethodAlgorithm.assemble(state.aliasMethodProbabilitySpace);
-        return state.aliasMethodRepository.storedElementCount(BenchmarkState.ALIAS_METHOD_KEY);
+        state.aliasMethodAlgorithm.assemble(state.aliasMethodProbabilitySpace, state.aliasMethodSnapshotKey);
+        return state.aliasMethodRepository.storedElementCount(state.aliasMethodSnapshotKey);
     }
 
     /**
@@ -140,6 +141,9 @@ public class ProbabilityAlgorithmBenchmark {
         private StrategyProbabilitySpace directLookupProbabilitySpace;
         private StrategyProbabilitySpace binarySearchProbabilitySpace;
         private StrategyProbabilitySpace aliasMethodProbabilitySpace;
+        private ProbabilitySnapshotKey directLookupSnapshotKey;
+        private ProbabilitySnapshotKey binarySearchSnapshotKey;
+        private ProbabilitySnapshotKey aliasMethodSnapshotKey;
 
         /**
          * 创建等权奖品空间并预先装配派发基准需要的数据。
@@ -155,9 +159,12 @@ public class ProbabilityAlgorithmBenchmark {
             directLookupProbabilitySpace = createProbabilitySpace(DIRECT_LOOKUP_KEY, awardCount);
             binarySearchProbabilitySpace = createProbabilitySpace(BINARY_SEARCH_KEY, awardCount);
             aliasMethodProbabilitySpace = createProbabilitySpace(ALIAS_METHOD_KEY, awardCount);
-            directLookupAlgorithm.assemble(directLookupProbabilitySpace);
-            binarySearchAlgorithm.assemble(binarySearchProbabilitySpace);
-            aliasMethodAlgorithm.assemble(aliasMethodProbabilitySpace);
+            directLookupSnapshotKey = new ProbabilitySnapshotKey(DIRECT_LOOKUP_KEY, 1L);
+            binarySearchSnapshotKey = new ProbabilitySnapshotKey(BINARY_SEARCH_KEY, 1L);
+            aliasMethodSnapshotKey = new ProbabilitySnapshotKey(ALIAS_METHOD_KEY, 1L);
+            directLookupAlgorithm.assemble(directLookupProbabilitySpace, directLookupSnapshotKey);
+            binarySearchAlgorithm.assemble(binarySearchProbabilitySpace, binarySearchSnapshotKey);
+            aliasMethodAlgorithm.assemble(aliasMethodProbabilitySpace, aliasMethodSnapshotKey);
         }
 
         private StrategyProbabilitySpace createProbabilitySpace(String assembleKey, int count) {
