@@ -46,6 +46,15 @@ market-forge:
     snapshot:
       # 旧快照切换后继续保留一段时间，保护已经持有旧指针的在途抽奖请求。
       retirement-grace-period: ${MARKET_FORGE_SNAPSHOT_RETIREMENT_GRACE_PERIOD:10m}
+      local-cache:
+        # 关闭后所有概率数据直接从 Redis 读取，可用于故障回退。
+        enabled: ${MARKET_FORGE_SNAPSHOT_LOCAL_CACHE_ENABLED:true}
+        # 长期未访问的策略版本自动从 JVM 堆中淘汰。
+        expire-after-access: ${MARKET_FORGE_SNAPSHOT_LOCAL_CACHE_EXPIRE_AFTER_ACCESS:30m}
+        # 限制总权重等小型快照元数据数量。
+        maximum-snapshots: ${MARKET_FORGE_SNAPSHOT_LOCAL_CACHE_MAXIMUM_SNAPSHOTS:10000}
+        # 限制查找表、累计区间和 Alias 表各自缓存的元素总量。
+        maximum-data-elements: ${MARKET_FORGE_SNAPSHOT_LOCAL_CACHE_MAXIMUM_DATA_ELEMENTS:100000}
     algorithm:
       # O(1) 算法允许展开的最大查找表元素数量，超过后由二分算法处理。
       direct-lookup-max-size: ${MARKET_FORGE_DIRECT_LOOKUP_MAX_SIZE:10000}

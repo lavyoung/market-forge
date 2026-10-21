@@ -108,6 +108,9 @@
         <!-- Elasticsearch Java Client：与开发环境 Elasticsearch Server 保持一致 -->
         <elasticsearch-java.version>8.6.2</elasticsearch-java.version>
 
+        <!-- JVM local cache -->
+        <caffeine.version>3.1.8</caffeine.version>
+
         <!-- dynamic-thread-pool-bom -->
         <dynamic-thread-pool-bom.version>0.1.1</dynamic-thread-pool-bom.version>
         <dynamic-config-center-bom.version>0.2.1</dynamic-config-center-bom.version>
@@ -239,6 +242,12 @@
                 <groupId>org.elasticsearch.client</groupId>
                 <artifactId>elasticsearch-rest-client</artifactId>
                 <version>${elasticsearch-java.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>${caffeine.version}</version>
             </dependency>
 
             <!-- ============================= -->

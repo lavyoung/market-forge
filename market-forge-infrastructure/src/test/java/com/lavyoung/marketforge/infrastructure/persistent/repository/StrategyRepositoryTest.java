@@ -19,6 +19,8 @@ import com.lavyoung.marketforge.infrastructure.persistent.dao.*;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyAwardPO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyRulePO;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
+import com.lavyoung.marketforge.infrastructure.persistent.repository.cache.ProbabilitySnapshotLocalCache;
+import com.lavyoung.marketforge.infrastructure.persistent.repository.config.ProbabilitySnapshotLocalCacheProperties;
 import com.lavyoung.marketforge.infrastructure.persistent.repository.config.ProbabilitySnapshotRetentionProperties;
 import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
@@ -64,6 +66,7 @@ class StrategyRepositoryTest {
     private static final int TOTAL_WEIGHT = 100;
     private static final Duration DEFAULT_STOCK_LOCK_LEASE_TIME = Duration.ofSeconds(30);
     private static final Duration SNAPSHOT_RETIREMENT_GRACE_PERIOD = Duration.ofMinutes(10);
+    private static final Duration LOCAL_CACHE_EXPIRE_AFTER_ACCESS = Duration.ofMinutes(30);
 
     @Mock
     private IStrategyAwardDao strategyAwardDao;
@@ -110,6 +113,9 @@ class StrategyRepositoryTest {
                 new MapperBuilderAssistant(new MybatisConfiguration(), "StrategyRepositoryTest"),
                 StrategyRulePO.class
         );
+        ProbabilitySnapshotLocalCache localCache = new ProbabilitySnapshotLocalCache(
+                new ProbabilitySnapshotLocalCacheProperties(
+                        true, LOCAL_CACHE_EXPIRE_AFTER_ACCESS, 1_000L, 10_000L));
         repository = new StrategyRepository(
                 strategyAwardDao,
                 strategyDao,
@@ -117,6 +123,7 @@ class StrategyRepositoryTest {
                 userAwardRecordDao,
                 awardDao,
                 redisService,
+                localCache,
                 new ProbabilitySnapshotRetentionProperties(SNAPSHOT_RETIREMENT_GRACE_PERIOD),
                 strategyAwardAssembler,
                 strategyAssembler,
@@ -480,18 +487,24 @@ class StrategyRepositoryTest {
         String rateRangeKey = Constants.RedisKeys.STRATEGY_RATE_RANGE_KEY + PROBABILITY_KEY + ":7";
         String rateTableKey = Constants.RedisKeys.STRATEGY_RATE_TABLE_KEY + PROBABILITY_KEY + ":7";
         when(redisService.getValue(rateRangeKey, Integer.class)).thenReturn(Optional.of(2));
-        when(redisService.getHashValue(rateTableKey, 1, Long.class)).thenReturn(Optional.of(100_012L));
+        when(redisService.getHashEntries(rateTableKey, Integer.class, Long.class)).thenReturn(lookupTable);
 
         // When
         repository.storeStrategyAwardSearchTables(snapshotKey, 2, lookupTable);
         int rateRange = repository.getRateRange(snapshotKey);
         long awardId = repository.getStrategyAwardAssemble(snapshotKey, 1);
+        int cachedRateRange = repository.getRateRange(snapshotKey);
+        long cachedAwardId = repository.getStrategyAwardAssemble(snapshotKey, 1);
 
         // Then
         assertEquals(2, rateRange);
         assertEquals(100_012L, awardId);
+        assertEquals(rateRange, cachedRateRange);
+        assertEquals(awardId, cachedAwardId);
         verify(redisService).setValue(rateRangeKey, 2);
         verify(redisService).putHashValues(rateTableKey, lookupTable);
+        verify(redisService, times(1)).getValue(rateRangeKey, Integer.class);
+        verify(redisService, times(1)).getHashEntries(rateTableKey, Integer.class, Long.class);
     }
 
     /**
@@ -512,11 +525,14 @@ class StrategyRepositoryTest {
         // When
         repository.storeStrategyAwardProbabilityRanges(snapshotKey, TOTAL_WEIGHT, ranges);
         List<AwardProbabilityRange> result = repository.getStrategyAwardProbabilityRanges(snapshotKey);
+        List<AwardProbabilityRange> cachedResult = repository.getStrategyAwardProbabilityRanges(snapshotKey);
 
         // Then
         assertEquals(ranges, result);
+        assertEquals(result, cachedResult);
         verify(redisService).setValue(rateRangeKey, TOTAL_WEIGHT);
         verify(redisService).setValue(rangeTableKey, ranges);
+        verify(redisService, times(1)).getValueList(rangeTableKey, AwardProbabilityRange.class);
     }
 
     /**
@@ -533,10 +549,13 @@ class StrategyRepositoryTest {
         // When
         repository.storeStrategyAwardAliasTable(snapshotKey, aliasTable);
         Optional<AliasProbabilityTable> result = repository.getStrategyAwardAliasTable(snapshotKey);
+        Optional<AliasProbabilityTable> cachedResult = repository.getStrategyAwardAliasTable(snapshotKey);
 
         // Then
         assertEquals(Optional.of(aliasTable), result);
+        assertEquals(result, cachedResult);
         verify(redisService).setValue(aliasTableKey, aliasTable);
+        verify(redisService, times(1)).getValue(aliasTableKey, AliasProbabilityTable.class);
     }
 
     /**
@@ -723,6 +742,39 @@ class StrategyRepositoryTest {
                 SNAPSHOT_RETIREMENT_GRACE_PERIOD);
         verify(redisService).expire(Constants.RedisKeys.STRATEGY_RATE_TABLE_KEY + suffix,
                 SNAPSHOT_RETIREMENT_GRACE_PERIOD);
+    }
+
+    /**
+     * Given 直接查表快照已经进入本地缓存，When 退役该快照后再次读取，Then 清除本地数据并重新访问 Redis。
+     */
+    @Test
+    void shouldReloadDirectLookupSnapshotAfterRetirement() {
+        // Given
+        ProbabilitySnapshotKey snapshotKey = new ProbabilitySnapshotKey(PROBABILITY_KEY, 7L);
+        ProbabilitySnapshotPointer pointer = new ProbabilitySnapshotPointer(
+                PROBABILITY_KEY, ProbabilityAlgorithmType.DIRECT_LOOKUP, 7L);
+        String suffix = PROBABILITY_KEY + ":7";
+        String rateRangeKey = Constants.RedisKeys.STRATEGY_RATE_RANGE_KEY + suffix;
+        String rateTableKey = Constants.RedisKeys.STRATEGY_RATE_TABLE_KEY + suffix;
+        when(redisService.getValue(rateRangeKey, Integer.class))
+                .thenReturn(Optional.of(1), Optional.of(2));
+        when(redisService.getHashEntries(rateTableKey, Integer.class, Long.class))
+                .thenReturn(Map.of(0, 100_011L), Map.of(0, 100_012L));
+
+        // When
+        int initialRateRange = repository.getRateRange(snapshotKey);
+        long initialAwardId = repository.getStrategyAwardAssemble(snapshotKey, 0);
+        repository.retireProbabilitySnapshot(pointer);
+        int reloadedRateRange = repository.getRateRange(snapshotKey);
+        long reloadedAwardId = repository.getStrategyAwardAssemble(snapshotKey, 0);
+
+        // Then
+        assertEquals(1, initialRateRange);
+        assertEquals(100_011L, initialAwardId);
+        assertEquals(2, reloadedRateRange);
+        assertEquals(100_012L, reloadedAwardId);
+        verify(redisService, times(2)).getValue(rateRangeKey, Integer.class);
+        verify(redisService, times(2)).getHashEntries(rateTableKey, Integer.class, Long.class);
     }
 
     /**

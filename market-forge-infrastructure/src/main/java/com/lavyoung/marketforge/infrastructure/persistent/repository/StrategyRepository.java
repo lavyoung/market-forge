@@ -22,6 +22,7 @@ import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyAwardPO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyRulePO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.UserAwardRecordPO;
 import com.lavyoung.marketforge.infrastructure.persistent.redis.IRedisService;
+import com.lavyoung.marketforge.infrastructure.persistent.repository.cache.ProbabilitySnapshotLocalCache;
 import com.lavyoung.marketforge.infrastructure.persistent.repository.config.ProbabilitySnapshotRetentionProperties;
 import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
@@ -60,6 +61,10 @@ public class StrategyRepository implements IStrategyRepository {
     private final IAwardDao awardDao;
 
     private final IRedisService redisService;
+    /**
+     * 版本化概率快照的 JVM 本地缓存。
+     */
+    private final ProbabilitySnapshotLocalCache probabilitySnapshotLocalCache;
     /**
      * 概率快照退役宽限期配置。
      */
@@ -130,7 +135,10 @@ public class StrategyRepository implements IStrategyRepository {
     public int getRateRange(ProbabilitySnapshotKey snapshotKey) {
         Objects.requireNonNull(snapshotKey, "snapshotKey must not be null");
         String suffix = snapshotKey.assembleKey() + Constants.COLON + snapshotKey.version();
-        return redisService.getValue(Constants.RedisKeys.STRATEGY_RATE_RANGE_KEY + suffix, Integer.class).orElse(0);
+        String redisKey = Constants.RedisKeys.STRATEGY_RATE_RANGE_KEY + suffix;
+        return probabilitySnapshotLocalCache.getRateRange(
+                snapshotKey,
+                () -> redisService.getValue(redisKey, Integer.class).orElse(0));
     }
 
     /**
@@ -149,7 +157,11 @@ public class StrategyRepository implements IStrategyRepository {
     public long getStrategyAwardAssemble(ProbabilitySnapshotKey snapshotKey, int rateKey) {
         Objects.requireNonNull(snapshotKey, "snapshotKey must not be null");
         String suffix = snapshotKey.assembleKey() + Constants.COLON + snapshotKey.version();
-        return redisService.getHashValue(Constants.RedisKeys.STRATEGY_RATE_TABLE_KEY + suffix, rateKey, Long.class).orElse(0L);
+        String redisKey = Constants.RedisKeys.STRATEGY_RATE_TABLE_KEY + suffix;
+        Map<Integer, Long> lookupTable = probabilitySnapshotLocalCache.getDirectLookupTable(
+                snapshotKey,
+                () -> redisService.getHashEntries(redisKey, Integer.class, Long.class));
+        return lookupTable.getOrDefault(rateKey, 0L);
     }
 
     @Override
@@ -176,8 +188,10 @@ public class StrategyRepository implements IStrategyRepository {
     public List<AwardProbabilityRange> getStrategyAwardProbabilityRanges(ProbabilitySnapshotKey snapshotKey) {
         Objects.requireNonNull(snapshotKey, "snapshotKey must not be null");
         String suffix = snapshotKey.assembleKey() + Constants.COLON + snapshotKey.version();
-        return redisService.getValueList(Constants.RedisKeys.STRATEGY_PROBABILITY_RANGE_TABLE_KEY + suffix,
-                AwardProbabilityRange.class).orElseGet(List::of);
+        String redisKey = Constants.RedisKeys.STRATEGY_PROBABILITY_RANGE_TABLE_KEY + suffix;
+        return probabilitySnapshotLocalCache.getProbabilityRanges(
+                snapshotKey,
+                () -> redisService.getValueList(redisKey, AwardProbabilityRange.class).orElseGet(List::of));
     }
 
     @Override
@@ -203,7 +217,10 @@ public class StrategyRepository implements IStrategyRepository {
     public Optional<AliasProbabilityTable> getStrategyAwardAliasTable(ProbabilitySnapshotKey snapshotKey) {
         Objects.requireNonNull(snapshotKey, "snapshotKey must not be null");
         String suffix = snapshotKey.assembleKey() + Constants.COLON + snapshotKey.version();
-        return redisService.getValue(Constants.RedisKeys.STRATEGY_ALIAS_TABLE_KEY + suffix, AliasProbabilityTable.class);
+        String redisKey = Constants.RedisKeys.STRATEGY_ALIAS_TABLE_KEY + suffix;
+        return probabilitySnapshotLocalCache.getAliasTable(
+                snapshotKey,
+                () -> redisService.getValue(redisKey, AliasProbabilityTable.class));
     }
 
     @Override
@@ -266,6 +283,7 @@ public class StrategyRepository implements IStrategyRepository {
     @Override
     public void retireProbabilitySnapshot(ProbabilitySnapshotPointer pointer) {
         Objects.requireNonNull(pointer, "pointer must not be null");
+        probabilitySnapshotLocalCache.invalidate(pointer);
         Duration gracePeriod = probabilitySnapshotRetentionProperties.retirementGracePeriod();
 
         for (String snapshotDataKey : probabilitySnapshotDataKeys(pointer)) {

@@ -38,6 +38,7 @@ module market.forge.infrastructure {
     requires org.apache.httpcomponents.httpasyncclient;
     requires market.forge.application;
     requires org.apache.commons.lang3;
+    requires com.github.benmanes.caffeine;
 
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler;
     opens com.lavyoung.marketforge.infrastructure.persistent.dao;
@@ -50,6 +51,7 @@ module market.forge.infrastructure {
     opens com.lavyoung.marketforge.infrastructure.persistent.redis;
     opens com.lavyoung.marketforge.infrastructure.persistent.repository;
     opens com.lavyoung.marketforge.infrastructure.persistent.repository.config;
+    opens com.lavyoung.marketforge.infrastructure.persistent.repository.cache;
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler.activity;
     opens com.lavyoung.marketforge.infrastructure.messaging;
     opens com.lavyoung.marketforge.infrastructure.messaging.rabbitmq;
