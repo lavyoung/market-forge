@@ -49,19 +49,27 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
 
     /**
      * {@inheritDoc}
-     * <p>
-     * 该实现按最小中奖概率计算查找表范围，将奖品标识按概率填充并乱序后写入仓储。
+     *
+     * <p>每次重建先申请策略级单调递增代次，再读取数据库配置。普通奖池和该策略下的
+     * 所有权重奖池共享同一代次，确保并发重建时较早发起的旧任务无法覆盖较新的结果。</p>
      *
      * @param strategyId 策略标识
-     * @throws ArithmeticException 奖品概率无法形成有效概率范围时抛出
+     * @return 策略及其权重规则全部装配完成时返回 {@code true}
+     * @throws NullPointerException strategyId 为空时抛出
+     * @throws ArithmeticException  奖品概率无法形成有效概率范围时抛出
+     * @throws RuntimeException     代次申请、配置读取或快照发布失败时抛出
      */
     @Override
     public boolean assembleLotteryStrategy(Long strategyId) {
         Objects.requireNonNull(strategyId, "strategyId must not be null");
+
+        String assembleKey = String.valueOf(strategyId);
+        // 必须在读取数据库前申请代次，保证较早发起的重建始终持有较小版本。
+        long generation = repository.nextProbabilitySnapshotVersion(assembleKey);
         List<StrategyAwardEntity> strategyAwards = repository.queryStrategyAwardList(strategyId);
         initializeAwardStocks(strategyAwards);
-        assembleProbabilitySpace(String.valueOf(strategyId), strategyAwards);
-        assembleWeightProbabilitySpaces(strategyId, strategyAwards);
+        assembleProbabilitySpace(assembleKey, strategyAwards, generation);
+        assembleWeightProbabilitySpaces(strategyId, strategyAwards, generation);
         return true;
     }
 
@@ -114,35 +122,31 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
     }
 
     /**
-     * 建立整数概率空间，将算法数据写入新版本并发布生效指针。
+     * 使用指定策略代次建立概率空间，并在算法数据完整写入后发布生效指针。
      *
-     * <p>完整装配流程如下：</p>
+     * <p>代次由装配入口在读取数据库配置前统一申请，本方法不得再次生成版本。
+     * 这样普通奖池和所有权重奖池可以属于同一次配置重建。</p>
+     *
      * <ol>
-     *     <li>根据奖品配置建立统一的整数概率空间。</li>
-     *     <li>根据概率空间规模选择直接查表、二分查找或 Alias Method。</li>
-     *     <li>从仓储申请单调递增的快照版本。</li>
-     *     <li>将算法数据写入带版本号的 Redis Key。</li>
-     *     <li>算法数据全部写入成功后，原子发布新的生效指针。</li>
-     *     <li>若装配失败或候选版本发布失败，则将候选快照标记为退役。</li>
+     *     <li>根据奖品配置建立统一整数概率空间。</li>
+     *     <li>根据空间规模选择概率算法。</li>
+     *     <li>使用策略级代次构造候选快照。</li>
+     *     <li>完整写入候选快照的算法数据。</li>
+     *     <li>原子发布候选快照指针。</li>
+     *     <li>发布失败时延迟退役候选快照。</li>
      * </ol>
      *
-     * <p>候选快照退役只设置延迟过期时间，不立即删除数据。这样既能清理装配失败
-     * 产生的残留数据，也能避免误伤可能仍在读取旧版本的在途请求。</p>
-     *
-     * <p>如果发布操作抛出异常，则不在此处退役候选快照。因为此时无法判断指针
-     * 是否已经成功切换，贸然退役可能删除刚刚生效的快照。</p>
-     *
-     * @param assembleKey 普通策略或权重奖池的装配键
+     * @param assembleKey    普通策略或权重奖池的装配键
      * @param strategyAwards 参与当前概率空间的奖品配置
+     * @param generation     在读取配置前申请的策略重建代次
      * @throws BusinessException 概率空间无效或没有可用算法时抛出
-     * @throws RuntimeException 快照数据写入或指针发布失败时抛出
+     * @throws RuntimeException  快照写入或指针发布失败时抛出
      */
-    private void assembleProbabilitySpace(String assembleKey, List<StrategyAwardEntity> strategyAwards) {
+    private void assembleProbabilitySpace(String assembleKey, List<StrategyAwardEntity> strategyAwards, long generation) {
         StrategyProbabilitySpace probabilitySpace = probabilitySpaceFactory.create(assembleKey, strategyAwards);
         IProbabilityAlgorithm algorithm = probabilityAlgorithmRegistry.select(probabilitySpace);
-        long version = repository.nextProbabilitySnapshotVersion(probabilitySpace.assembleKey());
         ProbabilitySnapshotPointer pointer = new ProbabilitySnapshotPointer(
-                probabilitySpace.assembleKey(), algorithm.type(), version);
+                probabilitySpace.assembleKey(), algorithm.type(), generation);
 
         try {
             algorithm.assemble(probabilitySpace, pointer.snapshotKey());
@@ -154,13 +158,13 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
         boolean published = repository.publishProbabilitySnapshotPointer(pointer);
         if (!published) {
             retireCandidateSnapshot(pointer, "概率快照版本已过期");
-            log.info("忽略已经过期的概率快照发布 assembleKey: {} algorithm: {} version: {}",
-                    assembleKey, algorithm.type().getCode(), version);
+            log.info("忽略已经过期的概率快照发布 assembleKey: {} algorithm: {} generation: {}",
+                    assembleKey, algorithm.type().getCode(), generation);
             return;
         }
 
-        log.info("抽奖策略概率快照发布完成 assembleKey: {} algorithm: {} version: {} totalWeight: {} awardCount: {}",
-                assembleKey, algorithm.type().getCode(), version,
+        log.info("抽奖策略概率快照发布完成 assembleKey: {} algorithm: {} generation: {} totalWeight: {} awardCount: {}",
+                assembleKey, algorithm.type().getCode(), generation,
                 probabilitySpace.totalWeight(), probabilitySpace.awardWeights().size());
     }
 
@@ -190,9 +194,10 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
      *
      * @param strategyId     策略标识
      * @param strategyAwards 策略包含的全部奖品
+     * @param generation     本次策略配置重建的统一代次
      * @throws BusinessException 策略声明权重规则但无法查询到规则配置时抛出
      */
-    private void assembleWeightProbabilitySpaces(Long strategyId, List<StrategyAwardEntity> strategyAwards) {
+    private void assembleWeightProbabilitySpaces(Long strategyId, List<StrategyAwardEntity> strategyAwards, long generation) {
         StrategyEntity strategy = repository.queryStrategyEntityByStrategyId(strategyId);
         if (strategy == null || !strategy.toRuleModes().contains(RuleModel.WEIGHT)) {
             return;
@@ -209,7 +214,7 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
                     .filter(award -> eligibleAwardIds.contains(award.awardId()))
                     .toList();
             String assembleKey = strategyId + Constants.UNDERLINE + entry.getKey();
-            assembleProbabilitySpace(assembleKey, eligibleAwards);
+            assembleProbabilitySpace(assembleKey, eligibleAwards, generation);
         }
     }
 

@@ -212,14 +212,15 @@ public interface IStrategyRepository {
     Optional<ProbabilityAlgorithmType> getStrategyProbabilityAlgorithm(String key);
 
     /**
-     * 为指定概率空间生成下一个快照版本。
+     * 为指定策略生成下一次配置重建代次。
      *
-     * <p>版本由共享存储原子递增，同一装配键下单调增长，但不保证连续。
-     * 装配中途失败时可以放弃已经申请的版本，不得回退版本计数器。</p>
+     * <p>代次由共享存储原子递增，并且必须在读取本次策略配置前申请。普通奖池和
+     * 该策略下的所有权重奖池共享同一个代次，使并发重建可以根据发起顺序拒绝
+     * 过期结果。装配中途失败时允许产生代次空洞，不得回退计数器。</p>
      *
-     * @param key 普通策略或权重奖池使用的装配键
-     * @return 大于零的新快照版本
-     * @throws IllegalArgumentException 装配键为空白时抛出
+     * @param key 普通策略标识对应的根装配键
+     * @return 大于零的新策略重建代次
+     * @throws IllegalArgumentException 根装配键为空白时抛出
      */
     long nextProbabilitySnapshotVersion(String key);
 

@@ -76,7 +76,7 @@ class StrategyArmoryDispatchTest {
      * Given 未配置权重规则的普通策略，When 执行装配，Then 初始化库存并在算法数据完成后发布快照指针。
      */
     @Test
-    void shouldAssembleDefaultProbabilitySpaceAndStoreAlgorithmMetadataLast() {
+    void shouldReserveGenerationBeforeReadingConfigurationAndPublishPointerLast() {
         // Given
         List<StrategyAwardEntity> awards = strategyAwards();
         StrategyProbabilitySpace probabilitySpace = defaultProbabilitySpace();
@@ -99,8 +99,10 @@ class StrategyArmoryDispatchTest {
         for (StrategyAwardEntity award : awards) {
             verify(repository).cacheStrategyAwardStock(award.strategyId(), award.awardId(), award.awardCountSurplus());
         }
+        InOrder generationOrder = inOrder(repository);
+        generationOrder.verify(repository).nextProbabilitySnapshotVersion(ASSEMBLE_KEY);
+        generationOrder.verify(repository).queryStrategyAwardList(STRATEGY_ID);
         InOrder assemblyOrder = inOrder(directLookupAlgorithm, repository);
-        assemblyOrder.verify(repository).nextProbabilitySnapshotVersion(ASSEMBLE_KEY);
         assemblyOrder.verify(directLookupAlgorithm).assemble(probabilitySpace, snapshotKey);
         assemblyOrder.verify(repository).publishProbabilitySnapshotPointer(pointer);
         verify(repository, never()).storeStrategyProbabilityAlgorithm(anyString(), any());
@@ -131,14 +133,13 @@ class StrategyArmoryDispatchTest {
         when(probabilityAlgorithmRegistry.select(weightSpace)).thenReturn(binarySearchAlgorithm);
         when(directLookupAlgorithm.type()).thenReturn(ProbabilityAlgorithmType.DIRECT_LOOKUP);
         when(binarySearchAlgorithm.type()).thenReturn(ProbabilityAlgorithmType.BINARY_SEARCH);
-        when(repository.nextProbabilitySnapshotVersion(ASSEMBLE_KEY)).thenReturn(7L);
-        when(repository.nextProbabilitySnapshotVersion(WEIGHT_ASSEMBLE_KEY)).thenReturn(8L);
+        when(repository.nextProbabilitySnapshotVersion(ASSEMBLE_KEY)).thenReturn(SNAPSHOT_VERSION);
         ProbabilitySnapshotKey defaultSnapshotKey = new ProbabilitySnapshotKey(ASSEMBLE_KEY, 7L);
-        ProbabilitySnapshotKey weightSnapshotKey = new ProbabilitySnapshotKey(WEIGHT_ASSEMBLE_KEY, 8L);
+        ProbabilitySnapshotKey weightSnapshotKey = new ProbabilitySnapshotKey(WEIGHT_ASSEMBLE_KEY, 7L);
         ProbabilitySnapshotPointer defaultPointer = new ProbabilitySnapshotPointer(
                 ASSEMBLE_KEY, ProbabilityAlgorithmType.DIRECT_LOOKUP, 7L);
         ProbabilitySnapshotPointer weightPointer = new ProbabilitySnapshotPointer(
-                WEIGHT_ASSEMBLE_KEY, ProbabilityAlgorithmType.BINARY_SEARCH, 8L);
+                WEIGHT_ASSEMBLE_KEY, ProbabilityAlgorithmType.BINARY_SEARCH, 7L);
         when(repository.publishProbabilitySnapshotPointer(defaultPointer)).thenReturn(true);
         when(repository.publishProbabilitySnapshotPointer(weightPointer)).thenReturn(true);
 
@@ -152,6 +153,28 @@ class StrategyArmoryDispatchTest {
         verify(repository).publishProbabilitySnapshotPointer(defaultPointer);
         verify(repository).publishProbabilitySnapshotPointer(weightPointer);
         verify(probabilitySpaceFactory).create(WEIGHT_ASSEMBLE_KEY, eligibleAwards);
+        verify(repository, times(1)).nextProbabilitySnapshotVersion(ASSEMBLE_KEY);
+        verify(repository, never()).nextProbabilitySnapshotVersion(WEIGHT_ASSEMBLE_KEY);
+    }
+
+    /**
+     * Given Redis 无法分配新的策略代次，When 执行策略装配，Then 在读取数据库配置和改写库存前立即失败。
+     */
+    @Test
+    void shouldStopBeforeReadingConfigurationWhenGenerationAllocationFails() {
+        // Given
+        RuntimeException allocationFailure = new RuntimeException("redis unavailable");
+        when(repository.nextProbabilitySnapshotVersion(ASSEMBLE_KEY)).thenThrow(allocationFailure);
+
+        // When
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> strategyArmoryDispatch.assembleLotteryStrategy(STRATEGY_ID));
+
+        // Then
+        assertSame(allocationFailure, exception);
+        verify(repository, never()).queryStrategyAwardList(anyLong());
+        verify(repository, never()).cacheStrategyAwardStock(anyLong(), anyLong(), anyInt());
+        verifyNoInteractions(probabilitySpaceFactory, probabilityAlgorithmRegistry);
     }
 
     /**

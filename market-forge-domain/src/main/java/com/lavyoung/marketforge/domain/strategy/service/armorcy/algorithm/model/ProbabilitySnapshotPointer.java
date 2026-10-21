@@ -11,12 +11,13 @@ import java.util.Objects;
  * 再原子替换当前指针。抽奖请求读取指针后，只访问该指针指定的版本，从而
  * 避免把新旧版本的算法类型、奖品列表和概率数据混合使用。</p>
  *
- * <p>{@code version} 必须在同一装配键下单调递增。基础设施实现应使用 Redis
- * 原子递增生成版本，不得使用本机时间戳，以避免多实例时钟偏差和版本碰撞。</p>
+ * <p>{@code version} 表示策略配置重建代次。同一次重建产生的普通奖池和权重奖池
+ * 指针共享该值；后续重建的代次必须更大。基础设施应使用 Redis 原子递增生成代次，
+ * 不得使用本机时间戳，以避免多实例时钟偏差和版本碰撞。</p>
  *
  * @param assembleKey   普通策略标识或“策略标识_权重档位”装配键
  * @param algorithmType 当前快照使用的概率算法
- * @param version       当前生效的正整数快照版本
+ * @param version       当前快照所属的正整数策略重建代次
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
  * @date 2026/10/21
