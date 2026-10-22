@@ -7,6 +7,7 @@ import com.lavyoung.marketforge.application.award.service.IUserAwardRecordSearch
 import com.lavyoung.marketforge.trigger.assembler.UserAwardRecordSearchAssembler;
 import com.lavyoung.marketforge.trigger.exception.GlobalExceptionHandler;
 import com.lavyoung.marketforge.types.model.CommonResponseCode;
+import com.lavyoung.marketforge.types.model.PageRequest;
 import com.lavyoung.marketforge.types.model.PageResult;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
@@ -48,7 +49,7 @@ class UserAwardRecordControllerTest {
         // Given
         IUserAwardRecordSearchService searchService = mock(IUserAwardRecordSearchService.class);
         UserAwardRecordSearchQuery expectedQuery = new UserAwardRecordSearchQuery(
-                "user-001", 101L, "completed", START_TIME, END_TIME, 1, 20
+                "user-001", 101L, "completed", START_TIME, END_TIME, new PageRequest(1, 20)
         );
         when(searchService.search(expectedQuery)).thenReturn(
                 new PageResult<>(List.of(searchItem()), 1, 1, 20)
@@ -181,7 +182,7 @@ class UserAwardRecordControllerTest {
         // Given
         IUserAwardRecordSearchService searchService = mock(IUserAwardRecordSearchService.class);
         when(searchService.search(new UserAwardRecordSearchQuery(
-                null, null, null, null, null, 1, 20
+                null, null, null, null, null, new PageRequest(1, 20)
         ))).thenThrow(new IllegalStateException("elasticsearch internal detail"));
         MockMvc mockMvc = mockMvc(searchService);
 

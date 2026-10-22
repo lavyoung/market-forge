@@ -46,6 +46,42 @@
         LIMIT 1
     </select>
 
+    <sql id="awardDefinitionSearchWhere">
+        <where>
+            <if test="awardCode != null">
+                award_key = #{awardCode}
+            </if>
+            <if test="awardName != null">
+                AND award_name LIKE CONCAT(#{awardName}, '%')
+            </if>
+            <if test="awardType != null">
+                AND award_type = #{awardType}
+            </if>
+            <if test="state != null">
+                AND state = #{state}
+            </if>
+        </where>
+    </sql>
+
+    <select id="countAwardDefinitions"
+            parameterType="com.lavyoung.marketforge.infrastructure.persistent.model.AwardDefinitionSearchParam"
+            resultType="long">
+        SELECT COUNT(*)
+        FROM award
+        <include refid="awardDefinitionSearchWhere"/>
+    </select>
+
+    <select id="queryAwardDefinitionPage"
+            parameterType="com.lavyoung.marketforge.infrastructure.persistent.model.AwardDefinitionSearchParam"
+            resultMap="awardResultMap">
+        SELECT
+        <include refid="awardColumns"/>
+        FROM award
+        <include refid="awardDefinitionSearchWhere"/>
+        ORDER BY update_time DESC, id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
     <update id="updateByAwardKey"
             parameterType="com.lavyoung.marketforge.infrastructure.persistent.po.AwardPO">
         UPDATE award

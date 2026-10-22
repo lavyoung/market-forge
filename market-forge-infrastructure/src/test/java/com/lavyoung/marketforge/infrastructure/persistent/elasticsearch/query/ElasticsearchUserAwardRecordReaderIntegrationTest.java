@@ -8,6 +8,7 @@ import com.lavyoung.marketforge.application.award.model.UserAwardRecordSearchQue
 import com.lavyoung.marketforge.infrastructure.persistent.elasticsearch.assembler.UserAwardRecordDocumentAssembler;
 import com.lavyoung.marketforge.infrastructure.persistent.elasticsearch.config.ElasticsearchClientConfig;
 import com.lavyoung.marketforge.infrastructure.persistent.elasticsearch.config.ElasticsearchProperties;
+import com.lavyoung.marketforge.types.model.PageRequest;
 import com.lavyoung.marketforge.types.model.PageResult;
 import org.elasticsearch.client.RestClient;
 import org.junit.jupiter.api.Test;
@@ -61,8 +62,7 @@ class ElasticsearchUserAwardRecordReaderIntegrationTest {
                     "create",
                     null,
                     null,
-                    1,
-                    20
+                    new PageRequest(1, 20)
             );
 
             // When

@@ -4,6 +4,7 @@ import com.lavyoung.marketforge.application.award.model.UserAwardRecordSearchIte
 import com.lavyoung.marketforge.application.award.model.UserAwardRecordSearchQuery;
 import com.lavyoung.marketforge.application.award.query.IUserAwardRecordReader;
 import com.lavyoung.marketforge.application.award.service.impl.UserAwardRecordSearchServiceImpl;
+import com.lavyoung.marketforge.types.model.PageRequest;
 import com.lavyoung.marketforge.types.model.PageResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,7 +44,7 @@ class UserAwardRecordSearchServiceImplTest {
     void shouldDelegateSearchToRecordReader() {
         // Given
         UserAwardRecordSearchQuery query = new UserAwardRecordSearchQuery(
-                "user-001", null, null, null, null, 1, 20
+                "user-001", null, null, null, null, new PageRequest(1, 20)
         );
         PageResult<UserAwardRecordSearchItem> expected = new PageResult<>(List.of(), 0, 1, 20);
         when(recordReader.search(query)).thenReturn(expected);

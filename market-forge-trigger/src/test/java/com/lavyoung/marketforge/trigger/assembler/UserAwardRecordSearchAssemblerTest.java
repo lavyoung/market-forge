@@ -56,8 +56,8 @@ class UserAwardRecordSearchAssemblerTest {
                 () -> assertEquals(request.awardState(), query.awardState()),
                 () -> assertEquals(request.startTime(), query.startTime()),
                 () -> assertEquals(request.endTime(), query.endTime()),
-                () -> assertEquals(request.pageNo(), query.pageNo()),
-                () -> assertEquals(request.pageSize(), query.pageSize())
+                () -> assertEquals(request.pageNo(), query.page().pageNumber()),
+                () -> assertEquals(request.pageSize(), query.page().pageSize())
         );
     }
 

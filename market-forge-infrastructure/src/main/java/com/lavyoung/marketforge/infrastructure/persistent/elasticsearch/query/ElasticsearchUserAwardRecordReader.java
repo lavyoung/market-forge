@@ -57,8 +57,8 @@ public class ElasticsearchUserAwardRecordReader implements IUserAwardRecordReade
             return new PageResult<>(
                     records,
                     total,
-                    query.pageNo(),
-                    query.pageSize()
+                    query.page().pageNumber(),
+                    query.page().pageSize()
             );
 
         } catch (IOException e) {
@@ -79,8 +79,8 @@ public class ElasticsearchUserAwardRecordReader implements IUserAwardRecordReade
 
         return client.search(builder -> builder
                         .index(INDEX_ALIAS)
-                        .from(query.offset())
-                        .size(query.pageSize())
+                        .from(Math.toIntExact(query.page().offset()))
+                        .size(query.page().pageSize())
                         .trackTotalHits(value -> value.enabled(true))
                         .query(value -> value.bool(boolQuery))
                         .sort(value -> value.field(field -> field

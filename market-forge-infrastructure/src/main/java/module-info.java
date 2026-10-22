@@ -50,6 +50,7 @@ module market.forge.infrastructure {
     opens com.lavyoung.marketforge.infrastructure.persistent.po;
     opens com.lavyoung.marketforge.infrastructure.persistent.po.activity;
     opens com.lavyoung.marketforge.infrastructure.persistent.redis;
+    opens com.lavyoung.marketforge.infrastructure.persistent.query;
     opens com.lavyoung.marketforge.infrastructure.persistent.repository;
     opens com.lavyoung.marketforge.infrastructure.persistent.repository.config;
     opens com.lavyoung.marketforge.infrastructure.persistent.repository.cache;

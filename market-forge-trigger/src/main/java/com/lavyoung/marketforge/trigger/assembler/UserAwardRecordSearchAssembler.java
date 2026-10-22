@@ -4,8 +4,10 @@ import com.lavyoung.marketforge.api.award.request.UserAwardRecordSearchRequest;
 import com.lavyoung.marketforge.api.award.response.UserAwardRecordResponse;
 import com.lavyoung.marketforge.application.award.model.UserAwardRecordSearchItem;
 import com.lavyoung.marketforge.application.award.model.UserAwardRecordSearchQuery;
+import com.lavyoung.marketforge.types.model.PageRequest;
 import com.lavyoung.marketforge.types.model.PageResult;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
 import org.mapstruct.ReportingPolicy;
 
@@ -25,7 +27,7 @@ import java.util.Objects;
  * @version 1.0.0
  * @date 2026/10/16
  */
-@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, unmappedTargetPolicy = ReportingPolicy.ERROR)
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, unmappedTargetPolicy = ReportingPolicy.ERROR, imports = PageRequest.class)
 public interface UserAwardRecordSearchAssembler {
 
 
@@ -35,6 +37,7 @@ public interface UserAwardRecordSearchAssembler {
      * @param request 用户中奖记录 HTTP 查询请求
      * @return 用户中奖记录应用层查询条件
      */
+    @Mapping(target = "page", expression = "java(new PageRequest(request.pageNo(), request.pageSize()))")
     UserAwardRecordSearchQuery toQuery(UserAwardRecordSearchRequest request);
 
     /**

@@ -1,10 +1,12 @@
 package com.lavyoung.marketforge.infrastructure.persistent.dao;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.lavyoung.marketforge.infrastructure.persistent.model.AwardDefinitionSearchParam;
 import com.lavyoung.marketforge.infrastructure.persistent.model.AwardDefinitionStateUpdateParam;
 import com.lavyoung.marketforge.infrastructure.persistent.po.AwardPO;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -33,6 +35,24 @@ public interface IAwardDao extends BaseMapper<AwardPO> {
      * @return 匹配的奖品记录；不存在时返回空
      */
     Optional<AwardPO> queryAwardByAwardKey(@Param("awardKey") String awardKey);
+
+    /**
+     * 统计满足条件的奖品定义数量。
+     *
+     * @param param 奖品定义查询参数
+     * @return 满足条件的总记录数
+     */
+    long countAwardDefinitions(AwardDefinitionSearchParam param);
+
+    /**
+     * 查询当前页奖品定义。
+     *
+     * <p>结果按照更新时间倒序、数据库主键倒序稳定排列。</p>
+     *
+     * @param param 奖品定义查询参数
+     * @return 当前页奖品持久化对象
+     */
+    List<AwardPO> queryAwardDefinitionPage(AwardDefinitionSearchParam param);
 
     /**
      * 根据奖品业务编码更新旧版奖品发放配置。

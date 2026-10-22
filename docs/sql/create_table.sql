@@ -37,7 +37,10 @@ CREATE TABLE award
     PRIMARY KEY (id),
     UNIQUE KEY uq_award_id (award_id),
     UNIQUE KEY uq_award_key (award_key),
-    KEY idx_award_state (state)
+    KEY idx_award_update (update_time, id),
+    KEY idx_award_state_update (state, update_time, id),
+    KEY idx_award_type_update (award_type, update_time, id),
+    KEY idx_award_name_update (award_name, update_time, id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='奖品表';
 
