@@ -18,6 +18,9 @@
         <result column="strategy_id" property="strategyId"/>
         <result column="award_unlock_scope" property="awardUnlockScope"/>
         <result column="state" property="state"/>
+        <result column="version" property="version"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="updated_by" property="updatedBy"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
     </resultMap>
@@ -25,7 +28,21 @@
     <sql id="activityColumns">
         id, activity_id, activity_name, activity_desc, begin_date_time, end_date_time,
         stock_count, stock_count_surplus, activity_count_id, strategy_id,
-        award_unlock_scope, state, create_time, update_time
+        award_unlock_scope, state, version, created_by, updated_by, create_time, update_time
+    </sql>
+
+    <sql id="activityDefinitionSearchWhere">
+        <where>
+            <if test="activityId != null">
+                activity_id = #{activityId}
+            </if>
+            <if test="activityName != null">
+                AND activity_name LIKE CONCAT(#{activityName}, '%')
+            </if>
+            <if test="state != null">
+                AND state = #{state}
+            </if>
+        </where>
     </sql>
 
     <select id="queryByActivityId" resultMap="activityResultMap">
@@ -34,6 +51,25 @@
         FROM raffle_activity
         WHERE activity_id = #{activityId}
         LIMIT 1
+    </select>
+
+    <select id="countActivityDefinitions"
+            parameterType="com.lavyoung.marketforge.infrastructure.persistent.model.ActivityDefinitionSearchParam"
+            resultType="long">
+        SELECT COUNT(*)
+        FROM raffle_activity
+        <include refid="activityDefinitionSearchWhere"/>
+    </select>
+
+    <select id="queryActivityDefinitionPage"
+            parameterType="com.lavyoung.marketforge.infrastructure.persistent.model.ActivityDefinitionSearchParam"
+            resultMap="activityResultMap">
+        SELECT
+        <include refid="activityColumns"/>
+        FROM raffle_activity
+        <include refid="activityDefinitionSearchWhere"/>
+        ORDER BY update_time DESC, id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
     </select>
 
 </mapper>

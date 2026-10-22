@@ -83,9 +83,23 @@ public class ActivityPO extends BasePO {
      */
     private String awardUnlockScope;
 
-
     /**
      * 活动状态。
      */
     private String state;
+
+    /**
+     * 乐观锁版本。
+     */
+    private Integer version;
+
+    /**
+     * 创建人标识。
+     */
+    private String createdBy;
+
+    /**
+     * 最后修改人标识。
+     */
+    private String updatedBy;
 }

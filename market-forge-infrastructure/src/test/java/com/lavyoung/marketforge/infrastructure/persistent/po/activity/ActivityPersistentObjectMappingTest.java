@@ -38,7 +38,7 @@ class ActivityPersistentObjectMappingTest {
             ActivityPO.class, Set.of(
                     "id", "activityId", "activityName", "activityDesc", "beginDateTime", "endDateTime",
                     "stockCount", "stockCountSurplus", "activityCountId", "strategyId", "state",
-                    "awardUnlockScope"
+                    "awardUnlockScope", "version", "createdBy", "updatedBy"
             ),
             ActivityCountPO.class, Set.of(
                     "id", "activityCountId", "totalCount", "dayCount", "monthCount"

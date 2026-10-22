@@ -46,6 +46,9 @@ public interface ActivityAssembler {
      * @return 活动持久化对象
      */
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "version", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
     @Mapping(target = "createTime", ignore = true)
     @Mapping(target = "updateTime", ignore = true)
     ActivityPO toPO(ActivityEntity activityEntity);

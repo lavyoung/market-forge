@@ -94,10 +94,16 @@ VALUES (100301, 100301, 100, 10, 100);
 
 INSERT INTO raffle_activity
 (id, activity_id, activity_name, activity_desc, begin_date_time, end_date_time,
- stock_count, stock_count_surplus, activity_count_id, strategy_id, award_unlock_scope, state)
+ stock_count, stock_count_surplus, activity_count_id, strategy_id, award_unlock_scope,
+ state, version, created_by, updated_by)
 VALUES (100301, 100301, '九宫格活动抽奖', '九宫格抽奖活动演示数据',
         '2026-01-01 00:00:00', '2036-12-31 23:59:59',
-        100000, 100000, 100301, 900901001, 'total', 'open');
+        100000, 100000, 100301, 900901001, 'total',
+        'open', 1, 'system_seed', 'system_seed');
+
+INSERT INTO raffle_activity_stage
+(id, stage_id, channel, source, activity_id, state, version, created_by, updated_by)
+VALUES (900905001, 900905001, 'web', 'official', 100301, 'create', 1, 'system_seed', 'system_seed');
 
 INSERT INTO raffle_activity_sku
 (sku, activity_id, activity_count_id, stock_count, stock_count_surplus, credit_amount)

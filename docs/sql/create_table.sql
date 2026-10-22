@@ -139,22 +139,27 @@ CREATE TABLE rule_tree_node_line
 CREATE TABLE raffle_activity
 (
     id                  bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-    activity_id         bigint          NOT NULL COMMENT '活动ID',
+    activity_id        bigint       NOT NULL COMMENT '活动业务ID',
     activity_name       varchar(64)     NOT NULL COMMENT '活动名称',
-    activity_desc       varchar(128)    NOT NULL COMMENT '活动描述',
+    activity_desc      varchar(256) NOT NULL COMMENT '活动描述',
     begin_date_time     datetime        NOT NULL COMMENT '开始时间',
     end_date_time       datetime        NOT NULL COMMENT '结束时间',
     stock_count         int             NOT NULL COMMENT '库存总量',
     stock_count_surplus int             NOT NULL COMMENT '剩余库存',
     activity_count_id   bigint          NOT NULL COMMENT '活动次数配置ID',
     strategy_id         bigint          NOT NULL COMMENT '抽奖策略ID',
-    award_unlock_scope varchar(16) NOT NULL COMMENT '奖品解锁次数范围：day-当日、total-活动累计',
-    state               varchar(16)     NOT NULL COMMENT '活动状态',
+    award_unlock_scope varchar(16)  NOT NULL COMMENT '奖品解锁次数范围：day-当日、total-活动累计',
+    state              varchar(16)  NOT NULL DEFAULT 'draft' COMMENT '活动状态：draft、open、close',
+    version            int          NOT NULL DEFAULT 1 COMMENT '乐观锁版本',
+    created_by         varchar(64)  NOT NULL COMMENT '创建人标识',
+    updated_by         varchar(64)  NOT NULL COMMENT '最后修改人标识',
     create_time         datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time         datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uq_activity_id (activity_id),
-    KEY idx_activity_time (begin_date_time, end_date_time)
+    KEY idx_activity_time (begin_date_time, end_date_time),
+    KEY idx_activity_state_update (state, update_time, id),
+    KEY idx_activity_name_update (activity_name, update_time, id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='抽奖活动表';
 
