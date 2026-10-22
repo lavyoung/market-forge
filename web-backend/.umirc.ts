@@ -53,6 +53,11 @@ export default defineConfig({
             icon: 'TrophyOutlined',
             routes: [
                 {
+                    name: '奖品定义',
+                    path: '/award/definition',
+                    component: './Award/Definition',
+                },
+                {
                     name: '中奖记录',
                     path: '/award/record',
                     component: './Award/Record',
@@ -63,4 +68,3 @@ export default defineConfig({
     npmClient: 'pnpm',
     utoopack: {},
 });
-
