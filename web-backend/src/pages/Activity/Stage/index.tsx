@@ -5,6 +5,7 @@ import {
     queryActivityStages,
     updateActivityStage,
 } from '@/services/activity/activity-stage';
+import {queryOpenActivityOptions} from '@/services/activity/activity-definition';
 import type {
     ActivityStageFormValues,
     ActivityStageItem,
@@ -13,7 +14,7 @@ import type {
 } from '@/services/activity/types';
 import {EditOutlined, EyeOutlined, PlusOutlined, RocketOutlined} from '@ant-design/icons';
 import type {ActionType, ProColumns} from '@ant-design/pro-components';
-import {ModalForm, PageContainer, ProForm, ProFormText, ProTable} from '@ant-design/pro-components';
+import {ModalForm, PageContainer, ProForm, ProFormSelect, ProFormText, ProTable} from '@ant-design/pro-components';
 import {Button, Descriptions, Drawer, message, Modal, Tag} from 'antd';
 import {useRef, useState} from 'react';
 
@@ -163,49 +164,51 @@ function ActivityStagePage() {
                 ]}
             />
 
-            <ModalForm<ActivityStageFormValues>
-                key={editingStage?.stageId ?? 'create'}
-                title={editingStage ? '编辑待上架配置' : '新建上架配置'}
-                width={640}
-                open={editorOpen}
-                initialValues={toFormValues(editingStage)}
-                modalProps={{destroyOnClose: true, maskClosable: false, onCancel: () => setEditorOpen(false)}}
-                submitter={{searchConfig: {submitText: editingStage ? '保存修改' : '创建草稿', resetText: '取消'}}}
-                onOpenChange={setEditorOpen}
-                onFinish={submitStage}
-            >
-                <ProForm.Group>
-                    <ProFormText
-                        name="channel"
-                        label="投放渠道"
-                        width="md"
-                        placeholder="例如 web"
-                        rules={[{required: true, message: '请输入投放渠道'}, {
-                            pattern: /^[a-z][a-z0-9_-]{0,31}$/,
-                            message: '投放渠道格式不合法'
-                        }]}
+            {editorOpen ? (
+                <ModalForm<ActivityStageFormValues>
+                    key={editingStage?.stageId ?? 'create'}
+                    title={editingStage ? '编辑待上架配置' : '新建上架配置'}
+                    width={640}
+                    open
+                    initialValues={toFormValues(editingStage)}
+                    modalProps={{destroyOnClose: true, maskClosable: false, onCancel: () => setEditorOpen(false)}}
+                    submitter={{searchConfig: {submitText: editingStage ? '保存修改' : '创建草稿', resetText: '取消'}}}
+                    onOpenChange={setEditorOpen}
+                    onFinish={submitStage}
+                >
+                    <ProForm.Group>
+                        <ProFormText
+                            name="channel"
+                            label="投放渠道"
+                            width="md"
+                            placeholder="例如 web"
+                            rules={[{required: true, message: '请输入投放渠道'}, {
+                                pattern: /^[a-z][a-z0-9_-]{0,31}$/,
+                                message: '投放渠道格式不合法'
+                            }]}
+                        />
+                        <ProFormText
+                            name="source"
+                            label="流量来源"
+                            width="md"
+                            placeholder="例如 official"
+                            rules={[{required: true, message: '请输入流量来源'}, {
+                                pattern: /^[a-z][a-z0-9_-]{0,31}$/,
+                                message: '流量来源格式不合法'
+                            }]}
+                        />
+                    </ProForm.Group>
+                    <ProFormSelect
+                        name="activityId"
+                        label="活动"
+                        width="lg"
+                        placeholder="输入活动 ID 或名称搜索"
+                        request={loadOpenActivityOptions}
+                        fieldProps={{showSearch: true, filterOption: false, allowClear: true}}
+                        rules={[{required: true, message: '请选择已开放活动'}]}
                     />
-                    <ProFormText
-                        name="source"
-                        label="流量来源"
-                        width="md"
-                        placeholder="例如 official"
-                        rules={[{required: true, message: '请输入流量来源'}, {
-                            pattern: /^[a-z][a-z0-9_-]{0,31}$/,
-                            message: '流量来源格式不合法'
-                        }]}
-                    />
-                </ProForm.Group>
-                <ProFormText
-                    name="activityId"
-                    label="活动 ID"
-                    width="md"
-                    rules={[{required: true, message: '请输入活动 ID'}, {
-                        pattern: /^[1-9][0-9]{0,18}$/,
-                        message: '活动 ID 格式不合法'
-                    }]}
-                />
-            </ModalForm>
+                </ModalForm>
+            ) : null}
 
             <Drawer title="活动展台详情" width={640} open={Boolean(detailStage)} loading={detailLoading}
                     onClose={() => setDetailStage(undefined)}>
@@ -237,6 +240,10 @@ function toFormValues(stage?: ActivityStageItem): ActivityStageFormValues {
     return stage
         ? {channel: stage.channel, source: stage.source, activityId: stage.activityId}
         : {channel: 'web', source: 'official', activityId: ''};
+}
+
+function loadOpenActivityOptions({keyWords}: { keyWords?: string }) {
+    return queryOpenActivityOptions(keyWords);
 }
 
 export default ActivityStagePage;

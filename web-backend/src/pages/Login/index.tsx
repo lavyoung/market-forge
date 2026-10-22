@@ -1,5 +1,5 @@
 import loginArtwork from '@/assets/login-architecture.png';
-import {loginAdminOperator} from '@/services/auth/auth';
+import {getCurrentAdminOperator, loginAdminOperator} from '@/services/auth/auth';
 import type {AdminLoginRequest} from '@/services/auth/types';
 import {ArrowRightOutlined, DeploymentUnitOutlined, LockOutlined, UserOutlined} from '@ant-design/icons';
 import {LoginForm, ProFormText} from '@ant-design/pro-components';
@@ -19,10 +19,27 @@ function LoginPage() {
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
-        if (initialState?.currentOperator) {
-            history.replace(resolveRedirectPath(location.search));
+        if (!initialState?.currentOperator) {
+            return undefined;
         }
-    }, [initialState?.currentOperator, location.search]);
+
+        let active = true;
+        getCurrentAdminOperator()
+            .then(() => {
+                if (active) {
+                    history.replace(resolveRedirectPath(location.search));
+                }
+            })
+            .catch(() => {
+                if (active) {
+                    void setInitialState({});
+                }
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [initialState?.currentOperator, location.search, setInitialState]);
 
     /**
      * 校验账号密码并建立服务端登录会话。

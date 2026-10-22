@@ -41,6 +41,11 @@ export default defineConfig({
             icon: 'GiftOutlined',
             routes: [
                 {
+                    name: '活动定义',
+                    path: '/activity/definition',
+                    component: './Activity/Definition',
+                },
+                {
                     name: '抽奖订单',
                     path: '/activity/order',
                     component: './Activity/Order',

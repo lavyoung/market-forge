@@ -2,6 +2,7 @@ package com.lavyoung.marketforge.infrastructure.persistent.dao.activity;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.lavyoung.marketforge.infrastructure.persistent.model.ActivityDefinitionSearchParam;
+import com.lavyoung.marketforge.infrastructure.persistent.model.ActivityDefinitionStateUpdateParam;
 import com.lavyoung.marketforge.infrastructure.persistent.po.activity.ActivityPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -42,4 +43,20 @@ public interface IActivityDao extends BaseMapper<ActivityPO> {
      * @return 按更新时间和主键倒序排列的活动记录
      */
     List<ActivityPO> queryActivityDefinitionPage(ActivityDefinitionSearchParam searchParam);
+
+    /**
+     * 按草稿状态和乐观锁版本更新活动定义。
+     *
+     * @param activity 最新活动配置和期望版本
+     * @return 影响行数
+     */
+    int updateDraftDefinition(ActivityPO activity);
+
+    /**
+     * 按当前状态和乐观锁版本推进活动生命周期。
+     *
+     * @param stateUpdate 状态条件更新参数
+     * @return 影响行数
+     */
+    int changeDefinitionState(ActivityDefinitionStateUpdateParam stateUpdate);
 }

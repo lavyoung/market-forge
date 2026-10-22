@@ -132,3 +132,95 @@ export interface ActivityStageFormValues {
     source: string;
     activityId: string;
 }
+
+/**
+ * 活动定义生命周期状态。
+ */
+export type ActivityDefinitionState = 'draft' | 'open' | 'close';
+
+/**
+ * 奖品解锁次数统计范围。
+ */
+export type AwardUnlockScope = 'day' | 'total';
+
+/**
+ * 活动定义列表项及详情。
+ *
+ * Java long 对应的业务标识统一使用字符串，避免浏览器数字精度丢失。
+ */
+export interface ActivityDefinitionItem {
+    /** 活动业务标识。 */
+    activityId: string;
+    /** 活动名称。 */
+    activityName: string;
+    /** 活动说明。 */
+    activityDesc: string | null;
+    /** 活动开始时间。 */
+    beginDateTime: string;
+    /** 活动结束时间。 */
+    endDateTime: string;
+    /** 活动库存总量。 */
+    stockCount: number;
+    /** 活动剩余库存。 */
+    stockCountSurplus: number;
+    /** 活动次数配置标识。 */
+    activityCountId: string;
+    /** 抽奖策略标识。 */
+    strategyId: string;
+    /** 奖品解锁次数统计范围。 */
+    awardUnlockScope: AwardUnlockScope;
+    /** 活动生命周期状态。 */
+    state: ActivityDefinitionState;
+    /** 乐观锁版本。 */
+    version: number;
+    /** 创建人。 */
+    createdBy: string;
+    /** 最后修改人。 */
+    updatedBy: string;
+    /** 创建时间。 */
+    createTime: string;
+    /** 最后修改时间。 */
+    updateTime: string;
+}
+
+/**
+ * ProTable 提交的活动定义查询条件。
+ */
+export interface ActivityDefinitionQuery {
+    /** ProTable 当前页，从 1 开始。 */
+    current?: number;
+    /** 每页记录数。 */
+    pageSize?: number;
+    /** 活动业务标识，精确匹配。 */
+    activityId?: string;
+    /** 活动名称前缀。 */
+    activityName?: string;
+    /** 活动生命周期状态。 */
+    state?: ActivityDefinitionState;
+}
+
+/**
+ * ProTable 所需的活动定义分页结果。
+ */
+export interface ActivityDefinitionPage {
+    /** 当前页活动定义。 */
+    data: ActivityDefinitionItem[];
+    /** 符合查询条件的记录总数。 */
+    total: number;
+    /** 请求是否成功。 */
+    success: boolean;
+}
+
+/**
+ * 创建或编辑活动定义的业务字段。
+ */
+export interface ActivityDefinitionFormValues {
+    activityName: string;
+    activityDesc: string;
+    beginDateTime: string;
+    endDateTime: string;
+    stockCount: number;
+    activityCountId: string;
+    strategyId: string;
+    awardUnlockScope: AwardUnlockScope;
+}

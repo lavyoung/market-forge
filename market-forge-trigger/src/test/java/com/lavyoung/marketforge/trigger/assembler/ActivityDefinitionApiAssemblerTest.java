@@ -1,9 +1,11 @@
 package com.lavyoung.marketforge.trigger.assembler;
 
 import com.lavyoung.marketforge.api.activity.request.ActivityDefinitionSearchRequest;
+import com.lavyoung.marketforge.api.activity.request.CreateActivityDefinitionRequest;
 import com.lavyoung.marketforge.api.activity.response.ActivityDefinitionResponse;
 import com.lavyoung.marketforge.application.activity.model.ActivityDefinitionResult;
 import com.lavyoung.marketforge.application.activity.model.ActivityDefinitionSearchQuery;
+import com.lavyoung.marketforge.application.activity.model.CreateActivityDefinitionCommand;
 import com.lavyoung.marketforge.types.model.PageResult;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
@@ -42,6 +44,23 @@ class ActivityDefinitionApiAssemblerTest {
                 () -> assertEquals(2, query.page().pageNumber()),
                 () -> assertEquals(20, query.page().pageSize())
         );
+    }
+
+    @Test
+    void shouldMapCreateRequestAndTrustedOperatorToCommand() {
+        // Given
+        CreateActivityDefinitionRequest request = new CreateActivityDefinitionRequest("新活动", "活动说明",
+                LocalDateTime.of(2026, 11, 1, 0, 0), LocalDateTime.of(2026, 11, 30, 23, 59),
+                1000, 100301L, 100001L, "total");
+
+        // When
+        CreateActivityDefinitionCommand command = ASSEMBLER.toCreateCommand(request, "admin");
+
+        // Then
+        assertAll(() -> assertEquals("新活动", command.activityName()),
+                () -> assertEquals(1000, command.stockCount()),
+                () -> assertEquals(100301L, command.activityCountId()),
+                () -> assertEquals("admin", command.operator()));
     }
 
     @Test

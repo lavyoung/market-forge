@@ -1,9 +1,11 @@
 package com.lavyoung.marketforge.trigger.assembler;
 
 import com.lavyoung.marketforge.api.activity.request.ActivityDefinitionSearchRequest;
+import com.lavyoung.marketforge.api.activity.request.ChangeActivityDefinitionStateRequest;
+import com.lavyoung.marketforge.api.activity.request.CreateActivityDefinitionRequest;
+import com.lavyoung.marketforge.api.activity.request.UpdateActivityDefinitionRequest;
 import com.lavyoung.marketforge.api.activity.response.ActivityDefinitionResponse;
-import com.lavyoung.marketforge.application.activity.model.ActivityDefinitionResult;
-import com.lavyoung.marketforge.application.activity.model.ActivityDefinitionSearchQuery;
+import com.lavyoung.marketforge.application.activity.model.*;
 import com.lavyoung.marketforge.types.model.PageRequest;
 import com.lavyoung.marketforge.types.model.PageResult;
 import org.mapstruct.Mapper;
@@ -35,6 +37,40 @@ public interface ActivityDefinitionApiAssembler {
      */
     @Mapping(target = "page", expression = "java(new PageRequest(request.pageNumber(), request.pageSize()))")
     ActivityDefinitionSearchQuery toSearchQuery(ActivityDefinitionSearchRequest request);
+
+    /**
+     * 将创建请求转换为应用命令。
+     *
+     * @param request  创建请求
+     * @param operator 当前运营人员
+     * @return 创建命令
+     */
+    @Mapping(target = "operator", source = "operator")
+    CreateActivityDefinitionCommand toCreateCommand(CreateActivityDefinitionRequest request, String operator);
+
+    /**
+     * 将修改请求转换为应用命令。
+     *
+     * @param activityId 路径活动标识
+     * @param request    修改请求
+     * @param operator   当前运营人员
+     * @return 修改命令
+     */
+    @Mapping(target = "activityId", source = "activityId")
+    @Mapping(target = "operator", source = "operator")
+    UpdateActivityDefinitionCommand toUpdateCommand(Long activityId, UpdateActivityDefinitionRequest request, String operator);
+
+    /**
+     * 将状态请求转换为应用命令。
+     *
+     * @param activityId 路径活动标识
+     * @param request    状态请求
+     * @param operator   当前运营人员
+     * @return 状态命令
+     */
+    @Mapping(target = "activityId", source = "activityId")
+    @Mapping(target = "operator", source = "operator")
+    ChangeActivityDefinitionStateCommand toStateCommand(Long activityId, ChangeActivityDefinitionStateRequest request, String operator);
 
     /**
      * 将活动定义应用结果转换为 API 响应。
