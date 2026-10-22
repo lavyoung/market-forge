@@ -59,6 +59,7 @@ lavshard:
       - rule_tree_node
       - rule_tree_node_line
       - raffle_activity
+      - raffle_activity_stage
       - raffle_activity_count
       - raffle_activity_sku
       - processed_message

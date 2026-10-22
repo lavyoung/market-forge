@@ -1,4 +1,5 @@
 import {badGatewayResponse, errorResponse, forwardMarketForge, toProxyResponse} from "@/lib/server/market-forge-api";
+import {resolveActivityId} from "@/features/raffle/server/activity-config";
 
 /**
  * 查询当前活动可使用积分兑换的 SKU 商品。
@@ -21,18 +22,11 @@ export async function GET(request: Request): Promise<Response> {
         return errorResponse(503, 900_000_001, "积分兑换商品接口尚未开放");
     }
 
-    const configuredActivityId = Number(process.env.DEMO_RAFFLE_ACTIVITY_ID);
-    if (!Number.isSafeInteger(configuredActivityId) || configuredActivityId <= 0) {
-        return errorResponse(500, 900_000_001, "开发活动未配置");
-    }
-
-    if (activityId !== configuredActivityId) {
-        return errorResponse(400, 1001, "请求活动与当前页面配置不一致");
-    }
-
-    const params = new URLSearchParams({activityId: String(activityId)});
-
     try {
+        if (activityId !== await resolveActivityId()) {
+            return errorResponse(400, 1001, "请求活动与当前生效活动不一致");
+        }
+        const params = new URLSearchParams({activityId: String(activityId)});
         const upstream = await forwardMarketForge(`/api/v1/activity/sku-products?${params}`);
         return toProxyResponse(upstream);
     } catch (error) {

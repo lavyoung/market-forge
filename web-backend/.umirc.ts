@@ -45,6 +45,11 @@ export default defineConfig({
                     path: '/activity/order',
                     component: './Activity/Order',
                 },
+                {
+                    name: '活动上架',
+                    path: '/activity/stage',
+                    component: './Activity/Stage',
+                },
             ],
         },
         {

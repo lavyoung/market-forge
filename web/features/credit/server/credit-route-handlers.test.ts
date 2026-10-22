@@ -25,7 +25,6 @@ describe("credit BFF route handlers", () => {
         toProxyMock.mockClear();
         vi.stubEnv("DEMO_RAFFLE_ENABLED", "true");
         vi.stubEnv("DEMO_RAFFLE_USER_ID", "user-001");
-        vi.stubEnv("DEMO_RAFFLE_ACTIVITY_ID", "100301");
         forwardMock.mockResolvedValue(Response.json({code: 0, message: "成功", data: {}}));
     });
 
@@ -45,13 +44,15 @@ describe("credit BFF route handlers", () => {
     it("商品查询应拒绝访问非当前配置活动", async () => {
         // Given
         const request = new Request("http://localhost/api/activity/sku-products?activityId=100302");
+        forwardMock.mockResolvedValueOnce(Response.json({code: 0, message: "成功", data: {activityId: "100301"}}));
 
         // When
         const response = await querySkuProducts(request);
 
         // Then
         expect(response.status).toBe(400);
-        expect(forwardMock).not.toHaveBeenCalled();
+        expect(forwardMock).toHaveBeenCalledOnce();
+        expect(forwardMock).toHaveBeenCalledWith("/api/v1/activity/stages/active?channel=web&source=official");
     });
 
     it("积分兑换应由 BFF 补充用户身份并构造稳定幂等号", async () => {

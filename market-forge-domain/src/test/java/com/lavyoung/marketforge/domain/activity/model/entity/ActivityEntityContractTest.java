@@ -41,6 +41,10 @@ class ActivityEntityContractTest {
             ActivitySkuEntity.class, Set.of(
                     "sku", "activityId", "activityCountId", "stockCount", "stockCountSurplus", "creditAmount"
             ),
+            ActivityStageEntity.class, Set.of(
+                    "stageId", "channel", "source", "activityId", "state", "version", "createdBy", "updatedBy",
+                    "createTime", "updateTime"
+            ),
             ActivityOrderEntity.class, Set.of(
                     "userId", "activityId", "sku", "activityName", "strategyId", "orderId", "orderTime",
                     "totalCount", "dayCount", "monthCount", "state", "outBusinessNo", "endDateTime",

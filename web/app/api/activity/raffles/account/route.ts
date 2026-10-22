@@ -1,4 +1,5 @@
 import {badGatewayResponse, errorResponse, forwardMarketForge, toProxyResponse,} from "@/lib/server/market-forge-api";
+import {resolveActivityId} from "@/features/raffle/server/activity-config";
 
 /**
  * 查询当前开发用户在指定活动下的抽奖额度。
@@ -34,28 +35,14 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     const userId = process.env.DEMO_RAFFLE_USER_ID?.trim();
-    const configuredActivityId = Number(process.env.DEMO_RAFFLE_ACTIVITY_ID);
-
     if (!userId) {
         return errorResponse(500, 900_000_001, "开发用户未配置");
     }
 
-    if (
-        !Number.isSafeInteger(configuredActivityId)
-        || configuredActivityId <= 0
-    ) {
-        return errorResponse(500, 900_000_001, "开发活动未配置");
-    }
-
-    if (activityId !== configuredActivityId) {
-        return errorResponse(
-            400,
-            1001,
-            "请求活动与当前页面配置不一致",
-        );
-    }
-
     try {
+        if (activityId !== await resolveActivityId()) {
+            return errorResponse(400, 1001, "请求活动与当前生效活动不一致");
+        }
         const upstream = await forwardMarketForge(
             "/api/v1/activity/raffles/account",
             {

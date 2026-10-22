@@ -1,4 +1,5 @@
 import {badGatewayResponse, errorResponse, forwardMarketForge, toProxyResponse,} from "@/lib/server/market-forge-api";
+import {resolveActivityId} from "@/features/raffle/server/activity-config";
 
 /**
  * 判断未知值是否为普通对象。
@@ -42,17 +43,10 @@ export async function PUT(request: Request): Promise<Response> {
     }
 
     const activityId = Number(input.activityId);
-    const configuredActivityId = Number(process.env.DEMO_RAFFLE_ACTIVITY_ID);
-
-    if (!Number.isSafeInteger(configuredActivityId) || configuredActivityId <= 0) {
-        return errorResponse(500, 900_000_001, "开发活动未配置");
-    }
-
-    if (activityId !== configuredActivityId) {
-        return errorResponse(400, 1001, "请求活动与当前页面配置不一致");
-    }
-
     try {
+        if (activityId !== await resolveActivityId()) {
+            return errorResponse(400, 1001, "请求活动与当前生效活动不一致");
+        }
         const path = `/api/v1/activity/raffles/armory?activityId=${encodeURIComponent(activityId)}`;
         const upstream = await forwardMarketForge(path, {method: "PUT"});
 

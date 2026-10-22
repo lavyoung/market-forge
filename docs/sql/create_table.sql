@@ -158,6 +158,27 @@ CREATE TABLE raffle_activity
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='抽奖活动表';
 
+CREATE TABLE raffle_activity_stage
+(
+    id          bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    stage_id    bigint          NOT NULL COMMENT '活动展台业务ID',
+    channel     varchar(32)     NOT NULL COMMENT '投放渠道',
+    source      varchar(32)     NOT NULL COMMENT '流量来源',
+    activity_id bigint          NOT NULL COMMENT '上架的活动ID',
+    state       varchar(16)     NOT NULL DEFAULT 'create' COMMENT '状态：create、active、expire',
+    version     int             NOT NULL DEFAULT 1 COMMENT '乐观锁版本',
+    created_by  varchar(64)     NOT NULL COMMENT '创建人标识',
+    updated_by  varchar(64)     NOT NULL COMMENT '最后修改人标识',
+    create_time datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_stage_id (stage_id),
+    KEY idx_stage_channel_source_activity (channel, source, activity_id),
+    KEY idx_stage_channel_source_state (channel, source, state, update_time, id),
+    KEY idx_stage_state_update (state, update_time, id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='活动展台表';
+
 CREATE TABLE raffle_activity_count
 (
     id                bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',

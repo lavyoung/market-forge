@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lavyoung.marketforge.infrastructure.persistent.dao.activity.IActivityStageDao">
+
+    <resultMap id="activityStageResultMap"
+               type="com.lavyoung.marketforge.infrastructure.persistent.po.activity.ActivityStagePO">
+        <id column="id" property="id"/>
+        <result column="stage_id" property="stageId"/>
+        <result column="channel" property="channel"/>
+        <result column="source" property="source"/>
+        <result column="activity_id" property="activityId"/>
+        <result column="state" property="state"/>
+        <result column="version" property="version"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="updated_by" property="updatedBy"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="activityStageColumns">
+        id, stage_id, channel, source, activity_id, state, version,
+        created_by, updated_by, create_time, update_time
+    </sql>
+
+    <sql id="activityStageSearchWhere">
+        <where>
+            <if test="channel != null">
+                AND channel = #{channel}
+            </if>
+            <if test="source != null">
+                AND source = #{source}
+            </if>
+            <if test="state != null">
+                AND state = #{state}
+            </if>
+        </where>
+    </sql>
+
+    <select id="countActivityStages" resultType="long">
+        SELECT COUNT(*)
+        FROM raffle_activity_stage
+        <include refid="activityStageSearchWhere"/>
+    </select>
+
+    <select id="queryActivityStagePage" resultMap="activityStageResultMap">
+        SELECT
+        <include refid="activityStageColumns"/>
+        FROM raffle_activity_stage
+        <include refid="activityStageSearchWhere"/>
+        ORDER BY update_time DESC, id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="queryByStageId" resultMap="activityStageResultMap">
+        SELECT
+        <include refid="activityStageColumns"/>
+        FROM raffle_activity_stage
+        WHERE stage_id = #{stageId}
+        LIMIT 1
+    </select>
+
+    <select id="queryActive" resultMap="activityStageResultMap">
+        SELECT
+        <include refid="activityStageColumns"/>
+        FROM raffle_activity_stage
+        WHERE channel = #{channel}
+        AND source = #{source}
+        AND state = 'active'
+        ORDER BY update_time DESC, id DESC
+    </select>
+
+    <select id="lockByChannelAndSource" resultMap="activityStageResultMap">
+        SELECT
+        <include refid="activityStageColumns"/>
+        FROM raffle_activity_stage
+        WHERE channel = #{channel}
+        AND source = #{source}
+        ORDER BY id ASC
+        FOR UPDATE
+    </select>
+
+    <update id="updateDraft"
+            parameterType="com.lavyoung.marketforge.infrastructure.persistent.po.activity.ActivityStagePO">
+        UPDATE raffle_activity_stage
+        SET channel = #{channel},
+        source = #{source},
+        activity_id = #{activityId},
+        updated_by = #{updatedBy},
+        update_time = CURRENT_TIMESTAMP,
+        version = version + 1
+        WHERE stage_id = #{stageId}
+        AND state = 'create'
+        AND version = #{version}
+    </update>
+
+    <update id="changeState"
+            parameterType="com.lavyoung.marketforge.infrastructure.persistent.model.ActivityStageStateUpdateParam">
+        UPDATE raffle_activity_stage
+        SET state = #{targetState},
+        updated_by = #{operator},
+        update_time = CURRENT_TIMESTAMP,
+        version = version + 1
+        WHERE stage_id = #{stageId}
+        AND state = #{currentState}
+        AND version = #{expectedVersion}
+    </update>
+
+</mapper>

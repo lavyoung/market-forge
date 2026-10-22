@@ -72,3 +72,63 @@ export interface ActivityOrderPage {
     /** 请求是否成功。 */
     success: boolean;
 }
+
+/**
+ * 活动展台生命周期状态。
+ */
+export type ActivityStageState = 'create' | 'active' | 'expire';
+
+/**
+ * 活动展台列表项及详情。
+ */
+export interface ActivityStageItem {
+    /** 展台业务标识。 */
+    stageId: string;
+    /** 投放渠道。 */
+    channel: string;
+    /** 流量来源。 */
+    source: string;
+    /** 当前展台关联的活动标识。 */
+    activityId: string;
+    /** 展台生命周期状态。 */
+    state: ActivityStageState;
+    /** 乐观锁版本。 */
+    version: number;
+    /** 创建人。 */
+    createdBy: string;
+    /** 最后修改人。 */
+    updatedBy: string;
+    /** 创建时间。 */
+    createTime: string;
+    /** 最后修改时间。 */
+    updateTime: string;
+}
+
+/**
+ * ProTable 提交的活动展台查询条件。
+ */
+export interface ActivityStageQuery {
+    current?: number;
+    pageSize?: number;
+    channel?: string;
+    source?: string;
+    state?: ActivityStageState;
+}
+
+/**
+ * ProTable 所需的活动展台分页结果。
+ */
+export interface ActivityStagePage {
+    data: ActivityStageItem[];
+    total: number;
+    success: boolean;
+}
+
+/**
+ * 创建或编辑活动展台的业务字段。
+ */
+export interface ActivityStageFormValues {
+    channel: string;
+    source: string;
+    activityId: string;
+}

@@ -164,6 +164,13 @@ public enum BusinessResponseCode implements IResponseCode {
     ACTIVITY_PARTAKE_ORDER_STATE_ERROR(500_005_005, "activity.partake.order.state-error", "活动参与订单状态异常"),
     ACTIVITY_PARTAKE_ORDER_PENDING(500_005_006, "activity.partake.order.pending", "存在未使用的活动参与订单"),
 
+    ACTIVITY_STAGE_NOT_FOUND(500_006_001, "activity.stage.not-found", "活动展台不存在"),
+    ACTIVITY_STAGE_ACTIVE_NOT_FOUND(500_006_002, "activity.stage.active-not-found", "当前渠道和来源没有生效活动"),
+    ACTIVITY_STAGE_CREATE_FAILED(500_006_003, "activity.stage.create-failed", "活动展台创建失败"),
+    ACTIVITY_STAGE_DUPLICATED(500_006_004, "activity.stage.duplicated", "活动展台已存在"),
+    ACTIVITY_STAGE_STATE_ERROR(500_006_005, "activity.stage.state-error", "活动展台状态异常"),
+    ACTIVITY_STAGE_CONFLICT(500_006_006, "activity.stage.conflict", "活动展台已被修改，请刷新后重试"),
+
     // 600 - 用户中奖与发奖域
     USER_AWARD_RECORD_NOT_FOUND(600_001_001, "user-award.record.not-found", "用户中奖记录不存在"),
     USER_AWARD_RECORD_CREATE_FAILED(600_001_002, "user-award.record.create-failed", "用户中奖记录创建失败"),

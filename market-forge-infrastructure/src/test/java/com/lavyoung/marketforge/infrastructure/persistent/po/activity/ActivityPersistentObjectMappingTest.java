@@ -30,6 +30,7 @@ class ActivityPersistentObjectMappingTest {
             ActivityAccountDayPO.class, "raffle_activity_account_day",
             ActivityAccountMonthPO.class, "raffle_activity_account_month",
             ActivitySkuPO.class, "raffle_activity_sku",
+            ActivityStagePO.class, "raffle_activity_stage",
             ActivityOrderPO.class, "raffle_activity_order"
     );
 
@@ -54,6 +55,9 @@ class ActivityPersistentObjectMappingTest {
             ),
             ActivitySkuPO.class, Set.of(
                     "id", "sku", "activityId", "activityCountId", "stockCount", "stockCountSurplus", "creditAmount"
+            ),
+            ActivityStagePO.class, Set.of(
+                    "id", "stageId", "channel", "source", "activityId", "state", "version", "createdBy", "updatedBy"
             ),
             ActivityOrderPO.class, Set.of(
                     "id", "userId", "activityId", "sku", "activityName", "strategyId", "orderId", "orderTime",
