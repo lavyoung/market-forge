@@ -6,7 +6,12 @@ import com.lavyoung.marketforge.application.strategy.model.StrategyAwardResult;
 import com.lavyoung.marketforge.application.strategy.service.impl.StrategyStrategyRaffleServiceImpl;
 import com.lavyoung.marketforge.domain.activity.model.vo.AwardUnlockScopeVO;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
-import com.lavyoung.marketforge.domain.strategy.model.entity.AwardEntity;
+import com.lavyoung.marketforge.domain.award.model.entity.AwardDefinitionEntity;
+import com.lavyoung.marketforge.domain.award.model.vo.AwardClaimModeVO;
+import com.lavyoung.marketforge.domain.award.model.vo.AwardConfigSnapshot;
+import com.lavyoung.marketforge.domain.award.model.vo.AwardDefinitionStateVO;
+import com.lavyoung.marketforge.domain.award.model.vo.AwardTypeVO;
+import com.lavyoung.marketforge.domain.award.repository.IAwardDefinitionRepository;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
@@ -14,6 +19,8 @@ import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.IRaffleAward;
 import com.lavyoung.marketforge.domain.strategy.service.IRaffleStrategy;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyArmory;
+import com.lavyoung.marketforge.types.exception.BusinessException;
+import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -26,114 +33,110 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * 验证抽奖应用服务的命令映射、领域调用与异常边界。
+ * 策略抽奖应用服务测试。
+ *
+ * <p>验证抽奖命中后的策略奖品查询、完整奖品定义读取、履约快照形成和
+ * 奖品生命周期边界，防止草稿或停用奖品继续产生新的中奖记录。</p>
  */
 class StrategyRaffleServiceImplTest {
 
+    private static final Long STRATEGY_ID = 100_001L;
+    private static final Long ACTIVITY_ID = 100_301L;
+    private static final Long AWARD_ID = 100_011L;
+    private static final LocalDate STATISTICS_DATE = LocalDate.of(2026, 10, 17);
+    private static final LocalDateTime END_DATE_TIME = LocalDateTime.of(2026, 10, 31, 23, 59);
+
     /**
-     * Given 合法抽奖命令与领域结果，When 执行用例，Then 返回隔离后的应用结果。
+     * Given 策略命中一个已启用奖品，When 执行抽奖，Then 应形成包含类型和版本的完整履约快照。
      */
     @Test
-    void shouldExecuteRaffleUseCase() {
+    void shouldCreateFulfillmentSnapshotForActiveAward() {
         // Given
-        IRaffleStrategy raffleStrategy = mock(IRaffleStrategy.class);
-        IStrategyArmory strategyArmory = mock(IStrategyArmory.class);
-        IStrategyRepository strategyRepository = mock(IStrategyRepository.class);
-        LocalDate statisticsDate = LocalDate.of(2026, 10, 17);
-        LocalDateTime endDateTime = LocalDateTime.of(2026, 10, 31, 23, 59);
-        RaffleFactorEntity factor = RaffleFactorEntity.builder()
-                .userId("user-001")
-                .strategyId(100_001L)
-                .activityId(100_301L)
-                .awardUnlockScope(AwardUnlockScopeVO.TOTAL)
-                .statisticsDate(statisticsDate)
-                .endDateTime(endDateTime)
-                .build();
-        when(raffleStrategy.performRaffle(factor)).thenReturn(RaffleAwardEntity.builder()
-                .strategyId(100_001L)
-                .awardId(100_011L)
-                .awardKey(null)
-                .awardConfig(null)
-                .awardDesc(null)
-                .build());
-        when(strategyRepository.getStrategyAwardEntity(100_001L, 100_011L)).thenReturn(Optional.of(
-                StrategyAwardEntity.builder()
-                        .strategyId(100_001L)
-                        .awardId(100_011L)
-                        .awardTitle("随机矿石")
-                        .build()));
-        when(strategyRepository.queryAwardEntity(100_011L)).thenReturn(Optional.of(
-                AwardEntity.builder()
-                        .awardId(100_011L)
-                        .awardKey("integral")
-                        .awardConfig("10")
-                        .awardDesc("10 积分")
-                        .build()));
-        StrategyStrategyRaffleServiceImpl service = new StrategyStrategyRaffleServiceImpl(
-                raffleStrategy, strategyArmory, mock(IActivityRepository.class), strategyRepository, mock(IRaffleAward.class));
+        RaffleFixture fixture = raffleFixture(AwardDefinitionStateVO.ACTIVE);
 
         // When
-        RaffleResult result = service.raffle(new RaffleCommand(
-                "user-001",
-                100_001L,
-                100_301L,
-                AwardUnlockScopeVO.TOTAL,
-                statisticsDate,
-                endDateTime
-        ));
+        RaffleResult result = fixture.service().raffle(raffleCommand());
 
         // Then
         assertAll(
-                () -> assertEquals(100_001L, result.strategyId()),
-                () -> assertEquals(100_011L, result.awardId()),
-                () -> assertEquals("integral", result.awardKey()),
-                () -> assertEquals("10", result.awardConfig()),
-                () -> assertEquals("随机矿石", result.awardTitle()),
-                () -> assertEquals("10 积分", result.awardDesc())
+                () -> assertEquals(STRATEGY_ID, result.strategyId()),
+                () -> assertEquals(AWARD_ID, result.awardId()),
+                () -> assertEquals("随机积分", result.awardTitle()),
+                () -> assertEquals("抽奖后自动发放 10 积分", result.awardDesc()),
+                () -> assertEquals("credit_10", result.fulfillmentSnapshot().awardCode()),
+                () -> assertEquals("internal_credit", result.fulfillmentSnapshot().awardType()),
+                () -> assertEquals("automatic", result.fulfillmentSnapshot().claimMode()),
+                () -> assertNull(result.fulfillmentSnapshot().providerCode()),
+                () -> assertEquals("{\"amount\":10}", result.fulfillmentSnapshot().configContent()),
+                () -> assertEquals(1, result.fulfillmentSnapshot().configVersion())
         );
-        verify(raffleStrategy).performRaffle(factor);
-        verify(strategyRepository).getStrategyAwardEntity(100_001L, 100_011L);
-        verify(strategyRepository).queryAwardEntity(100_011L);
+        verify(fixture.raffleStrategy()).performRaffle(raffleFactor());
+        verify(fixture.strategyRepository()).getStrategyAwardEntity(STRATEGY_ID, AWARD_ID);
+        verify(fixture.awardDefinitionRepository()).queryByAwardId(AWARD_ID);
     }
 
     /**
-     * Given 空命令，When 执行抽奖用例，Then 在进入领域层前快速失败。
+     * Given 空命令，When 执行抽奖，Then 应在调用领域服务前快速失败。
      */
     @Test
     void shouldRejectNullCommand() {
-        // Given
-        StrategyStrategyRaffleServiceImpl service = new StrategyStrategyRaffleServiceImpl(
-                mock(IRaffleStrategy.class), mock(IStrategyArmory.class), mock(IActivityRepository.class),
-                mock(IStrategyRepository.class), mock(IRaffleAward.class));
+        StrategyStrategyRaffleServiceImpl service = service(
+                mock(IRaffleStrategy.class), mock(IStrategyRepository.class), mock(IAwardDefinitionRepository.class), mock(IRaffleAward.class));
 
-        // When & Then
         assertThrows(NullPointerException.class, () -> service.raffle(null));
     }
 
     /**
-     * Given 领域服务返回奖品实体，When 查询策略奖品，Then 仅输出应用层契约字段。
+     * Given 命中奖品仍处于草稿状态，When 形成抽奖结果，Then 应拒绝产生新的中奖记录。
+     */
+    @Test
+    void shouldRejectDraftAward() {
+        assertAwardNotAvailable(AwardDefinitionStateVO.DRAFT);
+    }
+
+    /**
+     * Given 命中奖品已经停用，When 形成抽奖结果，Then 应拒绝产生新的中奖记录。
+     */
+    @Test
+    void shouldRejectDisabledAward() {
+        assertAwardNotAvailable(AwardDefinitionStateVO.DISABLED);
+    }
+
+    /**
+     * Given 策略引用的奖品定义不存在，When 形成抽奖结果，Then 应报告奖品不存在。
+     */
+    @Test
+    void shouldRejectMissingAwardDefinition() {
+        // Given
+        IRaffleStrategy raffleStrategy = mock(IRaffleStrategy.class);
+        IStrategyRepository strategyRepository = mock(IStrategyRepository.class);
+        IAwardDefinitionRepository awardDefinitionRepository = mock(IAwardDefinitionRepository.class);
+        prepareRaffleResult(raffleStrategy, strategyRepository);
+        when(awardDefinitionRepository.queryByAwardId(AWARD_ID)).thenReturn(Optional.empty());
+        StrategyStrategyRaffleServiceImpl service = service(
+                raffleStrategy, strategyRepository, awardDefinitionRepository, mock(IRaffleAward.class));
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class, () -> service.raffle(raffleCommand()));
+
+        // Then
+        assertEquals(BusinessResponseCode.AWARD_NOT_FOUND, exception.getResponseCode());
+    }
+
+    /**
+     * Given 领域服务返回奖品实体，When 查询策略奖品，Then 应只输出应用层契约字段。
      */
     @Test
     void shouldMapDomainAwardsToApplicationResults() {
         // Given
         IRaffleAward raffleAward = mock(IRaffleAward.class);
-        StrategyAwardEntity entity = StrategyAwardEntity.builder()
-                .strategyId(100_001L)
-                .awardId(100_011L)
-                .awardTitle("随机矿石")
-                .awardCount(100)
-                .awardCountSurplus(80)
-                .awardRate(new BigDecimal("0.1000"))
-                .sort(1)
-                .ruleModels("rule_lock")
-                .build();
-        when(raffleAward.queryRaffleStrategyAwardList(100_001L)).thenReturn(List.of(entity));
-        StrategyStrategyRaffleServiceImpl service = new StrategyStrategyRaffleServiceImpl(
-                mock(IRaffleStrategy.class), mock(IStrategyArmory.class), mock(IActivityRepository.class),
-                mock(IStrategyRepository.class), raffleAward);
+        StrategyAwardEntity entity = strategyAward();
+        when(raffleAward.queryRaffleStrategyAwardList(STRATEGY_ID)).thenReturn(List.of(entity));
+        StrategyStrategyRaffleServiceImpl service = service(
+                mock(IRaffleStrategy.class), mock(IStrategyRepository.class), mock(IAwardDefinitionRepository.class), raffleAward);
 
         // When
-        List<StrategyAwardResult> results = service.queryRaffleStrategyAwardList(100_001L);
+        List<StrategyAwardResult> results = service.queryRaffleStrategyAwardList(STRATEGY_ID);
 
         // Then
         StrategyAwardResult result = results.get(0);
@@ -144,6 +147,78 @@ class StrategyRaffleServiceImplTest {
                 () -> assertEquals(entity.awardTitle(), result.awardTitle()),
                 () -> assertEquals(entity.awardRate(), result.awardRate())
         );
-        verify(raffleAward).queryRaffleStrategyAwardList(100_001L);
+        verify(raffleAward).queryRaffleStrategyAwardList(STRATEGY_ID);
+    }
+
+    private void assertAwardNotAvailable(AwardDefinitionStateVO state) {
+        RaffleFixture fixture = raffleFixture(state);
+        BusinessException exception = assertThrows(
+                BusinessException.class, () -> fixture.service().raffle(raffleCommand()));
+        assertEquals(BusinessResponseCode.AWARD_NOT_AVAILABLE, exception.getResponseCode());
+    }
+
+    private RaffleFixture raffleFixture(AwardDefinitionStateVO state) {
+        IRaffleStrategy raffleStrategy = mock(IRaffleStrategy.class);
+        IStrategyRepository strategyRepository = mock(IStrategyRepository.class);
+        IAwardDefinitionRepository awardDefinitionRepository = mock(IAwardDefinitionRepository.class);
+        prepareRaffleResult(raffleStrategy, strategyRepository);
+        when(awardDefinitionRepository.queryByAwardId(AWARD_ID)).thenReturn(Optional.of(awardDefinition(state)));
+        return new RaffleFixture(service(raffleStrategy, strategyRepository, awardDefinitionRepository, mock(IRaffleAward.class)),
+                raffleStrategy, strategyRepository, awardDefinitionRepository);
+    }
+
+    private void prepareRaffleResult(IRaffleStrategy raffleStrategy, IStrategyRepository strategyRepository) {
+        when(raffleStrategy.performRaffle(raffleFactor())).thenReturn(
+                RaffleAwardEntity.builder().strategyId(STRATEGY_ID).awardId(AWARD_ID).build());
+        when(strategyRepository.getStrategyAwardEntity(STRATEGY_ID, AWARD_ID)).thenReturn(Optional.of(strategyAward()));
+    }
+
+    private StrategyStrategyRaffleServiceImpl service(IRaffleStrategy raffleStrategy, IStrategyRepository strategyRepository,
+                                                      IAwardDefinitionRepository awardDefinitionRepository, IRaffleAward raffleAward) {
+        return new StrategyStrategyRaffleServiceImpl(raffleStrategy, mock(IStrategyArmory.class),
+                mock(IActivityRepository.class), strategyRepository, awardDefinitionRepository, raffleAward);
+    }
+
+    private RaffleCommand raffleCommand() {
+        return new RaffleCommand(
+                "user-001", STRATEGY_ID, ACTIVITY_ID, AwardUnlockScopeVO.TOTAL, STATISTICS_DATE, END_DATE_TIME);
+    }
+
+    private RaffleFactorEntity raffleFactor() {
+        return RaffleFactorEntity.builder()
+                .userId("user-001")
+                .strategyId(STRATEGY_ID)
+                .activityId(ACTIVITY_ID)
+                .awardUnlockScope(AwardUnlockScopeVO.TOTAL)
+                .statisticsDate(STATISTICS_DATE)
+                .endDateTime(END_DATE_TIME)
+                .build();
+    }
+
+    private StrategyAwardEntity strategyAward() {
+        return StrategyAwardEntity.builder()
+                .strategyId(STRATEGY_ID)
+                .awardId(AWARD_ID)
+                .awardTitle("随机积分")
+                .awardCount(100)
+                .awardCountSurplus(80)
+                .awardRate(new BigDecimal("0.1000"))
+                .sort(1)
+                .build();
+    }
+
+    private AwardDefinitionEntity awardDefinition(AwardDefinitionStateVO state) {
+        return new AwardDefinitionEntity(AWARD_ID, "credit_10", "10 积分", AwardTypeVO.INTERNAL_CREDIT,
+                AwardClaimModeVO.AUTOMATIC, null, new AwardConfigSnapshot("{\"amount\":10}", 1),
+                "抽奖后自动发放 10 积分", state, 1, "operator-001", "operator-001",
+                LocalDateTime.of(2026, 10, 1, 10, 0), LocalDateTime.of(2026, 10, 1, 10, 0));
+    }
+
+    private record RaffleFixture(
+            StrategyStrategyRaffleServiceImpl service,
+            IRaffleStrategy raffleStrategy,
+            IStrategyRepository strategyRepository,
+            IAwardDefinitionRepository awardDefinitionRepository
+    ) {
     }
 }

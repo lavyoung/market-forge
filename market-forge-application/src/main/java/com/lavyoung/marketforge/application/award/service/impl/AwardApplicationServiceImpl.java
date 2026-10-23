@@ -1,5 +1,7 @@
 package com.lavyoung.marketforge.application.award.service.impl;
 
+import com.lavyoung.marketforge.application.award.grant.AwardGrantHandler;
+import com.lavyoung.marketforge.application.award.grant.AwardGrantHandlerRegistry;
 import com.lavyoung.marketforge.application.award.model.GrantAwardCommand;
 import com.lavyoung.marketforge.application.award.model.SaveUserAwardRecordCommand;
 import com.lavyoung.marketforge.application.award.service.IAwardApplicationService;
@@ -10,20 +12,22 @@ import com.lavyoung.marketforge.domain.award.model.entity.UserAwardRecordEntity;
 import com.lavyoung.marketforge.domain.award.model.vo.AwardStateVO;
 import com.lavyoung.marketforge.domain.award.repository.IAwardRepository;
 import com.lavyoung.marketforge.domain.award.service.IAwardStateService;
-import com.lavyoung.marketforge.domain.credit.model.vo.CreditAccountBusinessTypeVO;
-import com.lavyoung.marketforge.domain.credit.service.ICreditAccountService;
-import com.lavyoung.marketforge.types.exception.BusinessException;
-import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
+
 /**
  * 奖品应用服务默认实现。
- * <p>
- * 负责应用命令到领域模型的转换、事务控制和可靠消息投递编排，
- * 具体奖品状态规则委托给奖品领域服务处理。
+ *
+ * <p>负责中奖记录持久化、可靠消息创建以及发奖状态流转等应用编排。
+ * 具体奖品如何履约由 {@link AwardGrantHandler} 实现，本服务不解析奖品配置，
+ * 也不依赖积分、优惠券或第三方供应商等具体发奖能力。</p>
+ *
+ * <p>发奖处理器成功返回后，本服务才会将中奖记录推进到完成状态。
+ * 处理器抛出异常时事务回滚，异常继续交给消息消费重试和死信机制处理。</p>
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -31,37 +35,28 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AwardApplicationServiceImpl implements IAwardApplicationService {
-    /**
-     * 积分奖品业务键。
-     * <p>
-     * 与行为返利中的积分类型保持一致，表示该奖品需要进入积分账户发放链路。
-     */
-    private static final String INTEGRAL_AWARD_KEY = "integral";
-
 
     private final IAwardRepository awardRepository;
     private final IAwardStateService awardStateService;
-    private final ICreditAccountService creditAccountService;
-
+    private final AwardGrantHandlerRegistry awardGrantHandlerRegistry;
     private final ApplicationEventPublisher eventPublisher;
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void saveUserAwardRecord(SaveUserAwardRecordCommand command) {
         UserAwardRecordEntity record = toUserAwardRecord(command);
-        SendAwardRecordEvent event = new SendAwardRecordEvent(record.userId(),
-                record.orderId(), record.awardId(), command.awardKey(), command.awardConfig(), record.awardTitle());
+        SendAwardRecordEvent event = new SendAwardRecordEvent(
+                record.userId(),
+                record.orderId(),
+                record.awardId(),
+                command.fulfillmentSnapshot(),
+                record.awardTitle()
+        );
 
         awardRepository.saveUserAwardRecord(new UserAwardRecordAggregate(record, event));
         eventPublisher.publishEvent(new TaskCreatedEvent(record.userId(), event.eventId()));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void prepareAwardClaim(String userId, String orderId) {
@@ -71,43 +66,39 @@ public class AwardApplicationServiceImpl implements IAwardApplicationService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void grantAward(GrantAwardCommand command) {
-        if (!INTEGRAL_AWARD_KEY.equals(command.awardKey())) {
-            throw BusinessException.of(BusinessResponseCode.AWARD_TYPE_NOT_SUPPORTED, command.awardKey(), command.awardId());
-        }
-        Long amount = parseIntegralAmount(command.awardConfig());
-        try {
-            creditAccountService.grantCredit(command.userId(), command.orderId(), amount, CreditAccountBusinessTypeVO.AWARD_GRANT);
-        } catch (BusinessException e) {
-            // 重复处理幂等成功
-            if (e.getResponseCode() != BusinessResponseCode.POINTS_TRANSACTION_DUPLICATED) {
-                throw e;
-            }
-        }
-        awardStateService.completeGrant(command.userId(), command.orderId());
+        GrantAwardCommand validCommand = Objects.requireNonNull(command, "command must not be null");
+        String awardType = validCommand.fulfillmentSnapshot().awardType();
+
+        AwardGrantHandler handler = awardGrantHandlerRegistry.getRequired(awardType);
+        handler.grant(validCommand);
+
+        awardStateService.completeGrant(validCommand.userId(), validCommand.orderId());
     }
 
+    /**
+     * 将保存中奖记录命令转换为中奖记录领域实体。
+     *
+     * <p>新中奖记录统一从 {@link AwardStateVO#CREATE} 状态开始。
+     * 履约快照不写入中奖记录主表，而是保存在同事务创建的可靠消息中，
+     * 供后续异步发奖使用。</p>
+     *
+     * @param command 保存中奖记录命令
+     * @return 初始状态为创建中的中奖记录实体
+     * @throws NullPointerException 命令为空时抛出
+     */
     private UserAwardRecordEntity toUserAwardRecord(SaveUserAwardRecordCommand command) {
+        SaveUserAwardRecordCommand validCommand =
+                Objects.requireNonNull(command, "command must not be null");
+
         return UserAwardRecordEntity.builder()
-                .userId(command.userId())
-                .activityId(command.activityId())
-                .strategyId(command.strategyId())
-                .orderId(command.orderId())
-                .awardId(command.awardId())
-                .awardTitle(command.awardTitle())
-                .awardTime(command.awardTime())
+                .userId(validCommand.userId())
+                .activityId(validCommand.activityId())
+                .strategyId(validCommand.strategyId())
+                .orderId(validCommand.orderId())
+                .awardId(validCommand.awardId())
+                .awardTitle(validCommand.awardTitle())
+                .awardTime(validCommand.awardTime())
                 .awardState(AwardStateVO.CREATE)
                 .build();
-    }
-
-    private Long parseIntegralAmount(String awardConfig) {
-        try {
-            long amount = Long.parseLong(awardConfig);
-            if (amount <= 0) {
-                throw BusinessException.of(BusinessResponseCode.USER_AWARD_POINTS_AMOUNT_INVALID, awardConfig);
-            }
-            return amount;
-        } catch (NumberFormatException exception) {
-            throw BusinessException.of(BusinessResponseCode.USER_AWARD_POINTS_AMOUNT_INVALID, awardConfig);
-        }
     }
 }

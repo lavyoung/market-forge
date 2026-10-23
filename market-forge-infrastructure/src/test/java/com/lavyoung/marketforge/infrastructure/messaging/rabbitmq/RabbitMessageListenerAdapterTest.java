@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.lavyoung.marketforge.domain.activity.event.ActivitySkuStockDeductedEvent;
 import com.lavyoung.marketforge.domain.activity.event.ActivitySkuZeroStockEvent;
+import com.lavyoung.marketforge.domain.award.event.AwardFulfillmentSnapshot;
 import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
 import com.lavyoung.marketforge.domain.behavior.event.SendRebateEvent;
 import com.lavyoung.marketforge.domain.behavior.model.vo.RebateTypeVO;
@@ -194,8 +195,10 @@ class RabbitMessageListenerAdapterTest {
 
     @Test
     void shouldDispatchUserAwardSendEvent() throws Exception {
+        AwardFulfillmentSnapshot snapshot = new AwardFulfillmentSnapshot(
+                "award_credit", "internal_credit", "automatic", null, "{\"amount\":10}", 1);
         SendAwardRecordEvent event = new SendAwardRecordEvent(
-                USER_ID, "order-001", AWARD_ID, "award_credit", "10", "测试奖品");
+                USER_ID, "order-001", AWARD_ID, snapshot, "测试奖品");
 
         adapter.onUserAwardSend(messageOf(event));
 

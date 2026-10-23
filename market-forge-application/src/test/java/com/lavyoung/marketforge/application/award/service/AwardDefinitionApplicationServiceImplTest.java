@@ -1,5 +1,7 @@
 package com.lavyoung.marketforge.application.award.service;
 
+import com.lavyoung.marketforge.application.award.grant.AwardConfigValidatorRegistry;
+import com.lavyoung.marketforge.application.award.grant.AwardGrantHandlerRegistry;
 import com.lavyoung.marketforge.application.award.model.AwardDefinitionResult;
 import com.lavyoung.marketforge.application.award.model.ChangeAwardDefinitionStateCommand;
 import com.lavyoung.marketforge.application.award.model.CreateAwardDefinitionCommand;
@@ -46,11 +48,18 @@ class AwardDefinitionApplicationServiceImplTest {
     @Mock
     private IAwardDefinitionRepository awardDefinitionRepository;
 
+    @Mock
+    private AwardConfigValidatorRegistry awardConfigValidatorRegistry;
+
+    @Mock
+    private AwardGrantHandlerRegistry awardGrantHandlerRegistry;
+
     private AwardDefinitionApplicationServiceImpl awardDefinitionApplicationService;
 
     @BeforeEach
     void setUp() {
-        awardDefinitionApplicationService = new AwardDefinitionApplicationServiceImpl(awardDefinitionRepository);
+        awardDefinitionApplicationService = new AwardDefinitionApplicationServiceImpl(
+                awardDefinitionRepository, awardConfigValidatorRegistry, awardGrantHandlerRegistry);
     }
 
     /**
@@ -334,6 +343,104 @@ class AwardDefinitionApplicationServiceImplTest {
         // Then
         assertEquals(BusinessResponseCode.AWARD_TYPE_NOT_SUPPORTED.getCode(), exception.getCode());
         verify(awardDefinitionRepository, never()).create(any(AwardDefinitionEntity.class));
+    }
+
+    /**
+     * 验证创建草稿时配置协议校验失败，不生成奖品定义或执行持久化。
+     */
+    @Test
+    @DisplayName("创建草稿时拒绝非法奖品配置")
+    void shouldRejectInvalidConfigWhenCreatingDraft() {
+        // Given
+        CreateAwardDefinitionCommand command = new CreateAwardDefinitionCommand(
+                "credit_100", "100积分", "internal_credit", "automatic", null,
+                "{\"amount\":0}", 1, "非法积分配置", "operator-001");
+        doThrow(BusinessException.of(BusinessResponseCode.AWARD_CONFIG_INVALID, "internal_credit", 1))
+                .when(awardConfigValidatorRegistry)
+                .validate("internal_credit", 1, "{\"amount\":0}");
+
+        // When
+        BusinessException exception = assertThrows(
+                BusinessException.class, () -> awardDefinitionApplicationService.create(command));
+
+        // Then
+        assertEquals(BusinessResponseCode.AWARD_CONFIG_INVALID, exception.getResponseCode());
+        verify(awardDefinitionRepository, never()).create(any(AwardDefinitionEntity.class));
+    }
+
+    /**
+     * 验证修改草稿时最新配置校验失败，不执行条件更新。
+     */
+    @Test
+    @DisplayName("修改草稿时拒绝非法奖品配置")
+    void shouldRejectInvalidConfigWhenUpdatingDraft() {
+        // Given
+        AwardDefinitionEntity current = definition(AWARD_ID, AwardDefinitionStateVO.DRAFT, 2, "operator-001");
+        UpdateAwardDefinitionCommand command = new UpdateAwardDefinitionCommand(
+                AWARD_ID, "credit_200", "200积分", "internal_credit", "automatic", null,
+                "{\"amount\":0}", 1, "非法积分配置", 2, "operator-002");
+        when(awardDefinitionRepository.queryByAwardId(AWARD_ID)).thenReturn(Optional.of(current));
+        doThrow(BusinessException.of(BusinessResponseCode.AWARD_CONFIG_INVALID, "internal_credit", 1))
+                .when(awardConfigValidatorRegistry)
+                .validate("internal_credit", 1, "{\"amount\":0}");
+
+        // When
+        BusinessException exception = assertThrows(
+                BusinessException.class, () -> awardDefinitionApplicationService.updateDraft(command));
+
+        // Then
+        assertEquals(BusinessResponseCode.AWARD_CONFIG_INVALID, exception.getResponseCode());
+        verify(awardDefinitionRepository, never()).updateDraft(any(AwardDefinitionEntity.class));
+    }
+
+    /**
+     * 验证处理器不存在或不支持领取模式时，草稿不能进入启用状态。
+     */
+    @Test
+    @DisplayName("履约能力不支持时拒绝启用奖品")
+    void shouldRejectActivationWhenGrantCapabilityIsUnsupported() {
+        // Given
+        AwardDefinitionEntity current = definition(AWARD_ID, AwardDefinitionStateVO.DRAFT, 2, "operator-001");
+        ChangeAwardDefinitionStateCommand command =
+                new ChangeAwardDefinitionStateCommand(AWARD_ID, "active", 2, "operator-002");
+        when(awardDefinitionRepository.queryByAwardId(AWARD_ID)).thenReturn(Optional.of(current));
+        doThrow(BusinessException.of(BusinessResponseCode.AWARD_GRANT_NOT_SUPPORTED, "internal_credit", "automatic"))
+                .when(awardGrantHandlerRegistry)
+                .validateCapability("internal_credit", "automatic");
+
+        // When
+        BusinessException exception = assertThrows(
+                BusinessException.class, () -> awardDefinitionApplicationService.changeState(command));
+
+        // Then
+        assertEquals(BusinessResponseCode.AWARD_GRANT_NOT_SUPPORTED, exception.getResponseCode());
+        verify(awardConfigValidatorRegistry, never()).validate(anyString(), anyInt(), anyString());
+        verify(awardDefinitionRepository, never()).changeState(any(AwardDefinitionStateChange.class));
+    }
+
+    /**
+     * 验证启用前会重新校验持久化配置，历史非法配置不能进入生效状态。
+     */
+    @Test
+    @DisplayName("配置协议非法时拒绝启用奖品")
+    void shouldRejectActivationWhenPersistedConfigIsInvalid() {
+        // Given
+        AwardDefinitionEntity current = definition(AWARD_ID, AwardDefinitionStateVO.DRAFT, 2, "operator-001");
+        ChangeAwardDefinitionStateCommand command =
+                new ChangeAwardDefinitionStateCommand(AWARD_ID, "active", 2, "operator-002");
+        when(awardDefinitionRepository.queryByAwardId(AWARD_ID)).thenReturn(Optional.of(current));
+        doThrow(BusinessException.of(BusinessResponseCode.AWARD_CONFIG_INVALID, "internal_credit", 1))
+                .when(awardConfigValidatorRegistry)
+                .validate("internal_credit", 1, "{\"amount\":100}");
+
+        // When
+        BusinessException exception = assertThrows(
+                BusinessException.class, () -> awardDefinitionApplicationService.changeState(command));
+
+        // Then
+        assertEquals(BusinessResponseCode.AWARD_CONFIG_INVALID, exception.getResponseCode());
+        verify(awardGrantHandlerRegistry).validateCapability("internal_credit", "automatic");
+        verify(awardDefinitionRepository, never()).changeState(any(AwardDefinitionStateChange.class));
     }
 
     private UpdateAwardDefinitionCommand updateCommand(int expectedVersion) {

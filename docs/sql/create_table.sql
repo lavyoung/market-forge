@@ -25,7 +25,7 @@ CREATE TABLE award
     award_type     varchar(32)  NOT NULL COMMENT '奖品发放类型',
     claim_mode     varchar(16)  NOT NULL COMMENT '领取模式：automatic-自动发放、manual-人工领取',
     provider_code  varchar(32)  NULL COMMENT '履约供应商编码；内部奖品可以为空',
-    award_config   text         NOT NULL COMMENT '奖品发放配置快照',
+    award_config json NOT NULL COMMENT '奖品发放配置 JSON 快照',
     config_version int          NOT NULL DEFAULT 1 COMMENT '奖品配置结构版本',
     award_desc     varchar(256) NULL COMMENT '奖品描述',
     state          varchar(16)  NOT NULL DEFAULT 'draft' COMMENT '定义状态：draft、active、disabled',

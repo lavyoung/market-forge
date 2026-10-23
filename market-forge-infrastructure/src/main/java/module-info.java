@@ -41,6 +41,7 @@ module market.forge.infrastructure {
     requires com.github.benmanes.caffeine;
     requires micrometer.core;
 
+    opens com.lavyoung.marketforge.infrastructure.award.grant;
     opens com.lavyoung.marketforge.infrastructure.persistent.assembler;
     opens com.lavyoung.marketforge.infrastructure.persistent.dao;
     opens com.lavyoung.marketforge.infrastructure.persistent.dao.activity;

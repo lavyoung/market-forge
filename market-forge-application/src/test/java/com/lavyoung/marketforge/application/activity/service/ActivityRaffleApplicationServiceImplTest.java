@@ -12,6 +12,7 @@ import com.lavyoung.marketforge.domain.activity.model.vo.UserRaffleOrderStateVO;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityPartakeService;
 import com.lavyoung.marketforge.domain.activity.service.armory.IActivityArmory;
+import com.lavyoung.marketforge.domain.award.event.AwardFulfillmentSnapshot;
 import com.lavyoung.marketforge.domain.award.model.vo.AwardUnlockCountQueryVO;
 import com.lavyoung.marketforge.domain.award.model.vo.AwardUnlockResultVO;
 import com.lavyoung.marketforge.domain.award.service.IAwardUnlockService;
@@ -91,7 +92,9 @@ class ActivityRaffleApplicationServiceImplTest {
     void shouldCreatePartakeOrderDrawStrategyAndSettleAwardRecord() {
         // Given
         ActivityOrderEntity order = newActivityOrder();
-        RaffleResult raffleResult = new RaffleResult(STRATEGY_ID, AWARD_ID, "random_ore", "quantity=1", "随机矿石", "随机矿石");
+        AwardFulfillmentSnapshot snapshot = new AwardFulfillmentSnapshot(
+                "random_ore", "internal_activity_sku", "automatic", null, "{\"quantity\":1}", 1);
+        RaffleResult raffleResult = new RaffleResult(STRATEGY_ID, AWARD_ID, snapshot, "随机矿石", "随机矿石");
         when(activityAccessPolicy.isAllowed(USER_ID)).thenReturn(true);
         when(activityPartakeService.createRaffleOrder(any())).thenReturn(order);
         RaffleCommand raffleCommand = new RaffleCommand(

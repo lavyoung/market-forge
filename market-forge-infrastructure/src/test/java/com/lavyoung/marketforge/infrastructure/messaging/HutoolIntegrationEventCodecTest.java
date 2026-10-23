@@ -1,11 +1,14 @@
 package com.lavyoung.marketforge.infrastructure.messaging;
 
+import com.lavyoung.marketforge.domain.award.event.AwardFulfillmentSnapshot;
 import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
 import com.lavyoung.marketforge.domain.behavior.event.SendRebateEvent;
 import com.lavyoung.marketforge.domain.behavior.model.vo.RebateTypeVO;
 import com.lavyoung.marketforge.domain.credit.event.CreditAdjustSuccessEvent;
+import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.messaging.IntegrationEvent;
 import com.lavyoung.marketforge.types.messaging.MqConstants;
+import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -28,14 +31,15 @@ class HutoolIntegrationEventCodecTest {
     void shouldPreserveAwardGrantFieldsWhenDeserializingSendAwardRecordEvent() {
         // Given
         HutoolIntegrationEventCodec codec = new HutoolIntegrationEventCodec();
+        AwardFulfillmentSnapshot snapshot = new AwardFulfillmentSnapshot(
+                "credit_10", "internal_credit", "automatic", null, "{\"amount\":10}", 1);
         SendAwardRecordEvent expected = SendAwardRecordEvent.builder()
                 .eventId("event-001")
                 .occurredAt(Instant.parse("2026-10-11T13:30:00Z"))
                 .userId("user-001")
                 .orderId("order-001")
                 .awardId(900901011L)
-                .awardKey("integral")
-                .awardConfig("10")
+                .fulfillmentSnapshot(snapshot)
                 .awardTitle("10 积分")
                 .build();
 
@@ -51,10 +55,36 @@ class HutoolIntegrationEventCodecTest {
                 () -> assertEquals(expected.userId(), event.userId()),
                 () -> assertEquals(expected.orderId(), event.orderId()),
                 () -> assertEquals(expected.awardId(), event.awardId()),
-                () -> assertEquals(expected.awardKey(), event.awardKey()),
-                () -> assertEquals(expected.awardConfig(), event.awardConfig()),
+                () -> assertEquals(expected.fulfillmentSnapshot(), event.fulfillmentSnapshot()),
                 () -> assertEquals(expected.awardTitle(), event.awardTitle())
         );
+    }
+
+    /**
+     * Given 历史或损坏消息没有履约快照，When 执行补偿反序列化，Then 应报告消息格式错误。
+     */
+    @Test
+    void shouldRejectSendAwardRecordEventWithoutFulfillmentSnapshot() {
+        // Given
+        HutoolIntegrationEventCodec codec = new HutoolIntegrationEventCodec();
+        String messageBody = """
+                {
+                  "eventId": "event-001",
+                  "occurredAt": "2026-10-11T13:30:00Z",
+                  "userId": "user-001",
+                  "orderId": "order-001",
+                  "awardId": 900901011,
+                  "awardTitle": "10 积分"
+                }
+                """;
+
+        // When
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> codec.deserialize(MqConstants.USER_AWARD_SEND_ROUTE_KEY, messageBody));
+
+        // Then
+        assertEquals(BusinessResponseCode.MESSAGE_FORMAT_INVALID, exception.getResponseCode());
     }
 
     /**

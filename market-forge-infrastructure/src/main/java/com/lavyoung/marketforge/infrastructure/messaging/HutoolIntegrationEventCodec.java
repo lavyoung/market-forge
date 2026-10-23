@@ -2,6 +2,7 @@ package com.lavyoung.marketforge.infrastructure.messaging;
 
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.lavyoung.marketforge.domain.award.event.AwardFulfillmentSnapshot;
 import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
 import com.lavyoung.marketforge.domain.behavior.event.SendRebateEvent;
 import com.lavyoung.marketforge.domain.behavior.model.vo.RebateTypeVO;
@@ -69,16 +70,40 @@ public class HutoolIntegrationEventCodec implements IntegrationEventCodec {
                 .build();
     }
 
+    /**
+     * 反序列化用户中奖记录事件。
+     *
+     * @param messageBody task 表中保存的事件 JSON
+     * @return 包含完整奖品履约快照的中奖记录事件
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 消息缺少履约快照时抛出
+     */
     private SendAwardRecordEvent deserializeSendAwardRecordEvent(String messageBody) {
         JSONObject jsonObject = JSONUtil.parseObj(messageBody);
+        JSONObject snapshotJson = jsonObject.getJSONObject("fulfillmentSnapshot");
+
+        if (snapshotJson == null) {
+            throw BusinessException.of(
+                    BusinessResponseCode.MESSAGE_FORMAT_INVALID,
+                    "fulfillmentSnapshot"
+            );
+        }
+
+        AwardFulfillmentSnapshot snapshot = new AwardFulfillmentSnapshot(
+                snapshotJson.getStr("awardCode"),
+                snapshotJson.getStr("awardType"),
+                snapshotJson.getStr("claimMode"),
+                snapshotJson.getStr("providerCode"),
+                snapshotJson.getStr("configContent"),
+                snapshotJson.getInt("configVersion")
+        );
+
         return SendAwardRecordEvent.builder()
                 .eventId(jsonObject.getStr("eventId"))
                 .occurredAt(parseOccurredAt(jsonObject.getStr("occurredAt")))
                 .userId(jsonObject.getStr("userId"))
                 .orderId(jsonObject.getStr("orderId"))
                 .awardId(jsonObject.getLong("awardId"))
-                .awardKey(jsonObject.getStr("awardKey"))
-                .awardConfig(jsonObject.getStr("awardConfig"))
+                .fulfillmentSnapshot(snapshot)
                 .awardTitle(jsonObject.getStr("awardTitle"))
                 .build();
     }

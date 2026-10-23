@@ -2,6 +2,7 @@ package com.lavyoung.marketforge.application.award.messaging;
 
 import com.lavyoung.marketforge.application.award.model.GrantAwardCommand;
 import com.lavyoung.marketforge.application.award.service.IAwardApplicationService;
+import com.lavyoung.marketforge.domain.award.event.AwardFulfillmentSnapshot;
 import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
 import com.lavyoung.marketforge.types.messaging.MessageContext;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.verify;
 
 /**
@@ -36,12 +38,13 @@ class SendAwardRecordMessageHandlerTest {
     void shouldDispatchGrantAwardCommand() {
         // Given
         SendAwardRecordMessageHandler handler = new SendAwardRecordMessageHandler(awardApplicationService);
+        AwardFulfillmentSnapshot snapshot = new AwardFulfillmentSnapshot(
+                "credit_10", "internal_credit", "automatic", null, "{\"amount\":10}", 1);
         SendAwardRecordEvent event = new SendAwardRecordEvent(
                 "user-001",
                 "order-001",
                 100011L,
-                "integral",
-                "10",
+                snapshot,
                 "测试积分"
         );
         MessageContext context = new MessageContext("message-001", "trace-001", false, Map.of());
@@ -57,8 +60,7 @@ class SendAwardRecordMessageHandlerTest {
         assertEquals(event.userId(), command.userId());
         assertEquals(event.orderId(), command.orderId());
         assertEquals(event.awardId(), command.awardId());
-        assertEquals(event.awardKey(), command.awardKey());
-        assertEquals(event.awardConfig(), command.awardConfig());
+        assertSame(snapshot, command.fulfillmentSnapshot());
         assertEquals(event.awardTitle(), command.awardTitle());
     }
 }

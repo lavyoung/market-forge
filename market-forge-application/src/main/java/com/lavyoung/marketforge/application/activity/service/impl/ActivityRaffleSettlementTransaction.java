@@ -10,8 +10,6 @@ import com.lavyoung.marketforge.types.utils.DateUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.Objects;
-
 /**
  * 活动抽奖结算事务。
  * <p>
@@ -32,9 +30,12 @@ public class ActivityRaffleSettlementTransaction {
     /**
      * 结算一次活动抽奖结果。
      *
+     * <p>履约快照必须从抽奖结果原样进入中奖记录命令。中奖记录与可靠消息任务
+     * 在同一事务中保存，随后才将活动参与订单更新为已使用。</p>
+     *
      * @param activityOrder 已创建的活动参与订单
-     * @param raffleResult  策略抽奖结果
-     * @throws com.lavyoung.marketforge.types.exception.BusinessException 活动订单状态更新、中奖记录保存或任务创建失败时抛出
+     * @param raffleResult  已包含履约快照的抽奖结果
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 订单消费、中奖记录或消息任务创建失败时抛出
      */
     public void settle(ActivityOrderEntity activityOrder, RaffleResult raffleResult) {
         transactionExecutor.execute(() -> {
@@ -44,9 +45,8 @@ public class ActivityRaffleSettlementTransaction {
                     raffleResult.strategyId(),
                     activityOrder.orderId(),
                     raffleResult.awardId(),
-                    raffleResult.awardKey(),
-                    raffleResult.awardConfig(),
-                    Objects.requireNonNullElse(raffleResult.awardDesc(), String.valueOf(raffleResult.awardId())),
+                    raffleResult.fulfillmentSnapshot(),
+                    raffleResult.awardTitle(),
                     DateUtil.now()
             ));
             activityPartakeService.consumeRaffleOrder(activityOrder.userId(), activityOrder.orderId());

@@ -6,7 +6,9 @@ import com.lavyoung.marketforge.application.strategy.model.StrategyAwardResult;
 import com.lavyoung.marketforge.application.strategy.service.IStrategyRaffleService;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityEntity;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
-import com.lavyoung.marketforge.domain.strategy.model.entity.AwardEntity;
+import com.lavyoung.marketforge.domain.award.event.AwardFulfillmentSnapshot;
+import com.lavyoung.marketforge.domain.award.model.entity.AwardDefinitionEntity;
+import com.lavyoung.marketforge.domain.award.repository.IAwardDefinitionRepository;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.RaffleFactorEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
@@ -39,10 +41,15 @@ public class StrategyStrategyRaffleServiceImpl implements IStrategyRaffleService
     private final IStrategyArmory strategyArmory;
     private final IActivityRepository activityRepository;
     private final IStrategyRepository strategyRepository;
+    private final IAwardDefinitionRepository awardDefinitionRepository;
     private final IRaffleAward raffleAward;
 
     /**
      * {@inheritDoc}
+     *
+     * <p>抽奖命中后读取完整奖品定义，并立即创建不可变履约快照。
+     * 只有处于启用状态的奖品才能产生新的中奖记录；已经产生的历史中奖记录
+     * 则继续使用消息中保存的旧快照完成履约。</p>
      */
     @Override
     public RaffleResult raffle(RaffleCommand command) {
@@ -60,14 +67,26 @@ public class StrategyStrategyRaffleServiceImpl implements IStrategyRaffleService
         StrategyAwardEntity strategyAward = strategyRepository
                 .getStrategyAwardEntity(award.strategyId(), award.awardId())
                 .orElseThrow(() -> BusinessException.of(BusinessResponseCode.STRATEGY_NOT_FOUND, award.strategyId(), award.awardId()));
-        AwardEntity awardConfig = strategyRepository.queryAwardEntity(award.awardId()).orElseThrow(() -> BusinessException.of(BusinessResponseCode.AWARD_NOT_FOUND, award.awardId()));
+        AwardDefinitionEntity definition = awardDefinitionRepository.queryByAwardId(award.awardId())
+                .orElseThrow(() -> BusinessException.of(BusinessResponseCode.AWARD_NOT_FOUND, award.awardId()));
+        if (!definition.canReference()) {
+            throw BusinessException.of(BusinessResponseCode.AWARD_NOT_AVAILABLE,
+                    definition.awardId(),
+                    definition.state().getCode());
+        }
         return new RaffleResult(
                 award.strategyId(),
                 award.awardId(),
-                awardConfig.awardKey(),
-                awardConfig.awardConfig(),
+                new AwardFulfillmentSnapshot(
+                        definition.awardCode(),
+                        definition.awardType().code(),
+                        definition.claimMode().getCode(),
+                        definition.providerCode(),
+                        definition.awardConfig().content(),
+                        definition.awardConfig().version()
+                ),
                 strategyAward.awardTitle(),
-                awardConfig.awardDesc()
+                definition.awardDesc()
         );
     }
 

@@ -3,7 +3,7 @@ package com.lavyoung.marketforge.domain.award.event;
 import com.lavyoung.marketforge.types.messaging.BusinessIdempotentIntegrationEvent;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * 用户中奖记录事件契约测试。
@@ -21,16 +21,34 @@ class SendAwardRecordEventTest {
     @Test
     void shouldUseBusinessIdempotency() {
         // Given
+        AwardFulfillmentSnapshot snapshot = new AwardFulfillmentSnapshot(
+                "credit_10", "internal_credit", "automatic", null, "{\"amount\":10}", 1);
         SendAwardRecordEvent event = new SendAwardRecordEvent(
                 "user-001",
                 "order-001",
                 900901011L,
-                "integral",
-                "10",
+                snapshot,
                 "10 积分"
         );
 
         // When / Then
-        assertInstanceOf(BusinessIdempotentIntegrationEvent.class, event);
+        assertAll(
+                () -> assertInstanceOf(BusinessIdempotentIntegrationEvent.class, event),
+                () -> assertSame(snapshot, event.fulfillmentSnapshot()),
+                () -> assertEquals("credit_10", event.fulfillmentSnapshot().awardCode()),
+                () -> assertEquals("internal_credit", event.fulfillmentSnapshot().awardType()),
+                () -> assertEquals("{\"amount\":10}", event.fulfillmentSnapshot().configContent()),
+                () -> assertEquals(1, event.fulfillmentSnapshot().configVersion())
+        );
+    }
+
+    /**
+     * Given 履约快照缺失，When 创建中奖记录事件，Then 应拒绝不完整事件进入可靠消息表。
+     */
+    @Test
+    void shouldRejectMissingFulfillmentSnapshot() {
+        // Given / When / Then
+        assertThrows(NullPointerException.class,
+                () -> new SendAwardRecordEvent("user-001", "order-001", 900901011L, null, "10 积分"));
     }
 }

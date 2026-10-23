@@ -1,27 +1,30 @@
 package com.lavyoung.marketforge.application.award.service;
 
+import com.lavyoung.marketforge.application.award.grant.AwardGrantHandler;
+import com.lavyoung.marketforge.application.award.grant.AwardGrantHandlerRegistry;
 import com.lavyoung.marketforge.application.award.model.GrantAwardCommand;
 import com.lavyoung.marketforge.application.award.service.impl.AwardApplicationServiceImpl;
+import com.lavyoung.marketforge.domain.award.event.AwardFulfillmentSnapshot;
 import com.lavyoung.marketforge.domain.award.repository.IAwardRepository;
 import com.lavyoung.marketforge.domain.award.service.IAwardStateService;
-import com.lavyoung.marketforge.domain.credit.model.vo.CreditAccountBusinessTypeVO;
-import com.lavyoung.marketforge.domain.credit.service.ICreditAccountService;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 /**
- * 奖品应用服务测试。
- * <p>
- * 覆盖自动发奖编排的关键路径：积分奖品应完成积分入账和中奖记录状态推进，
- * 非积分奖品或非法积分配置应阻断发奖流程。
+ * {@link AwardApplicationServiceImpl} 单元测试。
+ *
+ * <p>验证通用发奖应用服务只承担处理器路由和中奖记录状态编排。具体积分配置解析、
+ * 积分入账和幂等语义由对应的发奖处理器测试覆盖。</p>
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -32,6 +35,7 @@ class AwardApplicationServiceImplTest {
     private static final String USER_ID = "user-001";
     private static final String ORDER_ID = "order-001";
     private static final Long AWARD_ID = 100011L;
+    private static final String AWARD_TYPE = "internal_credit";
 
     @Mock
     private IAwardRepository awardRepository;
@@ -40,163 +44,98 @@ class AwardApplicationServiceImplTest {
     private IAwardStateService awardStateService;
 
     @Mock
-    private ICreditAccountService creditAccountService;
+    private AwardGrantHandlerRegistry awardGrantHandlerRegistry;
+
+    @Mock
+    private AwardGrantHandler awardGrantHandler;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
     /**
-     * Given 积分奖品发奖命令，When 发放奖品，Then 应先发放积分再完成中奖记录状态。
+     * 验证应用服务按履约快照中的奖品类型选择处理器，并在履约成功后推进中奖记录。
      */
     @Test
-    void shouldGrantIntegralAwardAndCompleteAwardRecord() {
+    void shouldRouteHandlerAndCompleteAwardRecord() {
         // Given
         AwardApplicationServiceImpl service = service();
-        GrantAwardCommand command = integralAwardCommand("10");
+        GrantAwardCommand command = command();
+        when(awardGrantHandlerRegistry.getRequired(AWARD_TYPE)).thenReturn(awardGrantHandler);
 
         // When
         service.grantAward(command);
 
         // Then
-        verify(creditAccountService).grantCredit(
-                USER_ID,
-                ORDER_ID,
-                10L,
-                CreditAccountBusinessTypeVO.AWARD_GRANT
-        );
-        verify(awardStateService).completeGrant(USER_ID, ORDER_ID);
+        InOrder inOrder = inOrder(awardGrantHandlerRegistry, awardGrantHandler, awardStateService);
+        inOrder.verify(awardGrantHandlerRegistry).getRequired(AWARD_TYPE);
+        inOrder.verify(awardGrantHandler).grant(command);
+        inOrder.verify(awardStateService).completeGrant(USER_ID, ORDER_ID);
     }
 
     /**
-     * Given 非积分奖品发奖命令，When 发放奖品，Then 应抛出类型不支持异常且不执行积分入账。
+     * 验证没有注册对应处理器时直接返回统一业务异常，不推进中奖记录状态。
      */
     @Test
-    void shouldRejectUnsupportedAwardType() {
+    void shouldRejectUnregisteredAwardType() {
         // Given
         AwardApplicationServiceImpl service = service();
-        GrantAwardCommand command = new GrantAwardCommand(
-                USER_ID,
-                ORDER_ID,
-                AWARD_ID,
-                "coupon",
-                "coupon-template-001",
-                "测试优惠券"
-        );
+        GrantAwardCommand command = command();
+        BusinessException unsupported = BusinessException.of(BusinessResponseCode.AWARD_GRANT_NOT_SUPPORTED, AWARD_TYPE);
+        when(awardGrantHandlerRegistry.getRequired(AWARD_TYPE)).thenThrow(unsupported);
 
         // When
         BusinessException exception = assertThrows(BusinessException.class, () -> service.grantAward(command));
 
         // Then
-        assertEquals(BusinessResponseCode.AWARD_TYPE_NOT_SUPPORTED, exception.getResponseCode());
-        verify(creditAccountService, never()).grantCredit(
-                USER_ID,
-                ORDER_ID,
-                10L,
-                CreditAccountBusinessTypeVO.AWARD_GRANT
-        );
+        assertEquals(BusinessResponseCode.AWARD_GRANT_NOT_SUPPORTED, exception.getResponseCode());
+        verifyNoInteractions(awardGrantHandler);
         verify(awardStateService, never()).completeGrant(USER_ID, ORDER_ID);
     }
 
     /**
-     * Given 积分数量不是数字，When 发放奖品，Then 应抛出积分数量非法异常。
+     * 验证处理器真实履约失败时异常继续向上抛出，中奖记录不能被错误标记为完成。
      */
     @Test
-    void shouldRejectInvalidIntegralAwardConfig() {
+    void shouldNotCompleteAwardRecordWhenHandlerFails() {
         // Given
         AwardApplicationServiceImpl service = service();
-        GrantAwardCommand command = integralAwardCommand("abc");
+        GrantAwardCommand command = command();
+        BusinessException grantFailure = BusinessException.of(BusinessResponseCode.AWARD_GRANT_FAILED, ORDER_ID);
+        when(awardGrantHandlerRegistry.getRequired(AWARD_TYPE)).thenReturn(awardGrantHandler);
+        org.mockito.Mockito.doThrow(grantFailure).when(awardGrantHandler).grant(command);
 
         // When
         BusinessException exception = assertThrows(BusinessException.class, () -> service.grantAward(command));
 
         // Then
-        assertEquals(BusinessResponseCode.USER_AWARD_POINTS_AMOUNT_INVALID, exception.getResponseCode());
-        verify(creditAccountService, never()).grantCredit(
-                USER_ID,
-                ORDER_ID,
-                10L,
-                CreditAccountBusinessTypeVO.AWARD_GRANT
-        );
+        assertEquals(BusinessResponseCode.AWARD_GRANT_FAILED, exception.getResponseCode());
         verify(awardStateService, never()).completeGrant(USER_ID, ORDER_ID);
     }
 
     /**
-     * Given 积分数量小于等于零，When 发放奖品，Then 应抛出积分数量非法异常。
+     * 验证空命令在访问履约快照之前被明确拒绝。
      */
     @Test
-    void shouldRejectNonPositiveIntegralAwardConfig() {
+    void shouldRejectNullGrantCommand() {
         // Given
         AwardApplicationServiceImpl service = service();
-        GrantAwardCommand command = integralAwardCommand("0");
 
         // When
-        BusinessException exception = assertThrows(BusinessException.class, () -> service.grantAward(command));
+        NullPointerException exception = assertThrows(NullPointerException.class, () -> service.grantAward(null));
 
         // Then
-        assertEquals(BusinessResponseCode.USER_AWARD_POINTS_AMOUNT_INVALID, exception.getResponseCode());
-        verify(creditAccountService, never()).grantCredit(
-                USER_ID,
-                ORDER_ID,
-                10L,
-                CreditAccountBusinessTypeVO.AWARD_GRANT
-        );
-        verify(awardStateService, never()).completeGrant(USER_ID, ORDER_ID);
-    }
-
-    /**
-     * Given 积分账户流水已处理，When 重复发放同一中奖积分，Then 应视为幂等成功并推进中奖记录完成。
-     */
-    @Test
-    void shouldTreatDuplicatedCreditTransactionAsIdempotentSuccess() {
-        // Given
-        AwardApplicationServiceImpl service = service();
-        GrantAwardCommand command = integralAwardCommand("10");
-        doThrow(BusinessException.of(BusinessResponseCode.POINTS_TRANSACTION_DUPLICATED, USER_ID, ORDER_ID))
-                .when(creditAccountService)
-                .grantCredit(USER_ID, ORDER_ID, 10L, CreditAccountBusinessTypeVO.AWARD_GRANT);
-
-        // When / Then
-        assertDoesNotThrow(() -> service.grantAward(command));
-        verify(awardStateService).completeGrant(USER_ID, ORDER_ID);
-    }
-
-    /**
-     * Given 积分账户真实发放失败，When 发放中奖积分，Then 应继续抛出异常并阻断中奖记录完成。
-     */
-    @Test
-    void shouldPropagateCreditGrantFailure() {
-        // Given
-        AwardApplicationServiceImpl service = service();
-        GrantAwardCommand command = integralAwardCommand("10");
-        doThrow(BusinessException.of(BusinessResponseCode.POINTS_GRANT_FAILED, USER_ID, ORDER_ID))
-                .when(creditAccountService)
-                .grantCredit(USER_ID, ORDER_ID, 10L, CreditAccountBusinessTypeVO.AWARD_GRANT);
-
-        // When
-        BusinessException exception = assertThrows(BusinessException.class, () -> service.grantAward(command));
-
-        // Then
-        assertEquals(BusinessResponseCode.POINTS_GRANT_FAILED, exception.getResponseCode());
-        verify(awardStateService, never()).completeGrant(USER_ID, ORDER_ID);
+        assertEquals("command must not be null", exception.getMessage());
+        verifyNoInteractions(awardGrantHandlerRegistry, awardGrantHandler, awardStateService);
     }
 
     private AwardApplicationServiceImpl service() {
         return new AwardApplicationServiceImpl(
-                awardRepository,
-                awardStateService,
-                creditAccountService,
-                eventPublisher
-        );
+                awardRepository, awardStateService, awardGrantHandlerRegistry, eventPublisher);
     }
 
-    private GrantAwardCommand integralAwardCommand(String awardConfig) {
-        return new GrantAwardCommand(
-                USER_ID,
-                ORDER_ID,
-                AWARD_ID,
-                "integral",
-                awardConfig,
-                "测试积分"
-        );
+    private GrantAwardCommand command() {
+        AwardFulfillmentSnapshot snapshot = new AwardFulfillmentSnapshot(
+                "integral", AWARD_TYPE, "automatic", null, "{\"amount\":100}", 1);
+        return new GrantAwardCommand(USER_ID, ORDER_ID, AWARD_ID, snapshot, "测试积分");
     }
 }

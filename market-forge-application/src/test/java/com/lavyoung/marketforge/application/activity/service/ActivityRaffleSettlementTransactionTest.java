@@ -8,6 +8,7 @@ import com.lavyoung.marketforge.application.tx.ITransactionExecutor;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityOrderEntity;
 import com.lavyoung.marketforge.domain.activity.model.vo.UserRaffleOrderStateVO;
 import com.lavyoung.marketforge.domain.activity.service.IRaffleActivityPartakeService;
+import com.lavyoung.marketforge.domain.award.event.AwardFulfillmentSnapshot;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -18,8 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDateTime;
 import java.util.function.Supplier;
 
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.inOrder;
 
 /**
@@ -57,7 +57,9 @@ class ActivityRaffleSettlementTransactionTest {
                 .orderTime(LocalDateTime.of(2026, 9, 30, 10, 0))
                 .state(UserRaffleOrderStateVO.CREATE.getCode())
                 .build();
-        RaffleResult raffleResult = new RaffleResult(STRATEGY_ID, AWARD_ID, "random_ore", "quantity=1", "随机矿石", "随机矿石");
+        AwardFulfillmentSnapshot snapshot = new AwardFulfillmentSnapshot(
+                "random_ore", "internal_activity_sku", "automatic", null, "{\"quantity\":1}", 1);
+        RaffleResult raffleResult = new RaffleResult(STRATEGY_ID, AWARD_ID, snapshot, "随机矿石", "随机矿石");
         ActivityRaffleSettlementTransaction transaction =
                 new ActivityRaffleSettlementTransaction(activityPartakeService, awardApplicationService, syncTransactionExecutor());
 
@@ -76,6 +78,7 @@ class ActivityRaffleSettlementTransactionTest {
                 () -> assertEquals(STRATEGY_ID, commandCaptor.getValue().strategyId()),
                 () -> assertEquals(ORDER_ID, commandCaptor.getValue().orderId()),
                 () -> assertEquals(AWARD_ID, commandCaptor.getValue().awardId()),
+                () -> assertSame(snapshot, commandCaptor.getValue().fulfillmentSnapshot()),
                 () -> assertEquals("随机矿石", commandCaptor.getValue().awardTitle())
         );
     }

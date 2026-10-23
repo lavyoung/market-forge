@@ -33,12 +33,18 @@ public interface IAwardApplicationService {
 
     /**
      * 发放用户中奖奖品。
-     * <p>
-     * 应用层根据奖品业务键选择具体发奖方式。当前章节先支持积分奖品，
-     * 发奖成功后会推进用户中奖记录状态。
      *
-     * @param command 发奖命令
-     * @throws com.lavyoung.marketforge.types.exception.BusinessException 奖品类型不支持、配置非法或发奖失败时抛出
+     * <p>应用层根据履约快照中的 {@code awardType} 选择发奖处理器。
+     * 处理器负责执行具体权益履约；处理器成功返回后，应用服务统一将
+     * 中奖记录推进为已完成状态。</p>
+     *
+     * <p>同一个抽奖订单可能因可靠消息重试而被重复处理，因此具体处理器
+     * 必须使用订单号保证履约幂等。</p>
+     *
+     * @param command 包含用户、订单和不可变履约快照的发奖命令
+     * @throws NullPointerException 命令为空时抛出
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException
+     *                              处理器不存在、配置非法或奖品履约失败时抛出
      */
     void grantAward(GrantAwardCommand command);
 }

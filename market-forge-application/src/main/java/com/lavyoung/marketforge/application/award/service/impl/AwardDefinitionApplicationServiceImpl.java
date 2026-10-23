@@ -1,5 +1,7 @@
 package com.lavyoung.marketforge.application.award.service.impl;
 
+import com.lavyoung.marketforge.application.award.grant.AwardConfigValidatorRegistry;
+import com.lavyoung.marketforge.application.award.grant.AwardGrantHandlerRegistry;
 import com.lavyoung.marketforge.application.award.model.AwardDefinitionResult;
 import com.lavyoung.marketforge.application.award.model.ChangeAwardDefinitionStateCommand;
 import com.lavyoung.marketforge.application.award.model.CreateAwardDefinitionCommand;
@@ -42,12 +44,17 @@ public class AwardDefinitionApplicationServiceImpl implements IAwardDefinitionAp
     private static final int AWARD_ID_LENGTH = 18;
 
     private final IAwardDefinitionRepository awardDefinitionRepository;
+    private final AwardConfigValidatorRegistry awardConfigValidatorRegistry;
+    private final AwardGrantHandlerRegistry awardGrantHandlerRegistry;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public AwardDefinitionResult create(CreateAwardDefinitionCommand command) {
         CreateAwardDefinitionCommand validCommand =
                 Objects.requireNonNull(command, "command must not be null");
+
+        awardConfigValidatorRegistry.validate(
+                validCommand.awardType(), validCommand.configVersion(), validCommand.awardConfig());
 
         Long awardId = Long.valueOf(IdGenerator.nextNumericId(AWARD_ID_LENGTH));
         AwardDefinitionEntity definition = createNewDefinition(awardId, validCommand);
@@ -74,6 +81,8 @@ public class AwardDefinitionApplicationServiceImpl implements IAwardDefinitionAp
         }
 
         ensureExpectedVersion(current, validCommand.expectedVersion());
+        awardConfigValidatorRegistry.validate(
+                validCommand.awardType(), validCommand.configVersion(), validCommand.awardConfig());
         AwardDefinitionEntity updated = createUpdatedDefinition(current, validCommand);
 
         if (!awardDefinitionRepository.updateDraft(updated)) {
@@ -104,6 +113,10 @@ public class AwardDefinitionApplicationServiceImpl implements IAwardDefinitionAp
             );
         }
 
+        if (targetState == AwardDefinitionStateVO.ACTIVE) {
+            validateActivationCapability(current);
+        }
+
         AwardDefinitionStateChange stateChange = new AwardDefinitionStateChange(
                 current.awardId(),
                 current.state(),
@@ -118,6 +131,24 @@ public class AwardDefinitionApplicationServiceImpl implements IAwardDefinitionAp
         }
 
         return toResult(queryRequired(current.awardId()));
+    }
+
+    /**
+     * 校验奖品定义是否具备进入启用状态的完整履约能力。
+     *
+     * <p>启用是奖品进入抽奖策略前的最后一道防线，需要同时确认发奖处理器存在、
+     * 领取模式受支持，并且配置内容能够按照声明的版本被当前系统解析。</p>
+     *
+     * @param definition 待启用的奖品定义
+     * @throws BusinessException 处理器、领取模式或配置协议不可用时抛出
+     */
+    private void validateActivationCapability(AwardDefinitionEntity definition) {
+        String awardType = definition.awardType().code();
+        String claimMode = definition.claimMode().getCode();
+
+        awardGrantHandlerRegistry.validateCapability(awardType, claimMode);
+        awardConfigValidatorRegistry.validate(
+                awardType, definition.awardConfig().version(), definition.awardConfig().content());
     }
 
     /**
