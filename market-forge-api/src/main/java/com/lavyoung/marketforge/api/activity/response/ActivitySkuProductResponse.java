@@ -7,10 +7,9 @@ import java.io.Serializable;
 /**
  * 活动 SKU 商品查询响应。
  *
- * <p>该对象面向前端商品列表页面，描述用户可以使用积分兑换的活动商品，
- * 包括商品库存、兑换后可获得的抽奖次数，以及本次兑换所需积分。
- * 它属于 API 协议模型，只用于 HTTP 响应，不能替代领域层的
- * {@code ActivitySkuEntity}。</p>
+ * <p>该对象面向前端商品列表页面，描述用户可以使用积分兑换的活动商品。
+ * SKU 和活动标识属于长整型业务标识，因此在 HTTP 响应中使用字符串；
+ * 库存、次数和积分价格属于可计算业务数量，继续保留数值类型。</p>
  *
  * <p>商品是否可兑换、库存是否充足、用户积分是否足够等业务判断，
  * 仍由 application 层和 domain 层完成；本对象只负责将查询结果
@@ -30,11 +29,11 @@ import java.io.Serializable;
  */
 @Schema(description = "活动 SKU 积分兑换商品")
 public record ActivitySkuProductResponse(
-        @Schema(description = "活动商品 SKU", example = "9011")
-        Long sku,
+        @Schema(description = "活动商品 SKU", example = "9007199254740993", type = "string")
+        String sku,
 
-        @Schema(description = "所属抽奖活动标识", example = "100301")
-        Long activityId,
+        @Schema(description = "所属抽奖活动标识", example = "9007199254740994", type = "string")
+        String activityId,
 
         @Schema(description = "商品库存总量", example = "100000")
         Integer stockCount,

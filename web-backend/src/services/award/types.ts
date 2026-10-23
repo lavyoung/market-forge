@@ -12,11 +12,11 @@ export interface UserAwardRecordItem {
     /** 用户唯一标识。 */
     userId: string;
     /** 活动标识。 */
-    activityId: number;
+    activityId: string;
     /** 抽奖策略标识。 */
-    strategyId: number;
+    strategyId: string;
     /** 奖品标识。 */
-    awardId: number;
+    awardId: string;
     /** 奖品标题。 */
     awardTitle: string;
     /** 当前发奖状态。 */
@@ -36,7 +36,7 @@ export interface UserAwardRecordQuery {
     /** 用户标识，精确匹配。 */
     userId?: string;
     /** 奖品标识，精确匹配。 */
-    awardId?: number;
+    awardId?: string;
     /** 发奖状态。 */
     awardState?: AwardState;
     /** 中奖时间起点，包含该时间。 */

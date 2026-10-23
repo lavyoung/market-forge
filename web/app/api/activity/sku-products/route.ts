@@ -1,5 +1,6 @@
 import {badGatewayResponse, errorResponse, forwardMarketForge, toProxyResponse} from "@/lib/server/market-forge-api";
 import {resolveActivityId} from "@/features/raffle/server/activity-config";
+import {isPositiveDecimalIdentifier} from "@/lib/business-identifier";
 
 /**
  * 查询当前活动可使用积分兑换的 SKU 商品。
@@ -11,11 +12,10 @@ import {resolveActivityId} from "@/features/raffle/server/activity-config";
  * @returns Java 服务返回的活动 SKU 商品列表统一响应
  */
 export async function GET(request: Request): Promise<Response> {
-    const rawActivityId = new URL(request.url).searchParams.get("activityId");
-    const activityId = Number(rawActivityId);
+    const activityId = new URL(request.url).searchParams.get("activityId");
 
-    if (!rawActivityId || !/^\d+$/.test(rawActivityId) || !Number.isSafeInteger(activityId) || activityId <= 0) {
-        return errorResponse(400, 1001, "activityId 必须是安全范围内的正整数");
+    if (!isPositiveDecimalIdentifier(activityId)) {
+        return errorResponse(400, 1001, "activityId 必须是十进制正整数字符串");
     }
 
     if (process.env.DEMO_RAFFLE_ENABLED !== "true") {
@@ -26,7 +26,7 @@ export async function GET(request: Request): Promise<Response> {
         if (activityId !== await resolveActivityId()) {
             return errorResponse(400, 1001, "请求活动与当前生效活动不一致");
         }
-        const params = new URLSearchParams({activityId: String(activityId)});
+        const params = new URLSearchParams({activityId});
         const upstream = await forwardMarketForge(`/api/v1/activity/sku-products?${params}`);
         return toProxyResponse(upstream);
     } catch (error) {

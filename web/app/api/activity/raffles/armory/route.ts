@@ -1,5 +1,6 @@
 import {badGatewayResponse, errorResponse, forwardMarketForge, toProxyResponse,} from "@/lib/server/market-forge-api";
 import {resolveActivityId} from "@/features/raffle/server/activity-config";
+import {isPositiveDecimalIdentifier} from "@/lib/business-identifier";
 
 /**
  * 判断未知值是否为普通对象。
@@ -32,17 +33,15 @@ export async function PUT(request: Request): Promise<Response> {
         return errorResponse(400, 1003, "请求体不是合法 JSON");
     }
 
-    if (!isRecord(input)
-        || !Number.isSafeInteger(input.activityId)
-        || Number(input.activityId) <= 0) {
-        return errorResponse(400, 1001, "activityId 必须是安全范围内的正整数");
+    if (!isRecord(input) || !isPositiveDecimalIdentifier(input.activityId)) {
+        return errorResponse(400, 1001, "activityId 必须是十进制正整数字符串");
     }
 
     if (process.env.DEMO_RAFFLE_ENABLED !== "true") {
         return errorResponse(503, 900_000_001, "活动装配接口尚未开放");
     }
 
-    const activityId = Number(input.activityId);
+    const activityId = input.activityId;
     try {
         if (activityId !== await resolveActivityId()) {
             return errorResponse(400, 1001, "请求活动与当前生效活动不一致");

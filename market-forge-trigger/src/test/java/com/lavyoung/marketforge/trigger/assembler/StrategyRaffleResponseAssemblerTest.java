@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 class StrategyRaffleResponseAssemblerTest {
 
+    private static final long UNSAFE_JAVASCRIPT_INTEGER = 9_007_199_254_740_993L;
     private static final StrategyRaffleResponseAssembler ASSEMBLER =
             Mappers.getMapper(StrategyRaffleResponseAssembler.class);
 
@@ -38,13 +39,15 @@ class StrategyRaffleResponseAssemblerTest {
     }
 
     /**
-     * Given 完整的应用结果，When 转换为响应，Then API 契约字段均不会丢失。
+     * Given 包含超出 JavaScript 安全整数范围标识的应用结果，
+     * When 转换为响应，Then 三个业务标识均转换为无精度损失的字符串。
      */
     @Test
     void shouldConvertResultToResponse() {
         // Given
         ActivityRaffleResult result = new ActivityRaffleResult(
-                "RO1003010001", 100_301L, 100_001L, 100_011L, "random_ore", "quantity=1", "随机矿石", "随机矿石");
+                "RO1003010001", UNSAFE_JAVASCRIPT_INTEGER, UNSAFE_JAVASCRIPT_INTEGER + 1,
+                UNSAFE_JAVASCRIPT_INTEGER + 2, "random_ore", "quantity=1", "随机矿石", "随机矿石");
 
         // When
         StrategyRaffleResponse response = ASSEMBLER.toResponse(result);
@@ -52,9 +55,9 @@ class StrategyRaffleResponseAssemblerTest {
         // Then
         assertAll(
                 () -> assertEquals(result.orderId(), response.orderId()),
-                () -> assertEquals(result.activityId(), response.activityId()),
-                () -> assertEquals(result.strategyId(), response.strategyId()),
-                () -> assertEquals(result.awardId(), response.awardId()),
+                () -> assertEquals(String.valueOf(result.activityId()), response.activityId()),
+                () -> assertEquals(String.valueOf(result.strategyId()), response.strategyId()),
+                () -> assertEquals(String.valueOf(result.awardId()), response.awardId()),
                 () -> assertEquals(result.awardKey(), response.awardKey()),
                 () -> assertEquals(result.awardConfig(), response.awardConfig()),
                 () -> assertEquals(result.awardDesc(), response.awardDesc())

@@ -26,7 +26,7 @@ export async function queryUserAwardRecords(params: UserAwardRecordQuery): Promi
         method: 'GET',
         params: {
             userId: normalizeText(params.userId),
-            awardId: params.awardId,
+            awardId: normalizeText(params.awardId),
             awardState: params.awardState,
             startTime: normalizeDateTime(params.startTime),
             endTime: normalizeDateTime(params.endTime),

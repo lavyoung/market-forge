@@ -25,6 +25,9 @@ export function describeUnlockState(award: ActivityAward): string {
 /**
  * 校验奖品标识唯一性，并按展示顺序生成新的奖品数组。
  *
+ * sort 是真正的业务展示顺序。两个奖品的 sort 相同时，使用字符串形式的
+ * awardId 提供确定性顺序，但不把奖品标识解释成可计算数值。
+ *
  * @param awards Java 服务返回的活动奖品
  * @returns 可直接渲染的有序奖品数组
  * @throws Error 奖品列表包含重复奖品标识时抛出
@@ -36,5 +39,8 @@ export function normalizeAwards(awards: ActivityAward[]): ActivityAward[] {
         throw new Error("活动奖品列表存在重复奖品编号");
     }
 
-    return [...awards].sort((left, right) => left.sort - right.sort || left.awardId - right.awardId);
+    return [...awards].sort((left, right) => {
+        const sortComparison = left.sort - right.sort;
+        return sortComparison !== 0 ? sortComparison : left.awardId.localeCompare(right.awardId);
+    });
 }

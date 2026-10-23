@@ -4,7 +4,7 @@ import type {ActivityAward} from "@/features/raffle/model/activity-raffle-types"
  * 权重门槛下新增进入奖池的奖品。
  */
 export type StrategyWeightAward = {
-    awardId: number;
+    awardId: string;
     awardTitle: string;
 };
 

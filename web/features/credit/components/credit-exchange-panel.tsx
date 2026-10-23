@@ -11,7 +11,7 @@ import {useCallback, useEffect, useRef, useState} from "react";
 import styles from "./credit-exchange-panel.module.css";
 
 type CreditExchangePanelProps = {
-    activityId: number;
+    activityId: string;
     externalRefreshToken: number;
     onExchangeAccepted: () => Promise<boolean> | boolean;
 };
@@ -62,7 +62,7 @@ export default function CreditExchangePanel({
     const [productsError, setProductsError] = useState<string | null>(null);
     const [accountLoading, setAccountLoading] = useState(true);
     const [productsLoading, setProductsLoading] = useState(true);
-    const [activeSku, setActiveSku] = useState<number | null>(null);
+    const [activeSku, setActiveSku] = useState<string | null>(null);
     const [exchangeBlocked, setExchangeBlocked] = useState(false);
     const [notice, setNotice] = useState<Notice | null>(null);
 

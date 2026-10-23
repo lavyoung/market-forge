@@ -10,7 +10,7 @@ import {describe, expect, it} from "vitest";
  */
 function createAward(overrides: Partial<ActivityAward> = {}): ActivityAward {
     return {
-        awardId: 1,
+        awardId: "1",
         awardTitle: "测试奖品",
         awardSubtitle: null,
         sort: 1,
@@ -30,16 +30,16 @@ describe("buildStrategyWeightTiers", () => {
         // Given
         const awards = [
             createAward({
-                awardId: 5,
+                awardId: "5",
                 awardTitle: "高门槛奖品",
                 sort: 5,
                 awardRuleWeightCount: 60_000,
                 isAwardWeightUnlock: false,
                 waitAwardWeightCount: 59_990
             }),
-            createAward({awardId: 2, awardTitle: "普通奖品", sort: 2}),
+            createAward({awardId: "2", awardTitle: "普通奖品", sort: 2}),
             createAward({
-                awardId: 4,
+                awardId: "4",
                 awardTitle: "低门槛奖品 B",
                 sort: 4,
                 awardRuleWeightCount: 40_000,
@@ -47,7 +47,7 @@ describe("buildStrategyWeightTiers", () => {
                 waitAwardWeightCount: 39_990
             }),
             createAward({
-                awardId: 3,
+                awardId: "3",
                 awardTitle: "低门槛奖品 A",
                 sort: 3,
                 awardRuleWeightCount: 40_000,
@@ -66,15 +66,15 @@ describe("buildStrategyWeightTiers", () => {
                 unlocked: false,
                 remainingCount: 39_990,
                 awards: [
-                    {awardId: 3, awardTitle: "低门槛奖品 A"},
-                    {awardId: 4, awardTitle: "低门槛奖品 B"},
+                    {awardId: "3", awardTitle: "低门槛奖品 A"},
+                    {awardId: "4", awardTitle: "低门槛奖品 B"},
                 ],
             },
             {
                 threshold: 60_000,
                 unlocked: false,
                 remainingCount: 59_990,
-                awards: [{awardId: 5, awardTitle: "高门槛奖品"}],
+                awards: [{awardId: "5", awardTitle: "高门槛奖品"}],
             },
         ]);
     });
@@ -82,8 +82,13 @@ describe("buildStrategyWeightTiers", () => {
     it("同一门槛状态不一致时应采用保守展示结果", () => {
         // Given
         const awards = [
-            createAward({awardId: 1, awardRuleWeightCount: 100, isAwardWeightUnlock: true, waitAwardWeightCount: 0}),
-            createAward({awardId: 2, awardRuleWeightCount: 100, isAwardWeightUnlock: false, waitAwardWeightCount: 20}),
+            createAward({awardId: "1", awardRuleWeightCount: 100, isAwardWeightUnlock: true, waitAwardWeightCount: 0}),
+            createAward({
+                awardId: "2",
+                awardRuleWeightCount: 100,
+                isAwardWeightUnlock: false,
+                waitAwardWeightCount: 20
+            }),
         ];
 
         // When
@@ -97,14 +102,14 @@ describe("buildStrategyWeightTiers", () => {
     it("整理展示顺序时不应修改原奖品数组", () => {
         // Given
         const awards = [
-            createAward({awardId: 2, sort: 2, awardRuleWeightCount: 100}),
-            createAward({awardId: 1, sort: 1, awardRuleWeightCount: 100}),
+            createAward({awardId: "2", sort: 2, awardRuleWeightCount: 100}),
+            createAward({awardId: "1", sort: 1, awardRuleWeightCount: 100}),
         ];
 
         // When
         buildStrategyWeightTiers(awards);
 
         // Then
-        expect(awards.map((award) => award.awardId)).toEqual([2, 1]);
+        expect(awards.map((award) => award.awardId)).toEqual(["2", "1"]);
     });
 });

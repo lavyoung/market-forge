@@ -29,7 +29,7 @@ public class StrategyAdminController implements IStrategyAdminApi {
     @Override
     public Response<StrategySnapshotRefreshResponse> requestSnapshotRefresh(Long strategyId) {
         boolean newTaskScheduled = strategySnapshotRefreshApplicationService.requestRefresh(strategyId);
-        StrategySnapshotRefreshResponse response = new StrategySnapshotRefreshResponse(strategyId, newTaskScheduled);
+        StrategySnapshotRefreshResponse response = new StrategySnapshotRefreshResponse(strategyId.toString(), newTaskScheduled);
         return Response.success(response);
     }
 }

@@ -16,18 +16,20 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 class StrategyAwardResponseAssemblerTest {
 
+    private static final long UNSAFE_JAVASCRIPT_INTEGER = 9_007_199_254_740_993L;
     private static final StrategyAwardResponseAssembler ASSEMBLER =
             Mappers.getMapper(StrategyAwardResponseAssembler.class);
 
     /**
-     * Given 完整应用层奖品列表，When 批量转换，Then API 所需字段全部保留。
+     * Given 包含超出 JavaScript 安全整数范围标识的应用层奖品列表，
+     * When 批量转换，Then 标识转换为无精度损失的字符串且业务数值保持原类型。
      */
     @Test
     void shouldConvertAwardEntitiesToResponses() {
         // Given
         StrategyAwardResult result = new StrategyAwardResult(
-                100_001L,
-                100_011L,
+                UNSAFE_JAVASCRIPT_INTEGER,
+                UNSAFE_JAVASCRIPT_INTEGER + 1,
                 "随机矿石",
                 100,
                 80,
@@ -42,8 +44,8 @@ class StrategyAwardResponseAssemblerTest {
         StrategyAwardResponse response = responses.get(0);
         assertAll(
                 () -> assertEquals(1, responses.size()),
-                () -> assertEquals(result.strategyId(), response.strategyId()),
-                () -> assertEquals(result.awardId(), response.awardId()),
+                () -> assertEquals(String.valueOf(result.strategyId()), response.strategyId()),
+                () -> assertEquals(String.valueOf(result.awardId()), response.awardId()),
                 () -> assertEquals(result.awardTitle(), response.awardTitle()),
                 () -> assertEquals(result.awardCount(), response.awardCount()),
                 () -> assertEquals(result.awardCountSurplus(), response.awardCountSurplus()),

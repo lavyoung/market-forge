@@ -1,4 +1,5 @@
-import type {ActivitySkuProduct, CreditAccount, CreditExchangeRequest,} from "@/features/credit/model/credit-types";
+import type {ActivitySkuProduct, CreditAccount, CreditExchangeRequest} from "@/features/credit/model/credit-types";
+import {isPositiveDecimalIdentifier} from "@/lib/business-identifier";
 
 type ApiResponse<T> = {
     code: number;
@@ -110,8 +111,8 @@ function isCreditAccount(value: unknown): value is CreditAccount {
  */
 function isActivitySkuProduct(value: unknown): value is ActivitySkuProduct {
     return isRecord(value)
-        && isPositiveSafeInteger(value.sku)
-        && isPositiveSafeInteger(value.activityId)
+        && isPositiveDecimalIdentifier(value.sku)
+        && isPositiveDecimalIdentifier(value.activityId)
         && isNonNegativeSafeInteger(value.stockCount)
         && isNonNegativeSafeInteger(value.stockCountSurplus)
         && isNonNegativeSafeInteger(value.totalCount)
@@ -148,8 +149,8 @@ export async function queryCreditAccount(signal?: AbortSignal): Promise<CreditAc
  * @returns 活动 SKU 商品列表
  * @throws Error 网络失败、业务失败或商品字段不符合契约时抛出
  */
-export async function queryActivitySkuProducts(activityId: number, signal?: AbortSignal): Promise<ActivitySkuProduct[]> {
-    const params = new URLSearchParams({activityId: String(activityId)});
+export async function queryActivitySkuProducts(activityId: string, signal?: AbortSignal): Promise<ActivitySkuProduct[]> {
+    const params = new URLSearchParams({activityId});
     const response = await fetch(`/api/activity/sku-products?${params}`, {cache: "no-store", signal});
     const data = await unwrap(response);
 
@@ -172,7 +173,7 @@ export async function queryActivitySkuProducts(activityId: number, signal?: Abor
  * @throws CreditExchangeOutcomeUnknownError 无法确认服务端处理结果时抛出
  * @throws Error 服务端明确拒绝兑换时抛出对应业务错误
  */
-export async function exchangeCreditForSku(sku: number, requestId: string): Promise<string> {
+export async function exchangeCreditForSku(sku: string, requestId: string): Promise<string> {
     const body: CreditExchangeRequest = {sku, requestId};
     let response: Response;
 

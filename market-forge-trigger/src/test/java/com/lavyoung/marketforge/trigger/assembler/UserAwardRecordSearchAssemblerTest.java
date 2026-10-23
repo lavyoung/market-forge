@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class UserAwardRecordSearchAssemblerTest {
 
+    private static final long UNSAFE_JAVASCRIPT_INTEGER = 9_007_199_254_740_993L;
     private static final LocalDateTime START_TIME = LocalDateTime.of(2026, 10, 16, 0, 0);
     private static final LocalDateTime END_TIME = LocalDateTime.of(2026, 10, 17, 0, 0);
     private static final UserAwardRecordSearchAssembler ASSEMBLER =
@@ -62,7 +63,8 @@ class UserAwardRecordSearchAssemblerTest {
     }
 
     /**
-     * 验证分页转换会转换记录类型，同时完整保留分页元数据。
+     * 验证分页转换会将超出 JavaScript 安全整数范围的标识转换为字符串，
+     * 同时完整保留业务字段和分页元数据。
      */
     @Test
     void shouldMapApplicationPageToApiPage() {
@@ -82,9 +84,9 @@ class UserAwardRecordSearchAssemblerTest {
                 () -> assertEquals(1, target.records().size()),
                 () -> assertEquals(item.orderId(), response.orderId()),
                 () -> assertEquals(item.userId(), response.userId()),
-                () -> assertEquals(item.activityId(), response.activityId()),
-                () -> assertEquals(item.strategyId(), response.strategyId()),
-                () -> assertEquals(item.awardId(), response.awardId()),
+                () -> assertEquals(String.valueOf(item.activityId()), response.activityId()),
+                () -> assertEquals(String.valueOf(item.strategyId()), response.strategyId()),
+                () -> assertEquals(String.valueOf(item.awardId()), response.awardId()),
                 () -> assertEquals(item.awardTitle(), response.awardTitle()),
                 () -> assertEquals(item.awardState(), response.awardState()),
                 () -> assertEquals(item.awardTime(), response.awardTime())
@@ -129,9 +131,9 @@ class UserAwardRecordSearchAssemblerTest {
         return new UserAwardRecordSearchItem(
                 "ROPmv8av9hj0002z38fvn2949wettup",
                 "user-001",
-                100301L,
-                100006L,
-                101L,
+                UNSAFE_JAVASCRIPT_INTEGER,
+                UNSAFE_JAVASCRIPT_INTEGER + 1,
+                UNSAFE_JAVASCRIPT_INTEGER + 2,
                 "用户积分",
                 "completed",
                 LocalDateTime.of(2026, 10, 16, 9, 30)

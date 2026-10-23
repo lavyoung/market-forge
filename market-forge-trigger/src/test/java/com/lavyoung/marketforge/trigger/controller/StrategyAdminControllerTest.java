@@ -1,6 +1,7 @@
 package com.lavyoung.marketforge.trigger.controller;
 
 import com.lavyoung.marketforge.api.strategy.IStrategyAdminApi;
+import com.lavyoung.marketforge.api.strategy.response.StrategySnapshotRefreshResponse;
 import com.lavyoung.marketforge.application.strategy.service.IStrategySnapshotRefreshApplicationService;
 import com.lavyoung.marketforge.trigger.exception.GlobalExceptionHandler;
 import com.lavyoung.marketforge.types.model.CommonResponseCode;
@@ -10,6 +11,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.concurrent.RejectedExecutionException;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -27,7 +30,7 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standal
  */
 class StrategyAdminControllerTest {
 
-    private static final Long STRATEGY_ID = 100_001L;
+    private static final Long STRATEGY_ID = 9_007_199_254_740_993L;
 
     /**
      * Given 策略当前没有刷新任务，When 运营端提交刷新命令，Then 返回 202 和新任务标记。
@@ -45,7 +48,7 @@ class StrategyAdminControllerTest {
         mockMvc.perform(post(IStrategyAdminApi.BASE_PATH + "/{strategyId}/snapshot-refresh", STRATEGY_ID))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.code").value(CommonResponseCode.SUCCESS.getCode()))
-                .andExpect(jsonPath("$.data.strategyId").value(STRATEGY_ID))
+                .andExpect(jsonPath("$.data.strategyId").value(STRATEGY_ID.toString()))
                 .andExpect(jsonPath("$.data.newTaskScheduled").value(true));
 
         verify(applicationService).requestRefresh(STRATEGY_ID);
@@ -67,7 +70,7 @@ class StrategyAdminControllerTest {
         mockMvc.perform(post(IStrategyAdminApi.BASE_PATH + "/{strategyId}/snapshot-refresh", STRATEGY_ID))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.code").value(CommonResponseCode.SUCCESS.getCode()))
-                .andExpect(jsonPath("$.data.strategyId").value(STRATEGY_ID))
+                .andExpect(jsonPath("$.data.strategyId").value(STRATEGY_ID.toString()))
                 .andExpect(jsonPath("$.data.newTaskScheduled").value(false));
 
         verify(applicationService).requestRefresh(STRATEGY_ID);
@@ -111,6 +114,20 @@ class StrategyAdminControllerTest {
                 .andExpect(jsonPath("$.code").value(CommonResponseCode.SERVICE_UNAVAILABLE.getCode()))
                 .andExpect(jsonPath("$.message").value(CommonResponseCode.SERVICE_UNAVAILABLE.getMsg()))
                 .andExpect(header().string(HttpHeaders.RETRY_AFTER, "1"));
+    }
+
+    /**
+     * Given 空值、零、负数和非数字策略标识，When 创建刷新响应，Then API 契约立即拒绝非法标识。
+     */
+    @Test
+    void shouldRejectInvalidResponseStrategyIdentifiers() {
+        // Given / When / Then
+        assertAll(
+                () -> assertThrows(NullPointerException.class, () -> new StrategySnapshotRefreshResponse(null, true)),
+                () -> assertThrows(IllegalArgumentException.class, () -> new StrategySnapshotRefreshResponse("0", true)),
+                () -> assertThrows(IllegalArgumentException.class, () -> new StrategySnapshotRefreshResponse("-1", true)),
+                () -> assertThrows(IllegalArgumentException.class, () -> new StrategySnapshotRefreshResponse("strategy-1", true))
+        );
     }
 
     /**

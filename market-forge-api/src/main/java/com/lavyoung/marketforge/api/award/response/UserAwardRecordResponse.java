@@ -9,7 +9,8 @@ import java.time.LocalDateTime;
  * 用户中奖记录响应。
  *
  * <p>该对象描述运营查询接口返回的一条中奖记录，不暴露 Elasticsearch 文档结构、
- * 分库来源、自增主键或其他基础设施字段。</p>
+ * 分库来源、自增主键或其他基础设施字段。活动、策略和奖品标识通过字符串返回，
+ * 避免标识值超过 JavaScript 安全整数范围后发生精度丢失。</p>
  *
  * @param orderId    全局唯一的抽奖订单标识
  * @param userId     用户标识
@@ -31,14 +32,14 @@ public record UserAwardRecordResponse(
         @Schema(description = "用户标识", example = "user-001")
         String userId,
 
-        @Schema(description = "活动标识", example = "100301")
-        Long activityId,
+        @Schema(description = "活动标识", example = "9007199254740993", type = "string")
+        String activityId,
 
-        @Schema(description = "抽奖策略标识", example = "100006")
-        Long strategyId,
+        @Schema(description = "抽奖策略标识", example = "9007199254740994", type = "string")
+        String strategyId,
 
-        @Schema(description = "奖品标识", example = "101")
-        Long awardId,
+        @Schema(description = "奖品标识", example = "9007199254740995", type = "string")
+        String awardId,
 
         @Schema(description = "奖品标题", example = "用户积分")
         String awardTitle,
@@ -46,13 +47,7 @@ public record UserAwardRecordResponse(
         @Schema(
                 description = "发奖状态",
                 example = "completed",
-                allowableValues = {
-                        "create",
-                        "wait_claim",
-                        "granting",
-                        "grant_failed",
-                        "completed"
-                }
+                allowableValues = {"create", "wait_claim", "granting", "grant_failed", "completed"}
         )
         String awardState,
 

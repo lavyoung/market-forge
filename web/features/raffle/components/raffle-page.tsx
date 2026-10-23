@@ -18,7 +18,7 @@ import {useEffect, useRef, useState} from "react";
 import styles from "./raffle-page.module.css";
 
 type RafflePageProp = {
-    activityId: number;
+    activityId: string;
 };
 
 type PageData = {

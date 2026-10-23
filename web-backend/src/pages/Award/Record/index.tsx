@@ -7,7 +7,7 @@ const columns: ProColumns<UserAwardRecordItem>[] = [
     {title: '用户 ID', dataIndex: 'userId', copyable: true, ellipsis: true, width: 160},
     {title: '活动 ID', dataIndex: 'activityId', copyable: true, hideInSearch: true, width: 120},
     {title: '抽奖策略', dataIndex: 'strategyId', copyable: true, hideInSearch: true, width: 130},
-    {title: '奖品 ID', dataIndex: 'awardId', valueType: 'digit', copyable: true, width: 120},
+    {title: '奖品 ID', dataIndex: 'awardId', copyable: true, width: 150},
     {title: '奖品名称', dataIndex: 'awardTitle', ellipsis: true, hideInSearch: true, width: 180},
     {title: '订单 ID', dataIndex: 'orderId', copyable: true, ellipsis: true, hideInSearch: true, width: 230},
     {

@@ -3,9 +3,11 @@ package com.lavyoung.marketforge.trigger.assembler;
 import com.lavyoung.marketforge.api.activity.request.ActivityAwardListRequest;
 import com.lavyoung.marketforge.api.activity.response.ActivityAccountResponse;
 import com.lavyoung.marketforge.api.activity.response.ActivityAwardResponse;
+import com.lavyoung.marketforge.api.activity.response.ActivityDrawResponse;
 import com.lavyoung.marketforge.application.activity.model.ActivityAccountResult;
 import com.lavyoung.marketforge.application.activity.model.ActivityAwardListCommand;
 import com.lavyoung.marketforge.application.activity.model.ActivityAwardResult;
+import com.lavyoung.marketforge.application.activity.model.ActivityRaffleResult;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
@@ -16,6 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * 验证活动抽奖接口层装配器的边界模型转换。
  */
 class ActivityRaffleResponseAssemblerTest {
+
+    private static final long UNSAFE_JAVASCRIPT_INTEGER = 9_007_199_254_740_993L;
 
     private static final ActivityRaffleResponseAssembler ASSEMBLER =
             Mappers.getMapper(ActivityRaffleResponseAssembler.class);
@@ -67,7 +71,7 @@ class ActivityRaffleResponseAssemblerTest {
     void shouldConvertActivityAwardResultToResponse() {
         // Given
         ActivityAwardResult result = new ActivityAwardResult(
-                108L,
+                UNSAFE_JAVASCRIPT_INTEGER,
                 "1等奖",
                 "抽奖2次后解锁",
                 8,
@@ -85,7 +89,7 @@ class ActivityRaffleResponseAssemblerTest {
 
         // Then
         assertAll(
-                () -> assertEquals(result.awardId(), response.awardId()),
+                () -> assertEquals(String.valueOf(result.awardId()), response.awardId()),
                 () -> assertEquals(result.awardTitle(), response.awardTitle()),
                 () -> assertEquals(result.awardSubtitle(), response.awardSubtitle()),
                 () -> assertEquals(result.sort(), response.sort()),
@@ -96,6 +100,38 @@ class ActivityRaffleResponseAssemblerTest {
                 () -> assertEquals(result.awardRuleWeightCount(), response.awardRuleWeightCount()),
                 () -> assertEquals(result.isAwardWeightUnlock(), response.isAwardWeightUnlock()),
                 () -> assertEquals(result.waitAwardWeightCount(), response.waitAwardWeightCount())
+        );
+    }
+
+    /**
+     * Given 超出 JavaScript 安全整数范围的活动、策略和奖品标识，
+     * When 转换为抽奖 API 响应，Then 所有标识都应无损转换为十进制字符串。
+     */
+    @Test
+    void shouldConvertLongIdentifiersToStringsInDrawResponse() {
+        // Given
+        ActivityRaffleResult result = new ActivityRaffleResult(
+                "order-001",
+                UNSAFE_JAVASCRIPT_INTEGER,
+                UNSAFE_JAVASCRIPT_INTEGER + 1,
+                UNSAFE_JAVASCRIPT_INTEGER + 2,
+                "integral",
+                "10",
+                "10 积分",
+                "自动发放积分"
+        );
+
+        // When
+        ActivityDrawResponse response = ASSEMBLER.toResponse(result);
+
+        // Then
+        assertAll(
+                () -> assertEquals("9007199254740993", response.activityId()),
+                () -> assertEquals("9007199254740994", response.strategyId()),
+                () -> assertEquals("9007199254740995", response.awardId()),
+                () -> assertEquals(result.orderId(), response.orderId()),
+                () -> assertEquals(result.awardKey(), response.awardKey()),
+                () -> assertEquals(result.awardTitle(), response.awardTitle())
         );
     }
 }

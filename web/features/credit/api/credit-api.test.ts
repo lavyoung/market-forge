@@ -60,8 +60,8 @@ describe("credit API", () => {
     it("应返回活动下全部合法积分兑换商品", async () => {
         // Given
         const products = [{
-            sku: 9011,
-            activityId: 100301,
+            sku: "9007199254740994",
+            activityId: "9007199254740993",
             stockCount: 100,
             stockCountSurplus: 90,
             totalCount: 10,
@@ -72,11 +72,11 @@ describe("credit API", () => {
         fetchMock.mockResolvedValue(apiResponse(products));
 
         // When
-        const actual = await queryActivitySkuProducts(100301);
+        const actual = await queryActivitySkuProducts("9007199254740993");
 
         // Then
         expect(actual).toEqual(products);
-        expect(fetchMock).toHaveBeenCalledWith("/api/activity/sku-products?activityId=100301", {
+        expect(fetchMock).toHaveBeenCalledWith("/api/activity/sku-products?activityId=9007199254740993", {
             cache: "no-store",
             signal: undefined
         });
@@ -85,8 +85,8 @@ describe("credit API", () => {
     it("商品积分价格为零时应拒绝交给页面", async () => {
         // Given
         fetchMock.mockResolvedValue(apiResponse([{
-            sku: 9011,
-            activityId: 100301,
+            sku: "9007199254740994",
+            activityId: "9007199254740993",
             stockCount: 100,
             stockCountSurplus: 90,
             totalCount: 10,
@@ -96,7 +96,27 @@ describe("credit API", () => {
         }]));
 
         // When
-        const action = queryActivitySkuProducts(100301);
+        const action = queryActivitySkuProducts("9007199254740993");
+
+        // Then
+        await expect(action).rejects.toThrow("积分兑换商品数据格式不正确");
+    });
+
+    it("商品响应仍使用数字标识时应拒绝交给页面", async () => {
+        // Given
+        fetchMock.mockResolvedValue(apiResponse([{
+            sku: 9001,
+            activityId: 100301,
+            stockCount: 100,
+            stockCountSurplus: 90,
+            totalCount: 10,
+            dayCount: 2,
+            monthCount: 10,
+            creditAmount: 100,
+        }]));
+
+        // When
+        const action = queryActivitySkuProducts("9007199254740993");
 
         // Then
         await expect(action).rejects.toThrow("积分兑换商品数据格式不正确");
@@ -108,14 +128,14 @@ describe("credit API", () => {
         fetchMock.mockResolvedValue(apiResponse("activity-order-001"));
 
         // When
-        const orderId = await exchangeCreditForSku(9011, requestId);
+        const orderId = await exchangeCreditForSku("9007199254740994", requestId);
 
         // Then
         expect(orderId).toBe("activity-order-001");
         expect(fetchMock).toHaveBeenCalledWith("/api/credit/exchanges/sku", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({sku: 9011, requestId}),
+            body: JSON.stringify({sku: "9007199254740994", requestId}),
         });
     });
 
@@ -124,7 +144,7 @@ describe("credit API", () => {
         fetchMock.mockResolvedValue(apiResponse(null, 3001, "用户积分不足", 422));
 
         // When
-        const action = exchangeCreditForSku(9011, "9cd37031-489f-4fa4-8a08-e69bd27ad58c");
+        const action = exchangeCreditForSku("9007199254740994", "9cd37031-489f-4fa4-8a08-e69bd27ad58c");
 
         // Then
         await expect(action).rejects.toThrow("用户积分不足");
@@ -136,7 +156,7 @@ describe("credit API", () => {
         fetchMock.mockRejectedValue(new TypeError("network unavailable"));
 
         // When
-        const action = exchangeCreditForSku(9011, "9cd37031-489f-4fa4-8a08-e69bd27ad58c");
+        const action = exchangeCreditForSku("9007199254740994", "9cd37031-489f-4fa4-8a08-e69bd27ad58c");
 
         // Then
         await expect(action).rejects.toBeInstanceOf(CreditExchangeOutcomeUnknownError);
@@ -148,7 +168,7 @@ describe("credit API", () => {
         fetchMock.mockResolvedValue(apiResponse(null, 900_000_001, "无法确认兑换结果，请勿重复提交", 502));
 
         // When
-        const action = exchangeCreditForSku(9011, "9cd37031-489f-4fa4-8a08-e69bd27ad58c");
+        const action = exchangeCreditForSku("9007199254740994", "9cd37031-489f-4fa4-8a08-e69bd27ad58c");
 
         // Then
         await expect(action).rejects.toBeInstanceOf(CreditExchangeOutcomeUnknownError);

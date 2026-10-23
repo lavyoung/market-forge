@@ -1,4 +1,5 @@
 import {badGatewayResponse, errorResponse, forwardMarketForge, toProxyResponse} from "@/lib/server/market-forge-api";
+import {isPositiveDecimalIdentifier} from "@/lib/business-identifier";
 
 type CreditExchangeBody = {
     sku?: unknown;
@@ -51,8 +52,8 @@ export async function POST(request: Request): Promise<Response> {
 
     const body = parsedBody;
 
-    if (typeof body.sku !== "number" || !Number.isSafeInteger(body.sku) || body.sku <= 0) {
-        return errorResponse(400, 1001, "sku 必须是安全范围内的正整数");
+    if (!isPositiveDecimalIdentifier(body.sku)) {
+        return errorResponse(400, 1001, "sku 必须是十进制正整数字符串");
     }
 
     if (typeof body.requestId !== "string" || !REQUEST_ID_PATTERN.test(body.requestId)) {

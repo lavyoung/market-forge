@@ -5,7 +5,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.io.Serializable;
 
 /**
- * 活动抽奖响应。
+ * 活动抽奖结果响应。
+ *
+ * <p>该响应只展示后端已经确认的抽奖结果，前端动画不得自行计算中奖奖品。
+ * 活动、策略和奖品标识全部使用字符串返回，确保十八位业务标识能够被浏览器
+ * 无损读取并在后续请求中原样回传。</p>
  *
  * @param orderId    活动参与订单号
  * @param activityId 抽奖活动标识
@@ -29,22 +33,25 @@ public record ActivityDrawResponse(
         String orderId,
 
         @Schema(
-                description = "抽奖活动标识",
-                example = "100301"
+                description = "抽奖活动业务标识",
+                example = "9007199254740993",
+                type = "string"
         )
-        Long activityId,
+        String activityId,
 
         @Schema(
-                description = "抽奖策略标识",
-                example = "900901001"
+                description = "抽奖策略业务标识",
+                example = "9007199254740994",
+                type = "string"
         )
-        Long strategyId,
+        String strategyId,
 
         @Schema(
-                description = "命中奖品标识",
-                example = "900901011"
+                description = "命中奖品业务标识",
+                example = "9007199254740995",
+                type = "string"
         )
-        Long awardId,
+        String awardId,
 
         @Schema(
                 description = "奖品业务标识",

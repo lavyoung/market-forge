@@ -29,7 +29,7 @@ describe("activity stage resolver", () => {
         const activityId = await resolveActivityId();
 
         // Then
-        expect(activityId).toBe(100301);
+        expect(activityId).toBe("100301");
         expect(forwardMock).toHaveBeenCalledWith("/api/v1/activity/stages/active?channel=app&source=campaign");
     });
 
@@ -52,11 +52,25 @@ describe("activity stage resolver", () => {
         await expect(resolveActivityId()).rejects.toThrow("当前渠道没有生效活动");
     });
 
-    it("十八位活动标识超出安全整数范围时应中止页面初始化", async () => {
+    it("十八位活动标识应以字符串形式原样保留", async () => {
         // Given
         forwardMock.mockResolvedValue(stageResponse("9007199254740993"));
 
-        // When / Then
-        await expect(resolveActivityId()).rejects.toThrow("当前活动标识超出前端安全整数范围");
+        // When
+        const activityId = await resolveActivityId();
+
+        // Then
+        expect(activityId).toBe("9007199254740993");
     });
+
+    it.each(["", "0", "001", "-1", "1.5", "1e10", "activity-1"])(
+        "活动标识 %j 格式非法时应中止页面初始化",
+        async (activityId) => {
+            // Given
+            forwardMock.mockResolvedValue(stageResponse(activityId));
+
+            // When / Then
+            await expect(resolveActivityId()).rejects.toThrow("当前活动标识格式不合法");
+        },
+    );
 });

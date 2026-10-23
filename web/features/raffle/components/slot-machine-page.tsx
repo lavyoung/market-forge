@@ -9,7 +9,7 @@ import {useEffect, useMemo, useRef, useState, useSyncExternalStore} from "react"
 import styles from "./slot-machine-page.module.css";
 
 type SlotMachinePageProps = {
-    activityId: number;
+    activityId: string;
 };
 
 type PageData = {

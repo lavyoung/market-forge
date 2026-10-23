@@ -12,12 +12,12 @@ export type CreditAccount = {
 /**
  * 活动下可使用积分兑换的 SKU 商品。
  *
- * 商品同时携带库存、积分价格和兑换成功后增加的总/月/日抽奖次数，
- * 页面只负责展示这些服务端配置，不自行推导价格或到账额度。
+ * SKU 和活动标识只用于关联商品和提交兑换请求，因此使用字符串保存。
+ * 库存、积分价格和兑换后增加的抽奖次数仍然使用 number。
  */
 export type ActivitySkuProduct = {
-    sku: number;
-    activityId: number;
+    sku: string;
+    activityId: string;
     stockCount: number;
     stockCountSurplus: number;
     totalCount: number;
@@ -33,6 +33,6 @@ export type ActivitySkuProduct = {
  * 一次页面操作，BFF 会将其转换为长度受控的业务幂等号并补充可信用户身份。
  */
 export type CreditExchangeRequest = {
-    sku: number;
+    sku: string;
     requestId: string;
 };

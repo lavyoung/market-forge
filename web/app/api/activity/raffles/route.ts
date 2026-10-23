@@ -1,5 +1,6 @@
 import {badGatewayResponse, errorResponse, forwardMarketForge, toProxyResponse,} from "@/lib/server/market-forge-api";
 import {resolveActivityId} from "@/features/raffle/server/activity-config";
+import {isPositiveDecimalIdentifier} from "@/lib/business-identifier";
 
 /**
  * 判断未知值是否为普通对象。
@@ -28,23 +29,23 @@ export async function POST(request: Request): Promise<Response> {
         return errorResponse(400, 1003, "请求体不是合法 JSON");
     }
 
-    if (!isRecord(input) || !Number.isSafeInteger(input.activityId) || Number(input.activityId) <= 0) {
-        return errorResponse(400, 1001, "activityId 必须是安全范围内的正整数");
+    if (!isRecord(input) || !isPositiveDecimalIdentifier(input.activityId)) {
+        return errorResponse(400, 1001, "activityId 必须是十进制正整数字符串");
     }
 
     if (process.env.DEMO_RAFFLE_ENABLED !== "true") {
         return errorResponse(503, 900_000_001, "活动抽奖接口尚未开放");
     }
 
-    const activityId = Number(input.activityId);
+    const activityId = input.activityId;
     const userId = process.env.DEMO_RAFFLE_USER_ID?.trim();
-    const sku = Number(process.env.DEMO_RAFFLE_SKU);
+    const sku = process.env.DEMO_RAFFLE_SKU?.trim();
 
     if (!userId) {
         return errorResponse(500, 900_000_001, "开发用户未配置");
     }
 
-    if (!Number.isSafeInteger(sku) || sku <= 0) {
+    if (!isPositiveDecimalIdentifier(sku)) {
         return errorResponse(500, 900_000_001, "开发活动 SKU 未配置");
     }
 

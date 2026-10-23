@@ -5,10 +5,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.io.Serializable;
 
 /**
- * 活动奖品展示响应。
- * <p>
- * 这个对象是给前端活动抽奖页使用的。
- * 它不只包含奖品基础信息，还包含当前用户视角下的解锁状态。
+ * 当前用户视角下的活动奖品展示响应。
+ *
+ * <p>该响应同时提供奖品展示信息、次数锁解锁状态和权重奖池解锁状态。
+ * 奖品标识使用字符串返回，避免十八位 Java {@code Long} 被 JavaScript
+ * {@code number} 解析后发生精度丢失。</p>
  *
  * @param awardId              奖品标识
  * @param awardTitle           奖品标题
@@ -27,8 +28,8 @@ import java.io.Serializable;
  */
 @Schema(name = "ActivityAwardResponse", description = "活动奖品展示信息")
 public record ActivityAwardResponse(
-        @Schema(description = "奖品标识", example = "108")
-        Long awardId,
+        @Schema(description = "奖品业务标识", example = "9007199254740993", type = "string")
+        String awardId,
 
         @Schema(description = "奖品标题", example = "1等奖")
         String awardTitle,

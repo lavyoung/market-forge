@@ -8,19 +8,13 @@ import {
     AwardUnlockScope,
     CalendarSignResult,
 } from "@/features/raffle/model/activity-raffle-types";
+import {isPositiveDecimalIdentifier} from "@/lib/business-identifier";
 
 /**
  * 判断未知值是否为普通对象。
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/**
- * 判断未知值是否为 JavaScript 可安全表达的正整数标识。
- */
-function isPositiveId(value: unknown): value is number {
-    return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 }
 
 /**
@@ -63,10 +57,16 @@ function isAwardUnlockScope(value: unknown): value is AwardUnlockScope {
 
 /**
  * 校验活动奖品响应是否符合前端契约。
+ *
+ * 奖品标识必须是十进制正整数字符串；排序、解锁次数和权重门槛
+ * 仍然按照数值字段校验。
+ *
+ * @param value Java 服务返回的未知数据
+ * @returns 数据符合活动奖品响应契约时返回 true
  */
 function isActivityAward(value: unknown): value is ActivityAward {
     return isRecord(value)
-        && isPositiveId(value.awardId)
+        && isPositiveDecimalIdentifier(value.awardId)
         && typeof value.awardTitle === "string"
         && isNullableString(value.awardSubtitle)
         && isNonNegativeInteger(value.sort)
@@ -111,14 +111,21 @@ function isCalendarSignResult(value: unknown): value is CalendarSignResult {
 }
 
 /**
- * 校验活动抽奖响应是否符合前端契约。
+ * 校验活动抽奖结果是否符合前端契约。
+ *
+ * 订单号和业务标识都保持字符串。活动、策略和奖品标识还必须满足
+ * 十进制正整数格式，避免空字符串或任意文本进入页面状态。
+ *
+ * @param value Java 服务返回的未知数据
+ * @returns 数据符合活动抽奖结果契约时返回 true
  */
 function isActivityDrawResult(value: unknown): value is ActivityDrawResult {
     return isRecord(value)
         && typeof value.orderId === "string"
-        && isPositiveId(value.activityId)
-        && isPositiveId(value.strategyId)
-        && isPositiveId(value.awardId)
+        && value.orderId.trim().length > 0
+        && isPositiveDecimalIdentifier(value.activityId)
+        && isPositiveDecimalIdentifier(value.strategyId)
+        && isPositiveDecimalIdentifier(value.awardId)
         && isNullableString(value.awardKey)
         && typeof value.awardTitle === "string";
 }
@@ -175,8 +182,8 @@ async function unwrap(response: Response, options: UnwrapOptions = {}): Promise<
  * @param signal 请求取消信号
  * @returns 按活动维度返回的奖品列表
  */
-export async function queryActivityAwards(activityId: number, signal?: AbortSignal): Promise<ActivityAward[]> {
-    const params = new URLSearchParams({activityId: String(activityId)});
+export async function queryActivityAwards(activityId: string, signal?: AbortSignal): Promise<ActivityAward[]> {
+    const params = new URLSearchParams({activityId});
     const response = await fetch(`/api/activity/raffles/awards?${params}`, {
         cache: "no-store",
         signal,
@@ -201,8 +208,8 @@ export async function queryActivityAwards(activityId: number, signal?: AbortSign
  * @returns 当前用户的总、月、日活动额度
  * @throws Error 网络失败、业务失败或响应结构不符合契约时抛出
  */
-export async function queryActivityAccount(activityId: number, signal?: AbortSignal): Promise<ActivityAccount> {
-    const params = new URLSearchParams({activityId: String(activityId)});
+export async function queryActivityAccount(activityId: string, signal?: AbortSignal): Promise<ActivityAccount> {
+    const params = new URLSearchParams({activityId});
     const response = await fetch(`/api/activity/raffles/account?${params}`, {cache: "no-store", signal});
     const data = await unwrap(response);
 
@@ -268,7 +275,7 @@ export async function submitCalendarSign(): Promise<CalendarSignResult> {
  * @param activityId 活动标识
  * @returns Java 服务确认的中奖结果
  */
-export async function drawActivityRaffle(activityId: number): Promise<ActivityDrawResult> {
+export async function drawActivityRaffle(activityId: string): Promise<ActivityDrawResult> {
     const body: ActivityDrawRequest = {activityId};
 
     let response: Response;
@@ -300,7 +307,7 @@ export async function drawActivityRaffle(activityId: number): Promise<ActivityDr
  * @param activityId 活动标识
  * @throws Error 网络异常、BFF 校验失败或后端装配失败时抛出
  */
-export async function armoryActivityRaffle(activityId: number): Promise<void> {
+export async function armoryActivityRaffle(activityId: string): Promise<void> {
     const body: ActivityArmoryRequest = {activityId};
 
     let response: Response;

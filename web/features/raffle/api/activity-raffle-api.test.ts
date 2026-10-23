@@ -1,4 +1,9 @@
-import {queryCalendarSignStatus, submitCalendarSign} from "@/features/raffle/api/activity-raffle-api";
+import {
+    drawActivityRaffle,
+    queryActivityAwards,
+    queryCalendarSignStatus,
+    submitCalendarSign,
+} from "@/features/raffle/api/activity-raffle-api";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 
 const fetchMock = vi.fn();
@@ -19,7 +24,7 @@ function apiResponse(data: unknown, code = 0, message = "成功", status = 200):
     });
 }
 
-describe("calendar sign API", () => {
+describe("activity raffle API", () => {
     beforeEach(() => {
         fetchMock.mockReset();
         vi.stubGlobal("fetch", fetchMock);
@@ -89,5 +94,89 @@ describe("calendar sign API", () => {
         // Then
         await expect(action).rejects.toThrow("无法确认签到结果，请先刷新签到状态");
         expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("应接受包含超大字符串奖品标识的奖品列表", async () => {
+        // Given
+        const award = {
+            awardId: "9007199254740993",
+            awardTitle: "用户积分",
+            awardSubtitle: null,
+            sort: 1,
+            awardRuleLockCount: null,
+            awardUnlockScope: "total",
+            isAwardUnlock: true,
+            waitUnLockCount: 0,
+            awardRuleWeightCount: null,
+            isAwardWeightUnlock: true,
+            waitAwardWeightCount: 0,
+        };
+        fetchMock.mockResolvedValue(apiResponse([award]));
+
+        // When
+        const awards = await queryActivityAwards("9007199254740993");
+
+        // Then
+        expect(awards).toEqual([award]);
+    });
+
+    it("奖品标识仍为数字时应拒绝错误响应", async () => {
+        // Given
+        fetchMock.mockResolvedValue(apiResponse([{
+            awardId: 101,
+            awardTitle: "用户积分",
+            awardSubtitle: null,
+            sort: 1,
+            awardRuleLockCount: null,
+            awardUnlockScope: "total",
+            isAwardUnlock: true,
+            waitUnLockCount: 0,
+            awardRuleWeightCount: null,
+            isAwardWeightUnlock: true,
+            waitAwardWeightCount: 0,
+        }]));
+
+        // When
+        const action = queryActivityAwards("9007199254740993");
+
+        // Then
+        await expect(action).rejects.toThrow("活动奖品列表数据格式不正确");
+    });
+
+    it("应接受包含超大字符串业务标识的抽奖结果", async () => {
+        // Given
+        const result = {
+            orderId: "ROPmv8av9hj0002z38fvn2949wettup",
+            activityId: "9007199254740993",
+            strategyId: "9007199254740994",
+            awardId: "9007199254740995",
+            awardKey: "credit",
+            awardTitle: "用户积分",
+        };
+        fetchMock.mockResolvedValue(apiResponse(result));
+
+        // When
+        const actual = await drawActivityRaffle("9007199254740993");
+
+        // Then
+        expect(actual).toEqual(result);
+    });
+
+    it("抽奖结果包含数字业务标识时应拒绝错误响应", async () => {
+        // Given
+        fetchMock.mockResolvedValue(apiResponse({
+            orderId: "ROPmv8av9hj0002z38fvn2949wettup",
+            activityId: 100301,
+            strategyId: 100006,
+            awardId: 101,
+            awardKey: "credit",
+            awardTitle: "用户积分",
+        }));
+
+        // When
+        const action = drawActivityRaffle("9007199254740993");
+
+        // Then
+        await expect(action).rejects.toThrow("抽奖结果格式不正确，请先核实订单结果，不要重复提交");
     });
 });
