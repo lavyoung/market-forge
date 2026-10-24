@@ -2,6 +2,7 @@ package com.lavyoung.marketforge.application.award.metadata.internalcredit;
 
 import com.lavyoung.marketforge.application.award.grant.internalcredit.InternalCreditAwardConfig;
 import com.lavyoung.marketforge.application.award.metadata.AwardTypeMetadataContributor;
+import com.lavyoung.marketforge.application.award.model.AwardClaimModeMetadata;
 import com.lavyoung.marketforge.application.award.model.AwardConfigFieldMetadata;
 import com.lavyoung.marketforge.application.award.model.AwardConfigFieldType;
 import com.lavyoung.marketforge.application.award.model.AwardTypeMetadata;
@@ -28,7 +29,7 @@ public class InternalCreditAwardTypeMetadataContributor implements AwardTypeMeta
     private static final AwardTypeMetadata METADATA = new AwardTypeMetadata(
             InternalCreditAwardConfig.AWARD_TYPE,
             "平台积分",
-            List.of(AwardClaimModeVO.AUTOMATIC.getCode()),
+            List.of(new AwardClaimModeMetadata(AwardClaimModeVO.AUTOMATIC.getCode(), AwardClaimModeVO.AUTOMATIC.getDesc())),
             InternalCreditAwardConfig.CONFIG_VERSION,
             List.of(new AwardConfigFieldMetadata("amount", "积分数量", AwardConfigFieldType.INTEGER, true,
                     "中奖后自动发放到用户积分账户的积分数量", Map.of("minimum", "1", "step", "1"))),

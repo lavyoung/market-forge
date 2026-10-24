@@ -11,7 +11,7 @@ import java.util.Objects;
  *
  * @param awardType           稳定的奖品类型编码，用于选择发奖处理器
  * @param displayName         运营后台展示名称
- * @param supportedClaimModes 支持的领取模式编码
+ * @param supportedClaimModes 支持的领取模式元数据
  * @param configVersion       当前配置结构版本
  * @param configFields        配置表单字段，可以为空集合
  * @param description         奖品类型的业务说明
@@ -22,7 +22,7 @@ import java.util.Objects;
 public record AwardTypeMetadata(
         String awardType,
         String displayName,
-        List<String> supportedClaimModes,
+        List<AwardClaimModeMetadata> supportedClaimModes,
         int configVersion,
         List<AwardConfigFieldMetadata> configFields,
         String description
@@ -49,15 +49,15 @@ public record AwardTypeMetadata(
 
         Objects.requireNonNull(supportedClaimModes, "supportedClaimModes must not be null");
         Objects.requireNonNull(configFields, "configFields must not be null");
-
-        if (supportedClaimModes.isEmpty() || supportedClaimModes.stream().anyMatch(mode -> mode == null || mode.isBlank())) {
-            throw new IllegalArgumentException("supportedClaimModes must contain valid modes");
-        }
-        if (supportedClaimModes.stream().distinct().count() != supportedClaimModes.size()) {
-            throw new IllegalArgumentException("supportedClaimModes must not contain duplicates");
-        }
-
         supportedClaimModes = List.copyOf(supportedClaimModes);
         configFields = List.copyOf(configFields);
+
+        if (supportedClaimModes.isEmpty()) {
+            throw new IllegalArgumentException("supportedClaimModes must not be empty");
+        }
+        if (supportedClaimModes.stream().map(AwardClaimModeMetadata::code).distinct().count()
+                != supportedClaimModes.size()) {
+            throw new IllegalArgumentException("supportedClaimModes must not contain duplicate codes");
+        }
     }
 }

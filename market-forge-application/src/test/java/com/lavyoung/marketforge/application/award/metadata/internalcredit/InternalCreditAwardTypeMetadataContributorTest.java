@@ -1,5 +1,6 @@
 package com.lavyoung.marketforge.application.award.metadata.internalcredit;
 
+import com.lavyoung.marketforge.application.award.model.AwardClaimModeMetadata;
 import com.lavyoung.marketforge.application.award.model.AwardConfigFieldMetadata;
 import com.lavyoung.marketforge.application.award.model.AwardConfigFieldType;
 import com.lavyoung.marketforge.application.award.model.AwardTypeMetadata;
@@ -31,7 +32,7 @@ class InternalCreditAwardTypeMetadataContributorTest {
         // Then
         assertEquals("internal_credit", metadata.awardType());
         assertEquals("平台积分", metadata.displayName());
-        assertEquals(List.of("automatic"), metadata.supportedClaimModes());
+        assertEquals(List.of(new AwardClaimModeMetadata("automatic", "自动发放")), metadata.supportedClaimModes());
         assertEquals(1, metadata.configVersion());
         assertEquals(List.of(new AwardConfigFieldMetadata("amount", "积分数量", AwardConfigFieldType.INTEGER,
                         true, "中奖后自动发放到用户积分账户的积分数量", Map.of("minimum", "1", "step", "1"))),
