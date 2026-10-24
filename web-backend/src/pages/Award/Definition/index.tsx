@@ -5,12 +5,17 @@ import {
     queryAwardDefinitions,
     updateAwardDefinition,
 } from '@/services/award/award-definition';
+import {queryAwardTypeMetadata} from '@/services/award/award-type-metadata';
 import type {
+    AwardConfigFieldMetadata,
+    AwardDefinitionEditorValues,
     AwardDefinitionFormValues,
     AwardDefinitionItem,
     AwardDefinitionQuery,
     AwardDefinitionState,
+    AwardTypeMetadata,
 } from '@/services/award/types';
+import {getApiErrorMessage} from '@/services/errors';
 import {CheckCircleOutlined, EditOutlined, EyeOutlined, PlusOutlined, StopOutlined} from '@ant-design/icons';
 import type {ActionType, ProColumns} from '@ant-design/pro-components';
 import {
@@ -19,12 +24,13 @@ import {
     ProForm,
     ProFormDigit,
     ProFormSelect,
+    ProFormSwitch,
     ProFormText,
     ProFormTextArea,
     ProTable,
 } from '@ant-design/pro-components';
-import {Button, Descriptions, Drawer, message, Modal, Tag} from 'antd';
-import {useRef, useState} from 'react';
+import {Alert, Button, Descriptions, Drawer, message, Modal, Space, Tag, Tooltip} from 'antd';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import styles from './index.less';
 
 const stateLabels: Record<AwardDefinitionState, { color: string; text: string }> = {
@@ -40,17 +46,67 @@ const stateLabels: Record<AwardDefinitionState, { color: string; text: string }>
  */
 function AwardDefinitionPage() {
     const actionRef = useRef<ActionType>();
+    const [editorForm] = ProForm.useForm<AwardDefinitionEditorValues>();
     const [editorOpen, setEditorOpen] = useState(false);
     const [editingAward, setEditingAward] = useState<AwardDefinitionItem>();
     const [detailAward, setDetailAward] = useState<AwardDefinitionItem>();
     const [detailLoading, setDetailLoading] = useState(false);
+    const [awardTypes, setAwardTypes] = useState<AwardTypeMetadata[]>([]);
+    const [awardTypesLoading, setAwardTypesLoading] = useState(true);
+    const [selectedAwardType, setSelectedAwardType] = useState<string>();
+
+    useEffect(() => {
+        queryAwardTypeMetadata()
+            .then((metadata) => {
+                setAwardTypes(metadata);
+                setSelectedAwardType((current) => current ?? metadata[0]?.awardType);
+            })
+            .catch((error) => message.error(getApiErrorMessage(error, '奖品类型元数据加载失败')))
+            .finally(() => setAwardTypesLoading(false));
+    }, []);
+
+    const selectedMetadata = useMemo(
+        () => awardTypes.find((metadata) => metadata.awardType === selectedAwardType),
+        [awardTypes, selectedAwardType],
+    );
+
+    const awardTypeOptions = useMemo(() => {
+        const options = awardTypes.map((metadata) => ({
+            label: metadata.displayName,
+            value: metadata.awardType,
+        }));
+        if (editingAward && !awardTypes.some((metadata) => metadata.awardType === editingAward.awardType)) {
+            options.push({label: `${editingAward.awardType}（暂不支持）`, value: editingAward.awardType});
+        }
+        return options;
+    }, [awardTypes, editingAward]);
+
+    const awardTypeValueEnum = useMemo(
+        () => Object.fromEntries(awardTypes.map((metadata) => [metadata.awardType, {text: metadata.displayName}])),
+        [awardTypes],
+    );
+
+    const supportedCapabilities = useMemo(
+        () => new Set(awardTypes.flatMap((metadata) => metadata.supportedClaimModes.map((mode) => `${metadata.awardType}:${mode.code}`))),
+        [awardTypes],
+    );
+
+    const editingCapabilitySupported = !editingAward
+        || supportedCapabilities.has(`${editingAward.awardType}:${editingAward.claimMode}`);
 
     const reloadTable = async () => {
         await actionRef.current?.reload();
     };
 
     const openCreateEditor = () => {
+        const metadata = awardTypes[0];
+        if (!metadata) {
+            message.warning('当前没有可配置的奖品类型');
+            return;
+        }
         setEditingAward(undefined);
+        setSelectedAwardType(metadata.awardType);
+        editorForm.setFieldsValue(toEditorValues(undefined, metadata));
         setEditorOpen(true);
     };
 
@@ -58,9 +114,13 @@ function AwardDefinitionPage() {
         try {
             const latest = await getAwardDefinition(award.awardId);
             setEditingAward(latest);
+            setSelectedAwardType(latest.awardType);
+            editorForm.setFieldsValue(
+                toEditorValues(latest, awardTypes.find((metadata) => metadata.awardType === latest.awardType)),
+            );
             setEditorOpen(true);
-        } catch {
-            message.error('奖品详情加载失败');
+        } catch (error) {
+            message.error(getApiErrorMessage(error, '奖品详情加载失败'));
         }
     };
 
@@ -70,27 +130,34 @@ function AwardDefinitionPage() {
 
         try {
             setDetailAward(await getAwardDefinition(award.awardId));
-        } catch {
-            message.error('奖品详情加载失败');
+        } catch (error) {
+            message.error(getApiErrorMessage(error, '奖品详情加载失败'));
         } finally {
             setDetailLoading(false);
         }
     };
 
-    const submitDefinition = async (values: AwardDefinitionFormValues): Promise<boolean> => {
+    const submitDefinition = async (values: AwardDefinitionEditorValues): Promise<boolean> => {
+        const metadata = awardTypes.find((item) => item.awardType === values.awardType);
+        if (!metadata) {
+            message.error('该奖品类型当前不具备可用的履约能力');
+            return false;
+        }
+
         try {
+            const request = toRequestValues(values, metadata);
             if (editingAward) {
-                await updateAwardDefinition(editingAward.awardId, editingAward.version, values);
+                await updateAwardDefinition(editingAward.awardId, editingAward.version, request);
                 message.success('奖品草稿已更新');
             } else {
-                await createAwardDefinition(values);
+                await createAwardDefinition(request);
                 message.success('奖品草稿已创建');
             }
 
             await reloadTable();
             return true;
-        } catch {
-            message.error(editingAward ? '奖品草稿更新失败' : '奖品草稿创建失败');
+        } catch (error) {
+            message.error(getApiErrorMessage(error, editingAward ? '奖品草稿更新失败' : '奖品草稿创建失败'));
             return false;
         }
     };
@@ -108,9 +175,9 @@ function AwardDefinitionPage() {
                     await changeAwardDefinitionState(award.awardId, targetState, award.version);
                     message.success(activating ? '奖品已启用' : '奖品已停用');
                     await reloadTable();
-                } catch {
-                    message.error(activating ? '奖品启用失败' : '奖品停用失败');
-                    throw new Error('Award state change failed');
+                } catch (error) {
+                    message.error(getApiErrorMessage(error, activating ? '奖品启用失败' : '奖品停用失败'));
+                    throw error;
                 }
             },
         });
@@ -120,7 +187,24 @@ function AwardDefinitionPage() {
         {title: '奖品 ID', dataIndex: 'awardId', copyable: true, hideInSearch: true, width: 170},
         {title: '奖品编码', dataIndex: 'awardCode', copyable: true, ellipsis: true, width: 160},
         {title: '奖品名称', dataIndex: 'awardName', ellipsis: true, width: 180},
-        {title: '发奖类型', dataIndex: 'awardType', ellipsis: true, width: 170},
+        {
+            title: '发奖类型',
+            dataIndex: 'awardType',
+            valueType: 'select',
+            valueEnum: awardTypeValueEnum,
+            ellipsis: true,
+            width: 170,
+            render: (_, record) => {
+                const displayName = awardTypes.find((metadata) => metadata.awardType === record.awardType)?.displayName ?? record.awardType;
+                const supported = supportedCapabilities.has(`${record.awardType}:${record.claimMode}`);
+                return (
+                    <Space size={4}>
+                        <span>{displayName}</span>
+                        {!supported ? <Tag color="warning">暂未支持</Tag> : null}
+                    </Space>
+                );
+            },
+        },
         {
             title: '领取模式',
             dataIndex: 'claimMode',
@@ -158,14 +242,23 @@ function AwardDefinitionPage() {
                     </Button>
                 ) : null,
                 record.state === 'draft' ? (
-                    <Button
+                    <Tooltip
                         key="active"
-                        type="link"
-                        icon={<CheckCircleOutlined/>}
-                        onClick={() => confirmStateChange(record, 'active')}
+                        title={supportedCapabilities.has(`${record.awardType}:${record.claimMode}`)
+                            ? undefined
+                            : '当前发奖类型或领取模式尚未实现，不能启用'}
                     >
-                        启用
-                    </Button>
+                        <span>
+                            <Button
+                                type="link"
+                                icon={<CheckCircleOutlined/>}
+                                disabled={!supportedCapabilities.has(`${record.awardType}:${record.claimMode}`)}
+                                onClick={() => confirmStateChange(record, 'active')}
+                            >
+                                启用
+                            </Button>
+                        </span>
+                    </Tooltip>
                 ) : null,
                 record.state === 'active' ? (
                     <Button
@@ -194,23 +287,38 @@ function AwardDefinitionPage() {
                 pagination={{defaultPageSize: 20, showSizeChanger: true}}
                 scroll={{x: 1510}}
                 toolBarRender={() => [
-                    <Button key="create" type="primary" icon={<PlusOutlined/>} onClick={openCreateEditor}>
+                    <Button
+                        key="create"
+                        type="primary"
+                        icon={<PlusOutlined/>}
+                        loading={awardTypesLoading}
+                        disabled={!awardTypesLoading && awardTypes.length === 0}
+                        onClick={openCreateEditor}
+                    >
                         新建奖品
                     </Button>,
                 ]}
             />
 
-            <ModalForm<AwardDefinitionFormValues>
+            <ModalForm<AwardDefinitionEditorValues>
                 key={editingAward?.awardId ?? 'create'}
+                form={editorForm}
                 title={editingAward ? '编辑奖品草稿' : '新建奖品'}
                 width={720}
                 open={editorOpen}
-                initialValues={toFormValues(editingAward)}
                 modalProps={{destroyOnClose: true, maskClosable: false, onCancel: () => setEditorOpen(false)}}
                 submitter={{searchConfig: {submitText: editingAward ? '保存修改' : '创建草稿', resetText: '取消'}}}
                 onOpenChange={setEditorOpen}
                 onFinish={submitDefinition}
             >
+                {!editingCapabilitySupported ? (
+                    <Alert
+                        showIcon
+                        type="warning"
+                        message="当前履约方案暂未支持"
+                        description="该奖品的发奖类型或领取模式尚无可执行处理器，保存时需改为系统已支持的方案，且在能力实现前不能启用。"
+                    />
+                ) : null}
                 <ProForm.Group>
                     <ProFormText
                         name="awardCode"
@@ -232,52 +340,42 @@ function AwardDefinitionPage() {
                     />
                 </ProForm.Group>
                 <ProForm.Group>
-                    <ProFormText
+                    <ProFormSelect
                         name="awardType"
                         label="发奖类型"
                         width="md"
-                        rules={[
-                            {required: true, message: '请输入发奖类型'},
-                            {pattern: /^[a-z][a-z0-9_]{1,31}$/, message: '发奖类型格式不合法'},
-                        ]}
+                        options={awardTypeOptions}
+                        disabled={Boolean(editingAward)}
+                        fieldProps={{
+                            onChange: (value: string) => {
+                                const metadata = awardTypes.find((item) => item.awardType === value);
+                                setSelectedAwardType(value);
+                                editorForm.setFieldsValue({
+                                    claimMode: metadata?.supportedClaimModes[0]?.code,
+                                    configValues: {},
+                                });
+                            },
+                        }}
+                        rules={[{required: true, message: '请选择发奖类型'}]}
                     />
                     <ProFormSelect
                         name="claimMode"
                         label="领取模式"
                         width="md"
-                        options={[
-                            {label: '自动发放', value: 'automatic'},
-                            {label: '人工领取', value: 'manual'},
-                        ]}
+                        options={(selectedMetadata?.supportedClaimModes ?? []).map((mode) => ({
+                            label: mode.displayName,
+                            value: mode.code,
+                        }))}
                         rules={[{required: true, message: '请选择领取模式'}]}
                     />
                 </ProForm.Group>
-                <ProForm.Group>
-                    <ProFormText
-                        name="providerCode"
-                        label="供应商编码"
-                        width="md"
-                        rules={[{pattern: /^[a-z][a-z0-9_-]{1,31}$/, message: '供应商编码格式不合法'}]}
-                    />
-                    <ProFormDigit
-                        name="configVersion"
-                        label="配置版本"
-                        width="md"
-                        min={1}
-                        fieldProps={{precision: 0}}
-                        rules={[{required: true, message: '请输入配置版本'}]}
-                    />
-                </ProForm.Group>
-                <ProFormTextArea
-                    name="awardConfig"
-                    label="发奖配置 JSON"
-                    fieldProps={{autoSize: {minRows: 5, maxRows: 10}}}
-                    rules={[
-                        {required: true, message: '请输入发奖配置'},
-                        {max: 4000, message: '发奖配置不能超过 4000 个字符'},
-                        {validator: validateJson},
-                    ]}
+                <ProFormText
+                    name="providerCode"
+                    label="供应商编码"
+                    width="md"
+                    rules={[{pattern: /^[a-z][a-z0-9_-]{1,31}$/, message: '供应商编码格式不合法'}]}
                 />
+                {selectedMetadata?.configFields.map(renderConfigField)}
                 <ProFormTextArea
                     name="awardDesc"
                     label="奖品说明"
@@ -293,7 +391,7 @@ function AwardDefinitionPage() {
                 loading={detailLoading}
                 onClose={() => setDetailAward(undefined)}
             >
-                {detailAward ? <AwardDefinitionDetail award={detailAward}/> : null}
+                {detailAward ? <AwardDefinitionDetail award={detailAward} awardTypes={awardTypes}/> : null}
             </Drawer>
         </PageContainer>
     );
@@ -305,8 +403,11 @@ function AwardDefinitionPage() {
  * @param props 奖品详情
  * @returns 详情描述列表
  */
-function AwardDefinitionDetail({award}: { award: AwardDefinitionItem }) {
+function AwardDefinitionDetail({award, awardTypes}: { award: AwardDefinitionItem; awardTypes: AwardTypeMetadata[] }) {
     const state = stateLabels[award.state];
+    const metadata = awardTypes.find((item) => item.awardType === award.awardType);
+    const claimMode = metadata?.supportedClaimModes.find((mode) => mode.code === award.claimMode);
+    const fulfillmentSupported = Boolean(claimMode);
     return (
         <Descriptions bordered size="small" column={2}>
             <Descriptions.Item label="奖品 ID" span={2}>
@@ -314,9 +415,11 @@ function AwardDefinitionDetail({award}: { award: AwardDefinitionItem }) {
             </Descriptions.Item>
             <Descriptions.Item label="奖品编码">{award.awardCode}</Descriptions.Item>
             <Descriptions.Item label="奖品名称">{award.awardName}</Descriptions.Item>
-            <Descriptions.Item label="发奖类型">{award.awardType}</Descriptions.Item>
-            <Descriptions.Item label="领取模式">
-                {award.claimMode === 'automatic' ? '自动发放' : '人工领取'}
+            <Descriptions.Item label="发奖类型">{metadata?.displayName ?? award.awardType}</Descriptions.Item>
+            <Descriptions.Item label="领取模式">{claimMode?.displayName ?? award.claimMode}</Descriptions.Item>
+            <Descriptions.Item label="履约能力">
+                <Tag
+                    color={fulfillmentSupported ? 'success' : 'warning'}>{fulfillmentSupported ? '已支持' : '暂未支持'}</Tag>
             </Descriptions.Item>
             <Descriptions.Item label="供应商编码">{award.providerCode || '-'}</Descriptions.Item>
             <Descriptions.Item label="状态">
@@ -338,15 +441,14 @@ function AwardDefinitionDetail({award}: { award: AwardDefinitionItem }) {
     );
 }
 
-function toFormValues(award?: AwardDefinitionItem): AwardDefinitionFormValues {
+function toEditorValues(award: AwardDefinitionItem | undefined, metadata: AwardTypeMetadata | undefined): AwardDefinitionEditorValues {
     if (!award) {
         return {
             awardCode: '',
             awardName: '',
-            awardType: 'internal_credit',
-            claimMode: 'automatic',
-            awardConfig: '{}',
-            configVersion: 1,
+            awardType: metadata?.awardType ?? '',
+            claimMode: metadata?.supportedClaimModes[0]?.code ?? '',
+            configValues: {},
         };
     }
     return {
@@ -355,10 +457,105 @@ function toFormValues(award?: AwardDefinitionItem): AwardDefinitionFormValues {
         awardType: award.awardType,
         claimMode: award.claimMode,
         providerCode: award.providerCode ?? undefined,
-        awardConfig: formatJson(award.awardConfig),
-        configVersion: award.configVersion,
+        configValues: parseConfigValues(award.awardConfig),
         awardDesc: award.awardDesc ?? undefined,
     };
+}
+
+/**
+ * 将结构化编辑器数据转换为后端奖品定义契约。
+ *
+ * @param values 编辑器字段
+ * @param metadata 当前奖品类型元数据
+ * @returns 包含版本化 JSON 配置的后端请求
+ */
+function toRequestValues(values: AwardDefinitionEditorValues, metadata: AwardTypeMetadata): AwardDefinitionFormValues {
+    const config = Object.fromEntries(
+        metadata.configFields
+            .map((field) => [field.name, values.configValues?.[field.name]] as const)
+            .filter((entry) => entry[1] !== undefined),
+    );
+    return {
+        awardCode: values.awardCode,
+        awardName: values.awardName,
+        awardType: metadata.awardType,
+        claimMode: values.claimMode,
+        providerCode: values.providerCode,
+        awardConfig: JSON.stringify(config),
+        configVersion: metadata.configVersion,
+        awardDesc: values.awardDesc,
+    };
+}
+
+/**
+ * 按字段元数据渲染受控表单组件。
+ *
+ * @param field 奖品配置字段元数据
+ * @returns 与字段类型匹配的 ProForm 控件
+ */
+function renderConfigField(field: AwardConfigFieldMetadata) {
+    const name = ['configValues', field.name];
+    const rules = [{required: field.required, message: `请输入${field.label}`}];
+    const commonProps = {
+        key: field.name,
+        name,
+        label: field.label,
+        width: 'md' as const,
+        tooltip: field.description,
+        rules
+    };
+
+    switch (field.fieldType) {
+        case 'integer':
+            return (
+                <ProFormDigit
+                    {...commonProps}
+                    min={toNumber(field.constraints.minimum)}
+                    max={toNumber(field.constraints.maximum)}
+                    fieldProps={{precision: 0, step: toNumber(field.constraints.step)}}
+                />
+            );
+        case 'boolean':
+            return <ProFormSwitch {...commonProps}/>;
+        case 'select':
+            return <ProFormSelect {...commonProps} options={parseSelectOptions(field.constraints.options)}/>;
+        default:
+            return <ProFormText {...commonProps}/>;
+    }
+}
+
+function parseConfigValues(value: string): Record<string, string | number | boolean> {
+    try {
+        const parsed: unknown = JSON.parse(value);
+        if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+            return {};
+        }
+        return Object.fromEntries(
+            Object.entries(parsed).filter((entry): entry is [string, string | number | boolean] =>
+                ['string', 'number', 'boolean'].includes(typeof entry[1]),
+            ),
+        );
+    } catch {
+        return {};
+    }
+}
+
+function parseSelectOptions(value?: string): Array<{ label: string; value: string }> {
+    if (!value) {
+        return [];
+    }
+    return value.split(',').map((option) => ({
+        label: option.trim(),
+        value: option.trim()
+    })).filter((option) => option.value);
+}
+
+function toNumber(value?: string): number | undefined {
+    if (!value) {
+        return undefined;
+    }
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function formatJson(value: string): string {
@@ -366,17 +563,6 @@ function formatJson(value: string): string {
         return JSON.stringify(JSON.parse(value), null, 2);
     } catch {
         return value;
-    }
-}
-
-async function validateJson(_: unknown, value?: string): Promise<void> {
-    if (!value) {
-        return;
-    }
-    try {
-        JSON.parse(value);
-    } catch {
-        throw new Error('请输入合法的 JSON');
     }
 }
 

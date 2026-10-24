@@ -11,6 +11,7 @@ import type {
     ActivityDefinitionQuery,
     ActivityDefinitionState
 } from '@/services/activity/types';
+import {getApiErrorMessage} from '@/services/errors';
 import {CheckCircleOutlined, EditOutlined, EyeOutlined, PlusOutlined, StopOutlined} from '@ant-design/icons';
 import type {ActionType, ProColumns} from '@ant-design/pro-components';
 import {
@@ -57,8 +58,8 @@ function ActivityDefinitionPage() {
         try {
             setEditingActivity(await getActivityDefinition(activity.activityId));
             setEditorOpen(true);
-        } catch {
-            message.error('活动详情加载失败');
+        } catch (error) {
+            message.error(getApiErrorMessage(error, '活动详情加载失败'));
         }
     };
 
@@ -73,8 +74,9 @@ function ActivityDefinitionPage() {
             }
             await actionRef.current?.reload();
             return true;
-        } catch {
-            message.error(editingActivity ? '活动草稿更新失败' : '活动草稿创建失败');
+        } catch (error) {
+            const fallbackMessage = editingActivity ? '活动草稿更新失败' : '活动草稿创建失败';
+            message.error(getApiErrorMessage(error, fallbackMessage));
             return false;
         }
     };
@@ -94,9 +96,9 @@ function ActivityDefinitionPage() {
                     await changeActivityDefinitionState(activity.activityId, targetState, activity.version);
                     message.success(opening ? '活动已开放' : '活动已关闭');
                     await actionRef.current?.reload();
-                } catch {
-                    message.error(opening ? '活动开放失败' : '活动关闭失败');
-                    throw new Error('Activity state change failed');
+                } catch (error) {
+                    message.error(getApiErrorMessage(error, opening ? '活动开放失败' : '活动关闭失败'));
+                    throw error;
                 }
             },
         });

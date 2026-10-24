@@ -12,6 +12,7 @@ import type {
     ActivityStageQuery,
     ActivityStageState,
 } from '@/services/activity/types';
+import {getApiErrorMessage} from '@/services/errors';
 import {EditOutlined, EyeOutlined, PlusOutlined, RocketOutlined} from '@ant-design/icons';
 import type {ActionType, ProColumns} from '@ant-design/pro-components';
 import {ModalForm, PageContainer, ProForm, ProFormSelect, ProFormText, ProTable} from '@ant-design/pro-components';
@@ -50,8 +51,8 @@ function ActivityStagePage() {
             const latest = await getActivityStage(stage.stageId);
             setEditingStage(latest);
             setEditorOpen(true);
-        } catch {
-            message.error('活动展台详情加载失败');
+        } catch (error) {
+            message.error(getApiErrorMessage(error, '活动展台详情加载失败'));
         }
     };
 
@@ -60,8 +61,8 @@ function ActivityStagePage() {
         setDetailLoading(true);
         try {
             setDetailStage(await getActivityStage(stage.stageId));
-        } catch {
-            message.error('活动展台详情加载失败');
+        } catch (error) {
+            message.error(getApiErrorMessage(error, '活动展台详情加载失败'));
         } finally {
             setDetailLoading(false);
         }
@@ -78,8 +79,9 @@ function ActivityStagePage() {
             }
             await reloadTable();
             return true;
-        } catch {
-            message.error(editingStage ? '待上架配置更新失败' : '待上架配置创建失败');
+        } catch (error) {
+            const fallbackMessage = editingStage ? '待上架配置更新失败' : '待上架配置创建失败';
+            message.error(getApiErrorMessage(error, fallbackMessage));
             return false;
         }
     };
@@ -95,9 +97,9 @@ function ActivityStagePage() {
                     await publishActivityStage(stage.stageId, stage.version);
                     message.success('活动已完成预热并发布');
                     await reloadTable();
-                } catch {
-                    message.error('活动发布失败，原生效活动保持不变');
-                    throw new Error('Activity stage publish failed');
+                } catch (error) {
+                    message.error(getApiErrorMessage(error, '活动发布失败，原生效活动保持不变'));
+                    throw error;
                 }
             },
         });

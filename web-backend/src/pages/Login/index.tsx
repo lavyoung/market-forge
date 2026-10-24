@@ -1,6 +1,7 @@
 import loginArtwork from '@/assets/login-architecture.png';
 import {getCurrentAdminOperator, loginAdminOperator} from '@/services/auth/auth';
 import type {AdminLoginRequest} from '@/services/auth/types';
+import {getApiErrorMessage} from '@/services/errors';
 import {ArrowRightOutlined, DeploymentUnitOutlined, LockOutlined, UserOutlined} from '@ant-design/icons';
 import {LoginForm, ProFormText} from '@ant-design/pro-components';
 import {history, useLocation, useModel} from '@umijs/max';
@@ -55,8 +56,8 @@ function LoginPage() {
             await setInitialState({currentOperator});
             message.success('登录成功');
             history.replace(resolveRedirectPath(location.search));
-        } catch {
-            message.error('用户名或密码错误');
+        } catch (error) {
+            message.error(getApiErrorMessage(error, '用户名或密码错误'));
         } finally {
             setSubmitting(false);
         }

@@ -1,4 +1,5 @@
 import HeaderAccount from '@/components/HeaderAccount';
+import {ApiError, normalizeApiError} from '@/services/errors';
 import {getCurrentAdminOperator} from '@/services/auth/auth';
 import type {AdminOperator} from '@/services/auth/types';
 import {DeploymentUnitOutlined} from '@ant-design/icons';
@@ -45,13 +46,14 @@ export const request: RequestConfig = {
         [
             response => response,
             error => {
-                if (isUnauthorized(error) && history.location.pathname !== '/login') {
+                const apiError = normalizeApiError(error);
+                if (isUnauthorized(apiError) && history.location.pathname !== '/login') {
                     const location = history.location;
                     const redirect = encodeURIComponent(`${location.pathname}${location.search}`);
                     history.replace(`/login?redirect=${redirect}`);
                 }
 
-                return Promise.reject(error);
+                return Promise.reject(apiError);
             },
         ],
     ],
@@ -162,6 +164,9 @@ export const layout: RunTimeLayoutConfig = ({initialState}) => ({
  * @returns 是否需要重新登录
  */
 function isUnauthorized(error: unknown): boolean {
+    if (error instanceof ApiError) {
+        return error.httpStatus === 401;
+    }
     if (typeof error !== 'object' || error === null || !('response' in error)) {
         return false;
     }

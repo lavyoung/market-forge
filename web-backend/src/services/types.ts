@@ -1,3 +1,5 @@
+import {ApiError} from './errors';
+
 /**
  * Java 服务端统一响应结构。
  */
@@ -29,11 +31,14 @@ export interface PageResult<T> {
  *
  * @param response 服务端统一响应
  * @returns 非空业务数据
- * @throws Error 服务端业务处理失败或成功响应未返回数据时抛出
+ * @throws ApiError 服务端业务处理失败或成功响应未返回数据时抛出
  */
 export function requireResponseData<T>(response: ApiResponse<T>): T {
-    if (response.code !== 0 || response.data === null) {
-        throw new Error(response.message);
+    if (response.code !== 0) {
+        throw new ApiError(response.code, response.message);
+    }
+    if (response.data === null) {
+        throw new ApiError(-1, '服务端未返回业务数据');
     }
 
     return response.data;

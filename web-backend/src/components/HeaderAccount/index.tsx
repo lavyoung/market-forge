@@ -1,4 +1,5 @@
 import {logoutAdminOperator} from '@/services/auth/auth';
+import {getApiErrorMessage} from '@/services/errors';
 import {LogoutOutlined, UserOutlined} from '@ant-design/icons';
 import {history, useModel} from '@umijs/max';
 import {Avatar, Button, message, Space, Tooltip, Typography} from 'antd';
@@ -32,8 +33,8 @@ function HeaderAccount() {
             await setInitialState({});
             history.replace('/login');
             message.success('已退出登录');
-        } catch {
-            message.error('退出登录失败，请稍后重试');
+        } catch (error) {
+            message.error(getApiErrorMessage(error, '退出登录失败，请稍后重试'));
         } finally {
             setLoggingOut(false);
         }

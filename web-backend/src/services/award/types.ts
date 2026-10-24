@@ -65,7 +65,44 @@ export type AwardDefinitionState = 'draft' | 'active' | 'disabled';
 /**
  * 奖品领取模式。
  */
-export type AwardClaimMode = 'automatic' | 'manual';
+export type AwardClaimMode = string;
+
+/**
+ * 奖品配置字段输入类型。
+ */
+export type AwardConfigFieldType = 'integer' | 'text' | 'select' | 'boolean';
+
+/**
+ * 奖品领取模式元数据。
+ */
+export interface AwardClaimModeMetadata {
+    code: AwardClaimMode;
+    displayName: string;
+}
+
+/**
+ * 奖品配置表单字段元数据。
+ */
+export interface AwardConfigFieldMetadata {
+    name: string;
+    label: string;
+    fieldType: AwardConfigFieldType;
+    required: boolean;
+    description: string;
+    constraints: Record<string, string>;
+}
+
+/**
+ * 系统当前真实支持的奖品类型元数据。
+ */
+export interface AwardTypeMetadata {
+    awardType: string;
+    displayName: string;
+    supportedClaimModes: AwardClaimModeMetadata[];
+    configVersion: number;
+    configFields: AwardConfigFieldMetadata[];
+    description: string;
+}
 
 /**
  * 奖品定义列表项及详情。
@@ -144,5 +181,18 @@ export interface AwardDefinitionFormValues {
     providerCode?: string;
     awardConfig: string;
     configVersion: number;
+    awardDesc?: string;
+}
+
+/**
+ * 奖品定义编辑器使用的结构化表单数据。
+ */
+export interface AwardDefinitionEditorValues {
+    awardCode: string;
+    awardName: string;
+    awardType: string;
+    claimMode: AwardClaimMode;
+    providerCode?: string;
+    configValues: Record<string, string | number | boolean>;
     awardDesc?: string;
 }
