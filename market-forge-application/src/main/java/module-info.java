@@ -48,6 +48,9 @@ module market.forge.application {
     opens com.lavyoung.marketforge.application.award.service.impl;
     opens com.lavyoung.marketforge.application.award.messaging;
     opens com.lavyoung.marketforge.application.award.grant;
+    opens com.lavyoung.marketforge.application.award.grant.internalcredit;
+    opens com.lavyoung.marketforge.application.award.metadata;
+    opens com.lavyoung.marketforge.application.award.metadata.internalcredit;
     opens com.lavyoung.marketforge.application.behavior.model;
     opens com.lavyoung.marketforge.application.behavior.service;
     opens com.lavyoung.marketforge.application.behavior.service.impl;

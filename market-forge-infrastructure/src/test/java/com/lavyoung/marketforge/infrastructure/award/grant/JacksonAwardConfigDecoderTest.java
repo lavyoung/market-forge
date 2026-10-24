@@ -1,10 +1,11 @@
 package com.lavyoung.marketforge.infrastructure.award.grant;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.lavyoung.marketforge.application.award.grant.InternalCreditAwardConfig;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import org.junit.jupiter.api.Test;
+
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -27,12 +28,12 @@ class JacksonAwardConfigDecoderTest {
      * 验证合法的积分配置 JSON 能够转换为类型安全的配置对象。
      */
     @Test
-    void shouldDecodeValidInternalCreditConfig() {
+    void shouldDecodeValidConfig() {
         // Given
         String configContent = "{\"amount\":100}";
 
         // When
-        InternalCreditAwardConfig config = decoder.decode(configContent, InternalCreditAwardConfig.class);
+        TestAwardConfig config = decoder.decode(configContent, TestAwardConfig.class);
 
         // Then
         assertEquals(100L, config.amount());
@@ -96,9 +97,24 @@ class JacksonAwardConfigDecoderTest {
     private void assertInvalidConfig(String configContent) {
         // When
         BusinessException exception = assertThrows(BusinessException.class,
-                () -> decoder.decode(configContent, InternalCreditAwardConfig.class));
+                () -> decoder.decode(configContent, TestAwardConfig.class));
 
         // Then
         assertEquals(BusinessResponseCode.AWARD_CONFIG_INVALID, exception.getResponseCode());
+    }
+
+    /**
+     * 测试专用配置模型，用于隔离 JSON 解码器与具体奖品实现。
+     *
+     * @param amount 必须大于零的测试数量
+     */
+    private record TestAwardConfig(Long amount) {
+
+        private TestAwardConfig {
+            Objects.requireNonNull(amount, "amount must not be null");
+            if (amount <= 0) {
+                throw new IllegalArgumentException("amount must be positive");
+            }
+        }
     }
 }

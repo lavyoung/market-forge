@@ -1,5 +1,7 @@
-package com.lavyoung.marketforge.application.award.grant;
+package com.lavyoung.marketforge.application.award.metadata.internalcredit;
 
+import com.lavyoung.marketforge.application.award.grant.internalcredit.InternalCreditAwardConfig;
+import com.lavyoung.marketforge.application.award.metadata.AwardTypeMetadataContributor;
 import com.lavyoung.marketforge.application.award.model.AwardConfigFieldMetadata;
 import com.lavyoung.marketforge.application.award.model.AwardConfigFieldType;
 import com.lavyoung.marketforge.application.award.model.AwardTypeMetadata;
@@ -11,7 +13,7 @@ import java.util.Map;
 
 
 /**
- * 平台积分奖品类型的运营配置元数据提供者。
+ * 平台积分奖品类型的运营配置元数据贡献者。
  *
  * <p>积分奖品当前只支持自动发放，版本 1 的配置只包含正整数
  * {@code amount}。这里描述配置结构，不执行 JSON 解析或积分入账。</p>
@@ -21,7 +23,7 @@ import java.util.Map;
  * @date 2026/10/24
  */
 @Component
-public class InternalCreditAwardTypeMetadataProvider implements AwardTypeMetadataProvider {
+public class InternalCreditAwardTypeMetadataContributor implements AwardTypeMetadataContributor {
 
     private static final AwardTypeMetadata METADATA = new AwardTypeMetadata(
             InternalCreditAwardConfig.AWARD_TYPE,

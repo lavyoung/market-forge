@@ -1,5 +1,6 @@
-package com.lavyoung.marketforge.application.award.grant;
+package com.lavyoung.marketforge.application.award.grant.internalcredit;
 
+import com.lavyoung.marketforge.application.award.grant.AwardConfigDecoder;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import org.junit.jupiter.api.Test;

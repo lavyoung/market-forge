@@ -1,5 +1,6 @@
-package com.lavyoung.marketforge.application.award.grant;
+package com.lavyoung.marketforge.application.award.grant.internalcredit;
 
+import com.lavyoung.marketforge.application.award.grant.AwardConfigDecoder;
 import com.lavyoung.marketforge.application.award.model.GrantAwardCommand;
 import com.lavyoung.marketforge.domain.award.event.AwardFulfillmentSnapshot;
 import com.lavyoung.marketforge.domain.credit.model.vo.CreditAccountBusinessTypeVO;

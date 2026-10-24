@@ -1,5 +1,7 @@
-package com.lavyoung.marketforge.application.award.grant;
+package com.lavyoung.marketforge.application.award.grant.internalcredit;
 
+import com.lavyoung.marketforge.application.award.grant.AwardConfigDecoder;
+import com.lavyoung.marketforge.application.award.grant.AwardConfigValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

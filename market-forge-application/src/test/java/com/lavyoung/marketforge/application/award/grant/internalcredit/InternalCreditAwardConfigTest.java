@@ -1,4 +1,4 @@
-package com.lavyoung.marketforge.application.award.grant;
+package com.lavyoung.marketforge.application.award.grant.internalcredit;
 
 import org.junit.jupiter.api.Test;
 
