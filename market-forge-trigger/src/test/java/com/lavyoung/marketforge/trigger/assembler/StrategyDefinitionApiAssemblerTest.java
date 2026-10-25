@@ -47,8 +47,55 @@ class StrategyDefinitionApiAssemblerTest {
                 () -> assertEquals("rule_weight", command.ruleModels()),
                 () -> assertEquals(AWARD_ID, command.awards().get(0).awardId()),
                 () -> assertEquals("rule_weight", command.rules().get(0).ruleModel()),
+                () -> assertEquals("100:" + AWARD_ID, command.rules().get(0).ruleValue()),
                 () -> assertEquals(OPERATOR, command.operator())
         );
+    }
+
+    /**
+     * Given 三类结构化规则请求，When 转换为应用命令，Then 应派生作用域并生成兼容规则值。
+     */
+    @Test
+    void shouldEncodeStructuredRuleConfigurations() {
+        // Given
+        StrategyRuleConfigRequest blacklist = new StrategyRuleConfigRequest(
+                null, "rule_blacklist", new BlacklistRuleConfigRequest(AWARD_ID, List.of(" user-002 ", "user-001")),
+                null, null, "黑名单兜底");
+        StrategyRuleConfigRequest weight = new StrategyRuleConfigRequest(
+                null, "rule_weight", null, new WeightRuleConfigRequest(List.of(
+                new WeightTierConfigRequest(100L, List.of(AWARD_ID)),
+                new WeightTierConfigRequest(10L, List.of(AWARD_ID, 200002L)))), null, "权重奖池");
+        StrategyRuleConfigRequest lock = new StrategyRuleConfigRequest(
+                AWARD_ID, "rule_lock", null, null, new LockRuleConfigRequest(3), "三次后解锁");
+
+        // When
+        StrategyRuleConfigCommand blacklistCommand = ASSEMBLER.toRuleCommand(blacklist);
+        StrategyRuleConfigCommand weightCommand = ASSEMBLER.toRuleCommand(weight);
+        StrategyRuleConfigCommand lockCommand = ASSEMBLER.toRuleCommand(lock);
+
+        // Then
+        assertAll(
+                () -> assertEquals(1, blacklistCommand.ruleType()),
+                () -> assertNull(blacklistCommand.awardId()),
+                () -> assertEquals(AWARD_ID + ":user-002/user-001", blacklistCommand.ruleValue()),
+                () -> assertEquals("10:" + AWARD_ID + "/200002;100:" + AWARD_ID, weightCommand.ruleValue()),
+                () -> assertEquals(2, lockCommand.ruleType()),
+                () -> assertEquals(AWARD_ID, lockCommand.awardId()),
+                () -> assertEquals("3", lockCommand.ruleValue())
+        );
+    }
+
+    /**
+     * Given 不受支持的规则模型，When 执行装配，Then 应显式拒绝而不是生成不完整命令。
+     */
+    @Test
+    void shouldRejectUnsupportedRuleModelDuringAssembly() {
+        // Given
+        StrategyRuleConfigRequest request = new StrategyRuleConfigRequest(null, "rule_unknown", null, null, null, "未知规则");
+
+        // When & Then
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> ASSEMBLER.toRuleCommand(request));
+        assertTrue(exception.getMessage().contains("rule_unknown"));
     }
 
     /**
@@ -183,8 +230,10 @@ class StrategyDefinitionApiAssemblerTest {
     private CreateStrategyDefinitionRequest createRequest() {
         StrategyAwardConfigRequest award = new StrategyAwardConfigRequest(
                 AWARD_ID, "100积分", null, 100, new BigDecimal("30"), "rule_stock", 1);
+        WeightRuleConfigRequest weight = new WeightRuleConfigRequest(
+                List.of(new WeightTierConfigRequest(100L, List.of(AWARD_ID))));
         StrategyRuleConfigRequest rule = new StrategyRuleConfigRequest(
-                null, 1, "rule_weight", "100:" + AWARD_ID, "权重奖池");
+                null, "rule_weight", null, weight, null, "权重奖池");
         return new CreateStrategyDefinitionRequest("九宫格策略", "rule_weight", List.of(award), List.of(rule));
     }
 }

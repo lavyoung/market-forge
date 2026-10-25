@@ -3,6 +3,9 @@
  */
 export type StrategyDefinitionState = 'draft' | 'active' | 'disabled';
 
+/** 支持运营端结构化编辑的规则模型。 */
+export type ConfigurableRuleModel = 'rule_blacklist' | 'rule_weight' | 'rule_lock';
+
 /**
  * 策略定义列表摘要。
  */
@@ -120,11 +123,30 @@ export interface StrategyAwardEditorValues {
  * 策略规则编辑字段。
  */
 export interface StrategyRuleEditorValues {
+    /** 关联奖品；仅次数锁规则填写。 */
     awardId?: string;
-    ruleType: 1 | 2;
-    ruleModel: string;
-    ruleValue: string;
+    /** 当前编辑的规则模型。 */
+    ruleModel: ConfigurableRuleModel;
+    /** 黑名单命中后的兜底奖品。 */
+    blacklistFallbackAwardId?: string;
+    /** 黑名单用户标识。 */
+    blacklistUserIds?: string[];
+    /** 权重奖池次数档位。 */
+    weightTiers?: WeightTierEditorValues[];
+    /** 次数锁要求的最低完成次数。 */
+    lockRequiredCount?: number;
+    /** 运营说明。 */
     ruleDesc: string;
+}
+
+/**
+ * 权重奖池的单个次数档位编辑字段。
+ */
+export interface WeightTierEditorValues {
+    /** 进入当前子奖池所需的最低累计次数。 */
+    threshold: number;
+    /** 当前档位包含的策略奖品标识。 */
+    awardIds: string[];
 }
 
 /**
@@ -144,5 +166,17 @@ export interface StrategyDefinitionPayload {
     strategyDesc: string;
     ruleModels?: string;
     awards: Array<Omit<StrategyAwardEditorValues, 'ruleModels'> & { ruleModels?: string }>;
-    rules: StrategyRuleEditorValues[];
+    rules: StrategyRulePayload[];
+}
+
+/**
+ * 服务端结构化策略规则写请求。
+ */
+export interface StrategyRulePayload {
+    awardId?: string;
+    ruleModel: ConfigurableRuleModel;
+    blacklist?: { fallbackAwardId: string; userIds: string[] };
+    weight?: { tiers: WeightTierEditorValues[] };
+    lock?: { requiredCount: number };
+    ruleDesc: string;
 }

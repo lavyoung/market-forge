@@ -66,12 +66,12 @@ class StrategyDefinitionRequestValidationTest {
     }
 
     /**
-     * Given 规则类型和模型格式非法，When 校验创建请求，Then 应级联拒绝嵌套规则。
+     * Given 规则模型不受支持且没有结构化配置，When 校验创建请求，Then 应级联拒绝嵌套规则。
      */
     @Test
     void shouldCascadeValidationToRuleConfiguration() {
         // Given
-        StrategyRuleConfigRequest invalidRule = new StrategyRuleConfigRequest(null, 3, "LOCK", "1", "规则说明");
+        StrategyRuleConfigRequest invalidRule = new StrategyRuleConfigRequest(null, "LOCK", null, null, null, "规则说明");
         CreateStrategyDefinitionRequest request = new CreateStrategyDefinitionRequest(
                 "测试策略", null, List.of(), List.of(invalidRule));
 
@@ -79,8 +79,57 @@ class StrategyDefinitionRequestValidationTest {
         Set<ConstraintViolation<CreateStrategyDefinitionRequest>> violations = VALIDATOR.validate(request);
 
         // Then
-        assertTrue(violations.stream().anyMatch(violation -> violation.getPropertyPath().toString().contains("rules[0].ruleType")));
         assertTrue(violations.stream().anyMatch(violation -> violation.getPropertyPath().toString().contains("rules[0].ruleModel")));
+        assertTrue(violations.stream().anyMatch(violation -> violation.getPropertyPath().toString().contains("rules[0].configurationValid")));
+    }
+
+    /**
+     * Given 权重模型错误携带黑名单配置，When 校验创建请求，Then 应拒绝互相矛盾的规则结构。
+     */
+    @Test
+    void shouldRejectRuleModelAndConfigurationMismatch() {
+        // Given
+        BlacklistRuleConfigRequest blacklist = new BlacklistRuleConfigRequest(200001L, List.of("user-001"));
+        StrategyRuleConfigRequest invalidRule = new StrategyRuleConfigRequest(
+                null, "rule_weight", blacklist, null, null, "权重奖池");
+
+        // When
+        Set<ConstraintViolation<StrategyRuleConfigRequest>> violations = VALIDATOR.validate(invalidRule);
+
+        // Then
+        assertTrue(violations.stream().anyMatch(violation -> violation.getPropertyPath().toString().equals("configurationValid")));
+    }
+
+    /**
+     * Given 权重档位包含负门槛和空奖品集合，When 校验请求，Then 应级联校验档位字段。
+     */
+    @Test
+    void shouldCascadeValidationToWeightTier() {
+        // Given
+        WeightTierConfigRequest invalidTier = new WeightTierConfigRequest(-1L, List.of());
+        StrategyRuleConfigRequest invalidRule = new StrategyRuleConfigRequest(
+                null, "rule_weight", null, new WeightRuleConfigRequest(List.of(invalidTier)), null, "权重奖池");
+
+        // When
+        Set<ConstraintViolation<StrategyRuleConfigRequest>> violations = VALIDATOR.validate(invalidRule);
+
+        // Then
+        assertTrue(violations.stream().anyMatch(violation -> violation.getPropertyPath().toString().contains("weight.tiers[0].threshold")));
+        assertTrue(violations.stream().anyMatch(violation -> violation.getPropertyPath().toString().contains("weight.tiers[0].awardIds")));
+    }
+
+    /**
+     * Given 次数锁没有绑定奖品，When 校验请求，Then 应拒绝缺少奖品作用域的配置。
+     */
+    @Test
+    void shouldRejectLockRuleWithoutAward() {
+        // Given
+        StrategyRuleConfigRequest invalidRule = new StrategyRuleConfigRequest(
+                null, "rule_lock", null, null, new LockRuleConfigRequest(1), "一次后解锁");
+
+        // When & Then
+        assertTrue(VALIDATOR.validate(invalidRule).stream()
+                .anyMatch(violation -> violation.getPropertyPath().toString().equals("configurationValid")));
     }
 
     /**
@@ -125,8 +174,10 @@ class StrategyDefinitionRequestValidationTest {
     private CreateStrategyDefinitionRequest validRequest() {
         StrategyAwardConfigRequest award = new StrategyAwardConfigRequest(
                 200001L, "100积分", "自动到账", 100, new BigDecimal("30.00000"), "rule_stock", 1);
+        WeightRuleConfigRequest weight = new WeightRuleConfigRequest(
+                List.of(new WeightTierConfigRequest(100L, List.of(200001L))));
         StrategyRuleConfigRequest rule = new StrategyRuleConfigRequest(
-                null, 1, "rule_weight", "100:200001", "权重奖池");
+                null, "rule_weight", null, weight, null, "权重奖池");
         return new CreateStrategyDefinitionRequest("测试策略", "rule_weight", List.of(award), List.of(rule));
     }
 }

@@ -6,6 +6,7 @@ import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionResponse
 import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionSummaryResponse;
 import com.lavyoung.marketforge.api.strategy.response.StrategyRuleConfigResponse;
 import com.lavyoung.marketforge.application.strategy.model.*;
+import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.model.PageRequest;
 import com.lavyoung.marketforge.types.model.PageResult;
 import org.mapstruct.Mapper;
@@ -15,6 +16,7 @@ import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * 策略定义 API 协议装配器。
@@ -99,7 +101,59 @@ public interface StrategyDefinitionApiAssembler {
      * @param request 规则请求项
      * @return 规则应用命令项
      */
-    StrategyRuleConfigCommand toRuleCommand(StrategyRuleConfigRequest request);
+    default StrategyRuleConfigCommand toRuleCommand(StrategyRuleConfigRequest request) {
+        Objects.requireNonNull(request, "request must not be null");
+        return switch (request.ruleModel()) {
+            case "rule_blacklist" -> new StrategyRuleConfigCommand(null, 1, request.ruleModel(),
+                    encodeBlacklistRule(request.blacklist()), request.ruleDesc());
+            case "rule_weight" -> new StrategyRuleConfigCommand(null, 1, request.ruleModel(),
+                    encodeWeightRule(request.weight()), request.ruleDesc());
+            case "rule_lock" -> new StrategyRuleConfigCommand(request.awardId(), 2, request.ruleModel(),
+                    encodeLockRule(request.lock()), request.ruleDesc());
+            default ->
+                    throw new IllegalArgumentException("Unsupported configurable rule model: " + request.ruleModel());
+        };
+    }
+
+    /**
+     * 将黑名单结构化请求编码为当前 Application Command 使用的兼容格式。
+     *
+     * @param request 黑名单结构化配置
+     * @return “兜底奖品标识:用户标识/用户标识”格式的规则值
+     * @throws NullPointerException 黑名单配置为空时抛出
+     */
+    private String encodeBlacklistRule(BlacklistRuleConfigRequest request) {
+        Objects.requireNonNull(request, "blacklist rule configuration must not be null");
+        String userIds = request.userIds().stream().map(String::trim).collect(Collectors.joining(Constants.SPLIT));
+        return request.fallbackAwardId() + Constants.COLON + userIds;
+    }
+
+    /**
+     * 将权重档位结构化请求编码为当前 Application Command 使用的兼容格式。
+     *
+     * @param request 权重奖池结构化配置
+     * @return “次数门槛:奖品标识/奖品标识;...”格式的规则值
+     * @throws NullPointerException 权重配置为空时抛出
+     */
+    private String encodeWeightRule(WeightRuleConfigRequest request) {
+        Objects.requireNonNull(request, "weight rule configuration must not be null");
+        return request.tiers().stream().sorted((left, right) -> Long.compare(left.threshold(), right.threshold()))
+                .map(tier -> tier.threshold() + Constants.COLON + tier.awardIds().stream()
+                        .map(String::valueOf).collect(Collectors.joining(Constants.SPLIT)))
+                .collect(Collectors.joining(Constants.SEMICOLON));
+    }
+
+    /**
+     * 将次数锁结构化请求编码为当前 Application Command 使用的兼容格式。
+     *
+     * @param request 次数锁结构化配置
+     * @return 非负整数格式的解锁次数
+     * @throws NullPointerException 次数锁配置为空时抛出
+     */
+    private String encodeLockRule(LockRuleConfigRequest request) {
+        Objects.requireNonNull(request, "lock rule configuration must not be null");
+        return Integer.toString(request.requiredCount());
+    }
 
     /**
      * 将完整应用结果转换为 API 响应。

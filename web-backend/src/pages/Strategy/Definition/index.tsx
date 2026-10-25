@@ -15,6 +15,7 @@ import type {
     StrategyDefinitionState,
     StrategyDefinitionSummary,
     StrategyRuleConfig,
+    StrategyRuleEditorValues,
 } from '@/services/strategy/types';
 import {getApiErrorMessage} from '@/services/errors';
 import {CopyOutlined, EditOutlined, EyeOutlined, PlusOutlined, RocketOutlined, StopOutlined} from '@ant-design/icons';
@@ -23,6 +24,7 @@ import {
     ModalForm,
     PageContainer,
     ProForm,
+    ProFormDependency,
     ProFormDigit,
     ProFormList,
     ProFormSelect,
@@ -327,24 +329,69 @@ function StrategyDefinitionEditor({open, strategy, awardOptions, awardOptionsLoa
             <Typography.Title level={5}>规则配置</Typography.Title>
             <ProFormList name="rules" creatorButtonProps={{creatorButtonText: '添加规则配置'}} copyIconProps={false}
                          deleteIconProps={{tooltipText: '删除规则'}}>
-                <ProForm.Group>
-                    <ProFormSelect name="ruleType" label="规则类型" width="sm" options={[
-                        {label: '策略规则', value: 1},
-                        {label: '奖品规则', value: 2},
-                    ]} rules={[{required: true}]}/>
-                    <ProFormSelect name="awardId" label="关联奖品" width="md" options={awardOptions}
-                                   fieldProps={{showSearch: true, optionFilterProp: 'label', allowClear: true}}
-                                   tooltip="策略规则留空；奖品规则必须选择当前策略中的奖品"/>
-                    <ProFormSelect name="ruleModel" label="规则模型" width="md" options={ruleConfigModelOptions}
-                                   rules={[{required: true}]}/>
-                </ProForm.Group>
-                <ProForm.Group>
-                    <ProFormText name="ruleValue" label="规则值" width="md" rules={[{required: true}, {max: 256}]}/>
-                    <ProFormText name="ruleDesc" label="规则说明" width="lg" rules={[{required: true}, {max: 256}]}/>
-                </ProForm.Group>
+                {() => (
+                    <>
+                        <ProForm.Group>
+                            <ProFormSelect name="ruleModel" label="规则模型" width="md" options={ruleConfigModelOptions}
+                                           rules={[{required: true, message: '请选择规则模型'}]}/>
+                            <ProFormText name="ruleDesc" label="规则说明" width="lg"
+                                         rules={[{required: true, message: '请输入规则说明'}, {max: 256}]}/>
+                        </ProForm.Group>
+                        <ProFormDependency name={['ruleModel']}>
+                            {({ruleModel}) => <RuleConfigurationFields ruleModel={ruleModel}
+                                                                       awardOptions={awardOptions}/>}
+                        </ProFormDependency>
+                    </>
+                )}
             </ProFormList>
         </ModalForm>
     );
+}
+
+function RuleConfigurationFields({ruleModel, awardOptions}: {
+    ruleModel?: StrategyRuleEditorValues['ruleModel'];
+    awardOptions: SelectOption[];
+}) {
+    if (ruleModel === 'rule_blacklist') {
+        return (
+            <ProForm.Group>
+                <ProFormSelect name="blacklistFallbackAwardId" label="黑名单兜底奖品" width="md"
+                               options={awardOptions} fieldProps={{showSearch: true, optionFilterProp: 'label'}}
+                               rules={positiveIdRules}/>
+                <ProFormSelect name="blacklistUserIds" label="黑名单用户" width="lg" mode="tags"
+                               fieldProps={{tokenSeparators: [',', '，', ' ']}}
+                               rules={[{required: true, message: '请输入至少一个黑名单用户'}]}
+                               tooltip="输入用户标识后按回车，可批量粘贴并使用逗号分隔"/>
+            </ProForm.Group>
+        );
+    }
+    if (ruleModel === 'rule_weight') {
+        return (
+            <ProFormList name="weightTiers" label="权重奖池档位"
+                         creatorButtonProps={{creatorButtonText: '添加次数档位'}} copyIconProps={false}
+                         deleteIconProps={{tooltipText: '删除档位'}}
+                         required isValidateList emptyListMessage="至少配置一个权重档位">
+                <ProForm.Group>
+                    <ProFormDigit name="threshold" label="累计次数门槛" width="sm" min={0}
+                                  fieldProps={{precision: 0}} rules={[{required: true, message: '请输入次数门槛'}]}/>
+                    <ProFormSelect name="awardIds" label="候选奖品" width="lg" mode="multiple"
+                                   options={awardOptions} fieldProps={{showSearch: true, optionFilterProp: 'label'}}
+                                   rules={[{required: true, message: '请选择至少一个候选奖品'}]}/>
+                </ProForm.Group>
+            </ProFormList>
+        );
+    }
+    if (ruleModel === 'rule_lock') {
+        return (
+            <ProForm.Group>
+                <ProFormSelect name="awardId" label="解锁奖品" width="md" options={awardOptions}
+                               fieldProps={{showSearch: true, optionFilterProp: 'label'}} rules={positiveIdRules}/>
+                <ProFormDigit name="lockRequiredCount" label="最低完成次数" width="sm" min={0}
+                              fieldProps={{precision: 0}} rules={[{required: true, message: '请输入最低完成次数'}]}/>
+            </ProForm.Group>
+        );
+    }
+    return <Typography.Text type="secondary">请选择规则模型后配置业务参数</Typography.Text>;
 }
 
 function StrategyDefinitionDetail({strategy}: { strategy: StrategyDefinition }) {
@@ -430,14 +477,44 @@ function toEditorValues(strategy?: StrategyDefinition): StrategyDefinitionEditor
             ruleModels: splitModels(award.ruleModels, '/'),
             sort: award.sort,
         })),
-        rules: strategy.rules.map((rule) => ({
-            awardId: rule.awardId ?? undefined,
-            ruleType: rule.ruleType,
-            ruleModel: rule.ruleModel,
-            ruleValue: rule.ruleValue,
-            ruleDesc: rule.ruleDesc,
-        })),
+        rules: strategy.rules.map(toRuleEditorValues),
     };
+}
+
+function toRuleEditorValues(rule: StrategyRuleConfig): StrategyRuleEditorValues {
+    if (rule.ruleModel === 'rule_blacklist') {
+        const separatorIndex = rule.ruleValue.indexOf(':');
+        return {
+            ruleModel: rule.ruleModel,
+            blacklistFallbackAwardId: separatorIndex >= 0 ? rule.ruleValue.slice(0, separatorIndex).trim() : undefined,
+            blacklistUserIds: separatorIndex >= 0 ? splitValues(rule.ruleValue.slice(separatorIndex + 1), '/') : [],
+            ruleDesc: rule.ruleDesc,
+        };
+    }
+    if (rule.ruleModel === 'rule_weight') {
+        return {
+            ruleModel: rule.ruleModel,
+            weightTiers: splitValues(rule.ruleValue, ';').map((tier) => {
+                const separatorIndex = tier.indexOf(':');
+                const threshold = Number(separatorIndex >= 0 ? tier.slice(0, separatorIndex).trim() : '');
+                return {
+                    threshold: Number.isSafeInteger(threshold) && threshold >= 0 ? threshold : 0,
+                    awardIds: separatorIndex >= 0 ? splitValues(tier.slice(separatorIndex + 1), '/') : [],
+                };
+            }),
+            ruleDesc: rule.ruleDesc,
+        };
+    }
+    return {
+        awardId: rule.awardId ?? undefined,
+        ruleModel: 'rule_lock',
+        lockRequiredCount: Number(rule.ruleValue),
+        ruleDesc: rule.ruleDesc,
+    };
+}
+
+function splitValues(value: string, separator: '/' | ';'): string[] {
+    return value.split(separator).map((item) => item.trim()).filter(Boolean);
 }
 
 function splitModels(value: string | null, separator: ',' | '/'): string[] {

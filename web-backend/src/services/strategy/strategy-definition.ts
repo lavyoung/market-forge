@@ -10,6 +10,8 @@ import type {
     StrategyDefinitionQuery,
     StrategyDefinitionState,
     StrategyDefinitionSummary,
+    StrategyRuleEditorValues,
+    StrategyRulePayload,
 } from './types';
 
 /** 策略定义运营管理接口地址。 */
@@ -136,13 +138,47 @@ function toPayload(values: StrategyDefinitionEditorValues): StrategyDefinitionPa
             awardSubtitle: normalizeText(award.awardSubtitle),
             ruleModels: joinModels(award.ruleModels, '/'),
         })),
-        rules: values.rules.map((rule) => ({
-            ...rule,
-            awardId: rule.ruleType === 1 ? undefined : normalizeText(rule.awardId),
-            ruleValue: rule.ruleValue.trim(),
-            ruleDesc: rule.ruleDesc.trim(),
-        })),
+        rules: values.rules.map(toRulePayload),
     };
+}
+
+/**
+ * 将规则编辑字段转换为与规则模型匹配的结构化写请求。
+ *
+ * @param rule 页面中的单条规则配置
+ * @returns 仅携带当前规则所需字段的 API 请求
+ */
+function toRulePayload(rule: StrategyRuleEditorValues): StrategyRulePayload {
+    const ruleDesc = rule.ruleDesc.trim();
+    switch (rule.ruleModel) {
+        case 'rule_blacklist':
+            return {
+                ruleModel: rule.ruleModel,
+                blacklist: {
+                    fallbackAwardId: normalizeText(rule.blacklistFallbackAwardId) ?? '',
+                    userIds: rule.blacklistUserIds?.map((userId) => userId.trim()).filter(Boolean) ?? [],
+                },
+                ruleDesc,
+            };
+        case 'rule_weight':
+            return {
+                ruleModel: rule.ruleModel,
+                weight: {
+                    tiers: rule.weightTiers?.map((tier) => ({
+                        threshold: tier.threshold,
+                        awardIds: tier.awardIds.map((awardId) => awardId.trim()),
+                    })) ?? [],
+                },
+                ruleDesc,
+            };
+        case 'rule_lock':
+            return {
+                awardId: normalizeText(rule.awardId),
+                ruleModel: rule.ruleModel,
+                lock: {requiredCount: rule.lockRequiredCount ?? 0},
+                ruleDesc,
+            };
+    }
 }
 
 function joinModels(models: string[] | undefined, separator: ',' | '/'): string | undefined {

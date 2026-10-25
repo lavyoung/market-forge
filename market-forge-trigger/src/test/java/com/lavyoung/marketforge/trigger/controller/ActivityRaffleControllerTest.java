@@ -68,7 +68,7 @@ class ActivityRaffleControllerTest {
         assertAll(
                 () -> assertEquals(CommonResponseCode.SUCCESS.getCode(), response.code()),
                 () -> assertEquals("order-001", response.data().orderId()),
-                () -> assertEquals(9_009_010L, response.data().awardId())
+                () -> assertEquals("9009010", response.data().awardId())
         );
         verifyNoInteractions(rateLimiterStore);
         verify(applicationService).raffle(expectedCommand);

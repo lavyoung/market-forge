@@ -69,9 +69,9 @@ class StrategyRaffleControllerTest {
         // Then
         assertAll(
                 () -> assertEquals(ORDER_ID, result.data().orderId()),
-                () -> assertEquals(ACTIVITY_ID, result.data().activityId()),
-                () -> assertEquals(STRATEGY_ID, result.data().strategyId()),
-                () -> assertEquals(AWARD_ID, result.data().awardId()),
+                () -> assertEquals(ACTIVITY_ID.toString(), result.data().activityId()),
+                () -> assertEquals(STRATEGY_ID.toString(), result.data().strategyId()),
+                () -> assertEquals(AWARD_ID.toString(), result.data().awardId()),
                 () -> assertEquals("random_ore", result.data().awardKey()),
                 () -> assertEquals("quantity=1", result.data().awardConfig())
         );
@@ -101,7 +101,7 @@ class StrategyRaffleControllerTest {
         assertAll(
                 () -> assertEquals(CommonResponseCode.SUCCESS.getCode(), result.code()),
                 () -> assertNotNull(result.data()),
-                () -> assertEquals(AWARD_ID, result.data().awardId())
+                () -> assertEquals(AWARD_ID.toString(), result.data().awardId())
         );
     }
 
@@ -127,8 +127,8 @@ class StrategyRaffleControllerTest {
         StrategyAwardResponse response = result.data().get(0);
         assertAll(
                 () -> assertEquals(CommonResponseCode.SUCCESS.getCode(), result.code()),
-                () -> assertEquals(STRATEGY_ID, response.strategyId()),
-                () -> assertEquals(AWARD_ID, response.awardId()),
+                () -> assertEquals(STRATEGY_ID.toString(), response.strategyId()),
+                () -> assertEquals(AWARD_ID.toString(), response.awardId()),
                 () -> assertEquals("随机矿石", response.awardTitle()),
                 () -> assertEquals(new BigDecimal("0.1000"), response.awardRate())
         );
