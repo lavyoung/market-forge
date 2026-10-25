@@ -2,7 +2,9 @@ package com.lavyoung.marketforge.trigger.assembler;
 
 import com.lavyoung.marketforge.api.strategy.request.*;
 import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionResponse;
+import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionSummaryResponse;
 import com.lavyoung.marketforge.application.strategy.model.*;
+import com.lavyoung.marketforge.types.model.PageResult;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
@@ -46,6 +48,50 @@ class StrategyDefinitionApiAssemblerTest {
                 () -> assertEquals(AWARD_ID, command.awards().get(0).awardId()),
                 () -> assertEquals("rule_weight", command.rules().get(0).ruleModel()),
                 () -> assertEquals(OPERATOR, command.operator())
+        );
+    }
+
+    /**
+     * Given HTTP 分页查询参数，When 转换，Then 应生成规范化前的应用查询结构和共享分页对象。
+     */
+    @Test
+    void shouldMapSearchRequestToApplicationQuery() {
+        // Given
+        StrategyDefinitionSearchRequest request = new StrategyDefinitionSearchRequest(STRATEGY_ID, "九宫格", "active", 2, 20);
+
+        // When
+        StrategyDefinitionSearchQuery query = ASSEMBLER.toSearchQuery(request);
+
+        // Then
+        assertAll(
+                () -> assertEquals(STRATEGY_ID, query.strategyId()),
+                () -> assertEquals("九宫格", query.strategyDesc()),
+                () -> assertEquals("active", query.state()),
+                () -> assertEquals(2, query.page().pageNumber()),
+                () -> assertEquals(20, query.page().pageSize())
+        );
+    }
+
+    /**
+     * Given 含超出 JavaScript 安全整数范围标识的分页结果，When 转换，Then 标识应完整字符串化且分页元数据不变。
+     */
+    @Test
+    void shouldMapSearchPageAndPreserveLongIdentifier() {
+        // Given
+        LocalDateTime now = LocalDateTime.of(2026, 10, 25, 16, 0);
+        StrategyDefinitionSearchItem item = new StrategyDefinitionSearchItem(STRATEGY_ID, "九宫格策略", "rule_weight", "active", 2, OPERATOR, OPERATOR, now, now);
+        PageResult<StrategyDefinitionSearchItem> source = new PageResult<>(List.of(item), 21L, 2, 20);
+
+        // When
+        PageResult<StrategyDefinitionSummaryResponse> response = ASSEMBLER.toPageResponse(source);
+
+        // Then
+        assertAll(
+                () -> assertEquals(STRATEGY_ID.toString(), response.records().get(0).strategyId()),
+                () -> assertEquals("九宫格策略", response.records().get(0).strategyDesc()),
+                () -> assertEquals(21L, response.total()),
+                () -> assertEquals(2, response.pageNumber()),
+                () -> assertEquals(20, response.pageSize())
         );
     }
 

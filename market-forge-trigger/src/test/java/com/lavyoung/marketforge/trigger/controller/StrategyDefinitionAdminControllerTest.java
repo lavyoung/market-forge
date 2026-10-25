@@ -2,15 +2,21 @@ package com.lavyoung.marketforge.trigger.controller;
 
 import com.lavyoung.marketforge.api.admin.auth.response.AdminOperatorResponse;
 import com.lavyoung.marketforge.api.strategy.IStrategyAdminApi;
+import com.lavyoung.marketforge.api.strategy.IStrategyDefinitionAdminApi;
 import com.lavyoung.marketforge.api.strategy.request.ChangeStrategyDefinitionStateRequest;
 import com.lavyoung.marketforge.api.strategy.request.CreateStrategyDefinitionRequest;
+import com.lavyoung.marketforge.api.strategy.request.StrategyDefinitionSearchRequest;
 import com.lavyoung.marketforge.api.strategy.request.UpdateStrategyDefinitionRequest;
 import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionResponse;
+import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionSummaryResponse;
 import com.lavyoung.marketforge.application.strategy.model.*;
 import com.lavyoung.marketforge.application.strategy.service.IStrategyDefinitionApplicationService;
+import com.lavyoung.marketforge.application.strategy.service.IStrategyDefinitionSearchService;
 import com.lavyoung.marketforge.application.strategy.service.IStrategySnapshotRefreshApplicationService;
 import com.lavyoung.marketforge.trigger.assembler.StrategyDefinitionApiAssembler;
 import com.lavyoung.marketforge.trigger.security.AdminSessionManager;
+import com.lavyoung.marketforge.types.model.PageRequest;
+import com.lavyoung.marketforge.types.model.PageResult;
 import com.lavyoung.marketforge.types.model.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +30,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
@@ -44,6 +51,8 @@ class StrategyDefinitionAdminControllerTest {
     private static final String OPERATOR = "admin";
 
     @Mock
+    private IStrategyDefinitionSearchService searchService;
+    @Mock
     private IStrategyDefinitionApplicationService applicationService;
     @Mock
     private StrategyDefinitionApiAssembler assembler;
@@ -54,7 +63,7 @@ class StrategyDefinitionAdminControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new StrategyDefinitionAdminController(applicationService, assembler, adminSessionManager);
+        controller = new StrategyDefinitionAdminController(searchService, applicationService, assembler, adminSessionManager);
     }
 
     /**
@@ -97,6 +106,54 @@ class StrategyDefinitionAdminControllerTest {
         // Then
         assertSame(response, actual.data());
         verify(adminSessionManager, never()).currentOperator();
+    }
+
+    /**
+     * Given 策略分页查询请求，When 查询列表，Then 应转换查询模型、委托查询服务且不读取写操作身份。
+     */
+    @Test
+    void shouldSearchStrategyDefinitionsWithoutReadingOperatorSession() {
+        // Given
+        StrategyDefinitionSearchRequest request = new StrategyDefinitionSearchRequest(STRATEGY_ID, "测试", "draft", 1, 20);
+        StrategyDefinitionSearchQuery query = new StrategyDefinitionSearchQuery(STRATEGY_ID, "测试", "draft", new PageRequest(1, 20));
+        StrategyDefinitionSearchItem item = new StrategyDefinitionSearchItem(STRATEGY_ID, "测试策略", null, "draft", 1, OPERATOR, OPERATOR, null, null);
+        PageResult<StrategyDefinitionSearchItem> result = new PageResult<>(List.of(item), 1L, 1, 20);
+        StrategyDefinitionSummaryResponse summary = new StrategyDefinitionSummaryResponse(STRATEGY_ID.toString(), "测试策略", null, "draft", 1, OPERATOR, OPERATOR, null, null);
+        PageResult<StrategyDefinitionSummaryResponse> response = new PageResult<>(List.of(summary), 1L, 1, 20);
+        when(assembler.toSearchQuery(request)).thenReturn(query);
+        when(searchService.search(query)).thenReturn(result);
+        when(assembler.toPageResponse(result)).thenReturn(response);
+
+        // When
+        Response<PageResult<StrategyDefinitionSummaryResponse>> actual = controller.searchStrategyDefinitions(request);
+
+        // Then
+        assertSame(response, actual.data());
+        verify(searchService).search(query);
+        verify(adminSessionManager, never()).currentOperator();
+    }
+
+    /**
+     * Given 策略根路径同时存在分页查询和标识详情路由，When 请求根路径，Then 应准确进入分页查询接口。
+     *
+     * @throws Exception MockMvc 请求执行失败时抛出
+     */
+    @Test
+    void shouldRouteGetCollectionPathToSearchEndpoint() throws Exception {
+        // Given
+        StrategyDefinitionSearchRequest request = new StrategyDefinitionSearchRequest(null, null, "draft", 1, 20);
+        StrategyDefinitionSearchQuery query = new StrategyDefinitionSearchQuery(null, null, "draft", new PageRequest(1, 20));
+        PageResult<StrategyDefinitionSearchItem> result = PageResult.empty(1, 20);
+        PageResult<StrategyDefinitionSummaryResponse> response = PageResult.empty(1, 20);
+        when(assembler.toSearchQuery(request)).thenReturn(query);
+        when(searchService.search(query)).thenReturn(result);
+        when(assembler.toPageResponse(result)).thenReturn(response);
+        MockMvc mockMvc = standaloneSetup(controller).build();
+
+        // When & Then
+        mockMvc.perform(get(IStrategyDefinitionAdminApi.BASE_PATH).param("state", "draft").param("pageNumber", "1").param("pageSize", "20"))
+                .andExpect(status().isOk());
+        verify(searchService).search(query);
     }
 
     /**

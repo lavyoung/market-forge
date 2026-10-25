@@ -22,11 +22,44 @@
         created_by, updated_by, create_time, update_time
     </sql>
 
+    <sql id="strategyDefinitionSearchWhere">
+        <where>
+            <if test="strategyId != null">
+                strategy_id = #{strategyId}
+            </if>
+            <if test="strategyDesc != null">
+                AND strategy_desc LIKE CONCAT(#{strategyDesc}, '%')
+            </if>
+            <if test="state != null">
+                AND state = #{state}
+            </if>
+        </where>
+    </sql>
+
     <select id="queryStrategyByStrategyId" resultMap="strategyResultMap">
         SELECT <include refid="strategyColumns"/>
         FROM strategy
         WHERE strategy_id = #{strategyId}
         LIMIT 1
+    </select>
+
+    <select id="countStrategyDefinitions"
+            parameterType="com.lavyoung.marketforge.infrastructure.persistent.model.StrategyDefinitionSearchParam"
+            resultType="long">
+        SELECT COUNT(*)
+        FROM strategy
+        <include refid="strategyDefinitionSearchWhere"/>
+    </select>
+
+    <select id="queryStrategyDefinitionPage"
+            parameterType="com.lavyoung.marketforge.infrastructure.persistent.model.StrategyDefinitionSearchParam"
+            resultMap="strategyResultMap">
+        SELECT
+        <include refid="strategyColumns"/>
+        FROM strategy
+        <include refid="strategyDefinitionSearchWhere"/>
+        ORDER BY update_time DESC, id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
     </select>
 
     <update id="updateDraft"

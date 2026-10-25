@@ -4,12 +4,16 @@ import com.lavyoung.marketforge.api.admin.auth.response.AdminOperatorResponse;
 import com.lavyoung.marketforge.api.strategy.IStrategyDefinitionAdminApi;
 import com.lavyoung.marketforge.api.strategy.request.ChangeStrategyDefinitionStateRequest;
 import com.lavyoung.marketforge.api.strategy.request.CreateStrategyDefinitionRequest;
+import com.lavyoung.marketforge.api.strategy.request.StrategyDefinitionSearchRequest;
 import com.lavyoung.marketforge.api.strategy.request.UpdateStrategyDefinitionRequest;
 import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionResponse;
+import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionSummaryResponse;
 import com.lavyoung.marketforge.application.strategy.model.*;
 import com.lavyoung.marketforge.application.strategy.service.IStrategyDefinitionApplicationService;
+import com.lavyoung.marketforge.application.strategy.service.IStrategyDefinitionSearchService;
 import com.lavyoung.marketforge.trigger.assembler.StrategyDefinitionApiAssembler;
 import com.lavyoung.marketforge.trigger.security.AdminSessionManager;
+import com.lavyoung.marketforge.types.model.PageResult;
 import com.lavyoung.marketforge.types.model.Response;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class StrategyDefinitionAdminController implements IStrategyDefinitionAdminApi {
 
+    private final IStrategyDefinitionSearchService strategyDefinitionSearchService;
     private final IStrategyDefinitionApplicationService strategyDefinitionApplicationService;
     private final StrategyDefinitionApiAssembler strategyDefinitionApiAssembler;
     private final AdminSessionManager adminSessionManager;
@@ -39,6 +44,13 @@ public class StrategyDefinitionAdminController implements IStrategyDefinitionAdm
         CreateStrategyDefinitionCommand command = strategyDefinitionApiAssembler.toCreateCommand(request, currentOperator());
         StrategyDefinitionResult result = strategyDefinitionApplicationService.create(command);
         return Response.success(strategyDefinitionApiAssembler.toResponse(result));
+    }
+
+    @Override
+    public Response<PageResult<StrategyDefinitionSummaryResponse>> searchStrategyDefinitions(StrategyDefinitionSearchRequest request) {
+        StrategyDefinitionSearchQuery query = strategyDefinitionApiAssembler.toSearchQuery(request);
+        PageResult<StrategyDefinitionSearchItem> result = strategyDefinitionSearchService.search(query);
+        return Response.success(strategyDefinitionApiAssembler.toPageResponse(result));
     }
 
     @Override
@@ -62,10 +74,8 @@ public class StrategyDefinitionAdminController implements IStrategyDefinitionAdm
     }
 
     @Override
-    public Response<StrategyDefinitionResponse> changeStrategyDefinitionState(Long strategyId,
-                                                                              ChangeStrategyDefinitionStateRequest request) {
-        ChangeStrategyDefinitionStateCommand command = strategyDefinitionApiAssembler.toStateCommand(
-                strategyId, request, currentOperator());
+    public Response<StrategyDefinitionResponse> changeStrategyDefinitionState(Long strategyId, ChangeStrategyDefinitionStateRequest request) {
+        ChangeStrategyDefinitionStateCommand command = strategyDefinitionApiAssembler.toStateCommand(strategyId, request, currentOperator());
         StrategyDefinitionResult result = strategyDefinitionApplicationService.changeState(command);
         return Response.success(strategyDefinitionApiAssembler.toResponse(result));
     }

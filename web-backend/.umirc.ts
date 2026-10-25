@@ -74,6 +74,18 @@ export default defineConfig({
                 },
             ],
         },
+        {
+            name: '策略运营',
+            path: '/strategy',
+            icon: 'ControlOutlined',
+            routes: [
+                {
+                    name: '策略定义',
+                    path: '/strategy/definition',
+                    component: './Strategy/Definition',
+                },
+            ],
+        },
     ],
     npmClient: 'pnpm',
     utoopack: {},

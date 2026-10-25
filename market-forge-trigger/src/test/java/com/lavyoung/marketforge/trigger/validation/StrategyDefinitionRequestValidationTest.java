@@ -1,9 +1,6 @@
 package com.lavyoung.marketforge.trigger.validation;
 
-import com.lavyoung.marketforge.api.strategy.request.ChangeStrategyDefinitionStateRequest;
-import com.lavyoung.marketforge.api.strategy.request.CreateStrategyDefinitionRequest;
-import com.lavyoung.marketforge.api.strategy.request.StrategyAwardConfigRequest;
-import com.lavyoung.marketforge.api.strategy.request.StrategyRuleConfigRequest;
+import com.lavyoung.marketforge.api.strategy.request.*;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -96,6 +93,33 @@ class StrategyDefinitionRequestValidationTest {
 
         // When & Then
         assertEquals(2, VALIDATOR.validate(request).size());
+    }
+
+    /**
+     * Given 合法筛选条件和分页窗口，When 校验查询请求，Then 请求应通过协议校验。
+     */
+    @Test
+    void shouldAcceptValidSearchRequest() {
+        // Given
+        StrategyDefinitionSearchRequest request = new StrategyDefinitionSearchRequest(100001L, "九宫格", "active", 1, 20);
+
+        // When & Then
+        assertEquals(0, VALIDATOR.validate(request).size());
+    }
+
+    /**
+     * Given 未知状态、零页码和超大页大小，When 校验查询请求，Then 应拒绝全部非法边界。
+     */
+    @Test
+    void shouldRejectInvalidSearchStateAndPageWindow() {
+        // Given
+        StrategyDefinitionSearchRequest request = new StrategyDefinitionSearchRequest(null, null, "archived", 0, 101);
+
+        // When
+        Set<ConstraintViolation<StrategyDefinitionSearchRequest>> violations = VALIDATOR.validate(request);
+
+        // Then
+        assertEquals(3, violations.size());
     }
 
     private CreateStrategyDefinitionRequest validRequest() {

@@ -2,8 +2,11 @@ package com.lavyoung.marketforge.api.strategy;
 
 import com.lavyoung.marketforge.api.strategy.request.ChangeStrategyDefinitionStateRequest;
 import com.lavyoung.marketforge.api.strategy.request.CreateStrategyDefinitionRequest;
+import com.lavyoung.marketforge.api.strategy.request.StrategyDefinitionSearchRequest;
 import com.lavyoung.marketforge.api.strategy.request.UpdateStrategyDefinitionRequest;
 import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionResponse;
+import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionSummaryResponse;
+import com.lavyoung.marketforge.types.model.PageResult;
 import com.lavyoung.marketforge.types.model.Response;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -52,6 +55,27 @@ public interface IStrategyDefinitionAdminApi {
     })
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     Response<StrategyDefinitionResponse> createStrategyDefinition(@Valid @RequestBody CreateStrategyDefinitionRequest request);
+
+    /**
+     * 分页查询策略定义摘要。
+     *
+     * <p>该接口只返回策略主表摘要，不在列表查询中加载奖品和规则子表。
+     * 查询结果按照更新时间和数据库主键倒序排列。</p>
+     *
+     * @param request 策略定义分页查询条件
+     * @return 满足条件的策略定义摘要分页结果
+     * @throws jakarta.validation.ValidationException                     查询条件或分页参数不合法时抛出
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 数据库查询失败时抛出
+     */
+    @Operation(operationId = "searchStrategyDefinitions", summary = "分页查询策略定义")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "查询成功"),
+            @ApiResponse(responseCode = "400", description = "查询条件或分页参数非法"),
+            @ApiResponse(responseCode = "401", description = "运营人员尚未登录"),
+            @ApiResponse(responseCode = "403", description = "没有查询权限")
+    })
+    @GetMapping
+    Response<PageResult<StrategyDefinitionSummaryResponse>> searchStrategyDefinitions(@Valid @ModelAttribute StrategyDefinitionSearchRequest request);
 
     /**
      * 查询策略完整定义。

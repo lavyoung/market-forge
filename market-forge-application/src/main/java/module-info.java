@@ -14,6 +14,7 @@ module market.forge.application {
     requires spring.core;
 
     exports com.lavyoung.marketforge.application.strategy.model;
+    exports com.lavyoung.marketforge.application.strategy.query;
     exports com.lavyoung.marketforge.application.strategy.service;
     exports com.lavyoung.marketforge.application.strategy.service.impl;
     exports com.lavyoung.marketforge.application.strategy.messaging;

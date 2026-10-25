@@ -1,11 +1,13 @@
 package com.lavyoung.marketforge.infrastructure.persistent.dao;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.lavyoung.marketforge.infrastructure.persistent.model.StrategyDefinitionSearchParam;
 import com.lavyoung.marketforge.infrastructure.persistent.model.StrategyDefinitionStateUpdateParam;
 import com.lavyoung.marketforge.infrastructure.persistent.po.StrategyPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -28,6 +30,22 @@ public interface IStrategyDao extends BaseMapper<StrategyPO> {
      * @return 策略持久化对象；不存在时返回 {@link Optional#empty()}
      */
     Optional<StrategyPO> queryStrategyByStrategyId(@Param("strategyId") Long strategyId);
+
+    /**
+     * 统计满足运营查询条件的策略数量。
+     *
+     * @param searchParam 策略过滤条件和分页窗口
+     * @return 匹配记录总数
+     */
+    long countStrategyDefinitions(StrategyDefinitionSearchParam searchParam);
+
+    /**
+     * 分页查询策略定义摘要。
+     *
+     * @param searchParam 策略过滤条件和分页窗口
+     * @return 按更新时间和主键倒序排列的策略记录
+     */
+    List<StrategyPO> queryStrategyDefinitionPage(StrategyDefinitionSearchParam searchParam);
 
     /**
      * 使用草稿状态和乐观锁版本更新策略基础配置。

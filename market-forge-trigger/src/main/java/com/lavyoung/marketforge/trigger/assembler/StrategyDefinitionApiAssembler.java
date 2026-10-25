@@ -3,12 +3,18 @@ package com.lavyoung.marketforge.trigger.assembler;
 import com.lavyoung.marketforge.api.strategy.request.*;
 import com.lavyoung.marketforge.api.strategy.response.StrategyAwardConfigResponse;
 import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionResponse;
+import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionSummaryResponse;
 import com.lavyoung.marketforge.api.strategy.response.StrategyRuleConfigResponse;
 import com.lavyoung.marketforge.application.strategy.model.*;
+import com.lavyoung.marketforge.types.model.PageRequest;
+import com.lavyoung.marketforge.types.model.PageResult;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
 import org.mapstruct.ReportingPolicy;
+
+import java.util.List;
+import java.util.Objects;
 
 /**
  * 策略定义 API 协议装配器。
@@ -22,8 +28,17 @@ import org.mapstruct.ReportingPolicy;
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
  */
-@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, unmappedTargetPolicy = ReportingPolicy.ERROR)
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, unmappedTargetPolicy = ReportingPolicy.ERROR, imports = PageRequest.class)
 public interface StrategyDefinitionApiAssembler {
+
+    /**
+     * 将 HTTP 查询参数转换为应用查询条件。
+     *
+     * @param request 策略分页查询请求
+     * @return 策略应用查询条件
+     */
+    @Mapping(target = "page", expression = "java(new PageRequest(request.pageNumber(), request.pageSize()))")
+    StrategyDefinitionSearchQuery toSearchQuery(StrategyDefinitionSearchRequest request);
 
     /**
      * 将创建请求转换为应用命令。
@@ -93,6 +108,34 @@ public interface StrategyDefinitionApiAssembler {
      * @return 完整策略定义响应
      */
     StrategyDefinitionResponse toResponse(StrategyDefinitionResult result);
+
+    /**
+     * 将策略应用列表项转换为 API 摘要响应。
+     *
+     * @param item 策略应用列表项
+     * @return 策略 API 摘要响应
+     */
+    StrategyDefinitionSummaryResponse toSummaryResponse(StrategyDefinitionSearchItem item);
+
+    /**
+     * 批量转换策略应用列表项。
+     *
+     * @param items 策略应用列表项
+     * @return 策略 API 摘要响应列表
+     */
+    List<StrategyDefinitionSummaryResponse> toSummaryResponses(List<StrategyDefinitionSearchItem> items);
+
+    /**
+     * 转换策略分页记录类型并保留分页元数据。
+     *
+     * @param pageResult 策略应用分页结果
+     * @return 策略 API 分页结果
+     * @throws NullPointerException 分页结果为空时抛出
+     */
+    default PageResult<StrategyDefinitionSummaryResponse> toPageResponse(PageResult<StrategyDefinitionSearchItem> pageResult) {
+        Objects.requireNonNull(pageResult, "pageResult must not be null");
+        return new PageResult<>(toSummaryResponses(pageResult.records()), pageResult.total(), pageResult.pageNumber(), pageResult.pageSize());
+    }
 
     /**
      * 将策略奖品应用结果转换为 API 响应。
