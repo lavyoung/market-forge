@@ -3,6 +3,7 @@ package com.lavyoung.marketforge.domain.award.repository;
 import com.lavyoung.marketforge.domain.award.model.entity.AwardDefinitionEntity;
 import com.lavyoung.marketforge.domain.award.model.entity.AwardDefinitionStateChange;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -27,6 +28,18 @@ public interface IAwardDefinitionRepository {
      * @return 匹配的奖品定义；不存在时返回空
      */
     Optional<AwardDefinitionEntity> queryByAwardId(Long awardId);
+
+    /**
+     * 批量查询奖品定义。
+     *
+     * <p>该方法用于策略发布、活动发布等需要一次校验多个奖品的场景。
+     * 实现方必须使用一条批量 SQL 完成读取，禁止循环调用单奖品查询产生 N+1。</p>
+     *
+     * @param awardIds 奖品业务标识集合
+     * @return 查询到的奖品定义；不存在的标识不会产生占位元素
+     * @throws NullPointerException 集合或集合中的奖品标识为空时抛出
+     */
+    List<AwardDefinitionEntity> queryByAwardIds(List<Long> awardIds);
 
     /**
      * 根据奖品业务编码查询奖品定义。

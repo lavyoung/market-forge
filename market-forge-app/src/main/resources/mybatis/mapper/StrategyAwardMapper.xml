@@ -63,4 +63,21 @@
           AND award_count_surplus &gt; 0
     </update>
 
+    <insert id="insertBatch">
+        INSERT INTO strategy_award
+        (strategy_id, award_id, award_title, award_subtitle, award_count,
+        award_count_surplus, award_rate, rule_models, sort)
+        VALUES
+        <foreach collection="items" item="item" separator=",">
+            (#{item.strategyId}, #{item.awardId}, #{item.awardTitle}, #{item.awardSubtitle},
+            #{item.awardCount}, #{item.awardCountSurplus}, #{item.awardRate},
+            #{item.ruleModels}, #{item.sort})
+        </foreach>
+    </insert>
+
+    <delete id="deleteByStrategyId">
+        DELETE FROM strategy_award
+        WHERE strategy_id = #{strategyId}
+    </delete>
+
 </mapper>

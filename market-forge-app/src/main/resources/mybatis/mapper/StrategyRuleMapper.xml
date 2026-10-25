@@ -56,4 +56,19 @@
         WHERE id = #{id}
     </update>
 
+    <insert id="insertBatch">
+        INSERT INTO strategy_rule
+        (strategy_id, award_id, rule_type, rule_model, rule_value, rule_desc)
+        VALUES
+        <foreach collection="items" item="item" separator=",">
+            (#{item.strategyId}, #{item.awardId}, #{item.ruleType},
+            #{item.ruleModel}, #{item.ruleValue}, #{item.ruleDesc})
+        </foreach>
+    </insert>
+
+    <delete id="deleteByStrategyId">
+        DELETE FROM strategy_rule
+        WHERE strategy_id = #{strategyId}
+    </delete>
+
 </mapper>

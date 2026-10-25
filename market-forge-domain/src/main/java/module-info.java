@@ -5,6 +5,7 @@ module market.forge.domain {
     exports com.lavyoung.marketforge.domain.activity.model.entity;
     exports com.lavyoung.marketforge.domain.strategy.repository;
     exports com.lavyoung.marketforge.domain.strategy.model.entity;
+    exports com.lavyoung.marketforge.domain.strategy.model.aggregate;
     exports com.lavyoung.marketforge.domain.strategy.model.vo;
     exports com.lavyoung.marketforge.domain.strategy.service;
     exports com.lavyoung.marketforge.domain.strategy.service.armorcy;

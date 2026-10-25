@@ -34,9 +34,10 @@ VALUES (900901011, 900901011, 'integral', '10 积分', 'internal_credit', 'autom
         'internal_fulfillment', '{"skuCode":"APPLE-AIRPODS"}', 1, '需要用户填写收货信息', 'active', 1, 'system_seed',
         'system_seed');
 
-INSERT INTO strategy (id, strategy_id, strategy_desc, rule_models)
+INSERT INTO strategy
+(id, strategy_id, strategy_desc, rule_models, state, version, created_by, updated_by)
 VALUES (900902001, 900901001, '九宫格抽奖：黑名单、权重、次数锁、库存和幸运奖综合验证策略',
-        'rule_blacklist,rule_weight');
+        'rule_blacklist,rule_weight', 'active', 1, 'system_seed', 'system_seed');
 
 INSERT INTO strategy_award
 (id, strategy_id, award_id, award_title, award_subtitle, award_count,
@@ -155,7 +156,7 @@ VALUES ('user-001', 10000, 10000),
 
 USE `market-forge-001`;
 
-SELECT strategy_id, strategy_desc, rule_models
+SELECT strategy_id, strategy_desc, rule_models, state, version, created_by, updated_by
 FROM strategy
 WHERE strategy_id = 900901001;
 

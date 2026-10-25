@@ -46,14 +46,19 @@ CREATE TABLE award
 
 CREATE TABLE strategy
 (
-    id            int          NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-    strategy_id   bigint       NOT NULL COMMENT '抽奖策略ID',
+    id          bigint      NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    strategy_id bigint      NOT NULL COMMENT '抽奖策略业务ID',
     strategy_desc varchar(256) NOT NULL COMMENT '策略描述',
     rule_models   varchar(64)  NULL COMMENT '策略级责任链规则模型',
+    state       varchar(16) NOT NULL DEFAULT 'draft' COMMENT '策略状态：draft、active、disabled',
+    version     int         NOT NULL DEFAULT 1 COMMENT '乐观锁版本',
+    created_by  varchar(64) NOT NULL COMMENT '创建人标识',
+    updated_by  varchar(64) NOT NULL COMMENT '最后修改人标识',
     create_time   datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time   datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
-    UNIQUE KEY uq_strategy_id (strategy_id)
+    UNIQUE KEY uq_strategy_id (strategy_id),
+    KEY idx_strategy_state_update (state, update_time, id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='抽奖策略表';
 

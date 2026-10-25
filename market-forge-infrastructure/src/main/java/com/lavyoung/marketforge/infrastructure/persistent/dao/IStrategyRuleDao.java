@@ -40,4 +40,24 @@ public interface IStrategyRuleDao extends BaseMapper<StrategyRulePO> {
             @Param("awardId") Long awardId,
             @Param("ruleModel") String ruleModel);
 
+    /**
+     * 批量新增策略级和奖品级规则。
+     *
+     * <p>调用方不得传入空集合。所有规则必须属于同一个策略聚合。</p>
+     *
+     * @param items 待新增的策略规则
+     * @return 成功写入的记录数
+     */
+    int insertBatch(@Param("items") List<StrategyRulePO> items);
+
+    /**
+     * 删除指定草稿策略的全部规则。
+     *
+     * <p>该方法只作为策略聚合更新事务的一部分使用，不能用于删除已生效策略规则。</p>
+     *
+     * @param strategyId 策略业务标识
+     * @return 删除的记录数
+     */
+    int deleteByStrategyId(@Param("strategyId") Long strategyId);
+
 }

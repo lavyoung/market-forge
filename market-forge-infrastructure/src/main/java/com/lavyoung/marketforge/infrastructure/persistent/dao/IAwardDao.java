@@ -29,6 +29,17 @@ public interface IAwardDao extends BaseMapper<AwardPO> {
     Optional<AwardPO> queryAwardByAwardId(@Param("awardId") Long awardId);
 
     /**
+     * 根据奖品业务标识集合批量查询完整奖品定义。
+     *
+     * <p>调用方不得传入空集合。查询结果不承诺与入参顺序一致，
+     * 也不会为不存在的奖品标识生成空记录。</p>
+     *
+     * @param awardIds 奖品业务标识集合
+     * @return 查询到的奖品持久化对象
+     */
+    List<AwardPO> queryAwardByAwardIds(@Param("awardIds") List<Long> awardIds);
+
+    /**
      * 根据奖品业务编码查询完整奖品定义。
      *
      * @param awardKey 奖品业务编码

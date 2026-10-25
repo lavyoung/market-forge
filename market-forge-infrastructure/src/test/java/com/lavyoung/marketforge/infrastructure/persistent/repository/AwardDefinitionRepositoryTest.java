@@ -21,6 +21,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DuplicateKeyException;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -84,6 +86,59 @@ class AwardDefinitionRepositoryTest {
         // Then
         assertTrue(actual.isEmpty());
         verify(awardDefinitionAssembler, never()).toEntity(null);
+    }
+
+    /**
+     * Given 奖品标识包含重复值，When 批量查询，Then 应去重后只执行一次 DAO 查询并转换结果。
+     */
+    @Test
+    void shouldQueryAwardDefinitionsInOneBatch() {
+        // Given
+        AwardPO first = new AwardPO();
+        AwardPO second = new AwardPO();
+        List<AwardPO> persistentObjects = List.of(first, second);
+        List<AwardDefinitionEntity> expected = List.of(definition(), definition());
+        when(awardDao.queryAwardByAwardIds(List.of(1001L, 1002L))).thenReturn(persistentObjects);
+        when(awardDefinitionAssembler.toEntities(persistentObjects)).thenReturn(expected);
+
+        // When
+        List<AwardDefinitionEntity> actual = repository.queryByAwardIds(List.of(1001L, 1002L, 1001L));
+
+        // Then
+        assertEquals(expected, actual);
+        verify(awardDao).queryAwardByAwardIds(List.of(1001L, 1002L));
+        verify(awardDefinitionAssembler).toEntities(persistentObjects);
+    }
+
+    /**
+     * Given 空奖品标识集合，When 批量查询，Then 应直接返回空集合且不生成 IN 空集合 SQL。
+     */
+    @Test
+    void shouldSkipDaoWhenAwardIdsAreEmpty() {
+        // When
+        List<AwardDefinitionEntity> actual = repository.queryByAwardIds(List.of());
+
+        // Then
+        assertEquals(List.of(), actual);
+        verifyNoInteractions(awardDao, awardDefinitionAssembler);
+    }
+
+    /**
+     * Given 批量查询参数或集合元素为空，When 查询，Then 应在访问 DAO 前拒绝。
+     */
+    @Test
+    void shouldRejectNullBatchQueryArguments() {
+        // Given
+        List<Long> awardIdsWithNull = new ArrayList<>();
+        awardIdsWithNull.add(1001L);
+        awardIdsWithNull.add(null);
+
+        // When & Then
+        assertAll(
+                () -> assertThrows(NullPointerException.class, () -> repository.queryByAwardIds(null)),
+                () -> assertThrows(NullPointerException.class, () -> repository.queryByAwardIds(awardIdsWithNull))
+        );
+        verifyNoInteractions(awardDao, awardDefinitionAssembler);
     }
 
     /**

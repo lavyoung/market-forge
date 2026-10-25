@@ -9,12 +9,17 @@
         <result column="strategy_id" property="strategyId"/>
         <result column="strategy_desc" property="strategyDesc"/>
         <result column="rule_models" property="ruleModels"/>
+        <result column="state" property="state"/>
+        <result column="version" property="version"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="updated_by" property="updatedBy"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
     </resultMap>
 
     <sql id="strategyColumns">
-        id, strategy_id, strategy_desc, rule_models, create_time, update_time
+        id, strategy_id, strategy_desc, rule_models, state, version,
+        created_by, updated_by, create_time, update_time
     </sql>
 
     <select id="queryStrategyByStrategyId" resultMap="strategyResultMap">
@@ -24,12 +29,29 @@
         LIMIT 1
     </select>
 
-    <update id="updateByStrategyId" parameterType="com.lavyoung.marketforge.infrastructure.persistent.po.StrategyPO">
+    <update id="updateDraft"
+            parameterType="com.lavyoung.marketforge.infrastructure.persistent.po.StrategyPO">
         UPDATE strategy
         SET strategy_desc = #{strategyDesc},
         rule_models = #{ruleModels},
-        update_time = CURRENT_TIMESTAMP
+        updated_by = #{updatedBy},
+        update_time = CURRENT_TIMESTAMP,
+        version = version + 1
         WHERE strategy_id = #{strategyId}
+        AND state = 'draft'
+        AND version = #{version}
+    </update>
+
+    <update id="changeState"
+            parameterType="com.lavyoung.marketforge.infrastructure.persistent.model.StrategyDefinitionStateUpdateParam">
+        UPDATE strategy
+        SET state = #{targetState},
+        updated_by = #{operator},
+        update_time = CURRENT_TIMESTAMP,
+        version = version + 1
+        WHERE strategy_id = #{strategyId}
+        AND state = #{currentState}
+        AND version = #{expectedVersion}
     </update>
 
 </mapper>

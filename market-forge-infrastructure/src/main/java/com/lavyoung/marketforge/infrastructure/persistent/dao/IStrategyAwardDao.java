@@ -57,5 +57,26 @@ public interface IStrategyAwardDao extends BaseMapper<StrategyAwardPO> {
             @Param("strategyId") Long strategyId,
             @Param("awardId") Long awardId);
 
+    /**
+     * 批量新增策略奖品配置。
+     *
+     * <p>调用方不得传入空集合。单次调用应写入同一策略的全部奖品配置，
+     * 避免循环执行单条新增产生大量数据库往返。</p>
+     *
+     * @param items 待新增的策略奖品配置
+     * @return 成功写入的记录数
+     */
+    int insertBatch(@Param("items") List<StrategyAwardPO> items);
+
+    /**
+     * 删除指定草稿策略的全部奖品配置。
+     *
+     * <p>该方法只作为策略聚合更新事务的一部分使用，调用前必须已经通过
+     * 策略根记录的草稿状态和乐观锁条件更新。</p>
+     *
+     * @param strategyId 策略业务标识
+     * @return 删除的记录数
+     */
+    int deleteByStrategyId(@Param("strategyId") Long strategyId);
 
 }

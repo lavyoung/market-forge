@@ -38,6 +38,16 @@
         LIMIT 1
     </select>
 
+    <select id="queryAwardByAwardIds" resultMap="awardResultMap">
+        SELECT
+        <include refid="awardColumns"/>
+        FROM award
+        WHERE award_id IN
+        <foreach collection="awardIds" item="awardId" open="(" separator="," close=")">
+            #{awardId}
+        </foreach>
+    </select>
+
     <select id="queryAwardByAwardKey" resultMap="awardResultMap">
         SELECT
         <include refid="awardColumns"/>

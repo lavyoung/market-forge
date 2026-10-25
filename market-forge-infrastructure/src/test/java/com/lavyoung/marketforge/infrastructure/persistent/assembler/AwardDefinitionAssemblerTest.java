@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -76,6 +77,30 @@ class AwardDefinitionAssemblerTest {
         assertAll(
                 () -> assertNull(assembler.toPO(null)),
                 () -> assertNull(assembler.toEntity(null))
+        );
+    }
+
+    /**
+     * Given 多条完整奖品记录，When 批量转换，Then 应复用单条映射并保留输入顺序。
+     */
+    @Test
+    void shouldConvertAwardDefinitionsInBatch() {
+        // Given
+        AwardPO first = validAwardPO();
+        AwardPO second = validAwardPO();
+        second.setAwardId(1002L);
+        second.setAwardKey("credit_200");
+
+        // When
+        List<AwardDefinitionEntity> actual = assembler.toEntities(List.of(first, second));
+
+        // Then
+        assertAll(
+                () -> assertEquals(2, actual.size()),
+                () -> assertEquals(1001L, actual.get(0).awardId()),
+                () -> assertEquals("credit_100", actual.get(0).awardCode()),
+                () -> assertEquals(1002L, actual.get(1).awardId()),
+                () -> assertEquals("credit_200", actual.get(1).awardCode())
         );
     }
 

@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -42,6 +43,19 @@ public class AwardDefinitionRepository implements IAwardDefinitionRepository {
     public Optional<AwardDefinitionEntity> queryByAwardId(Long awardId) {
         Objects.requireNonNull(awardId, "awardId must not be null");
         return awardDao.queryAwardByAwardId(awardId).map(awardDefinitionAssembler::toEntity);
+    }
+
+    @Override
+    public List<AwardDefinitionEntity> queryByAwardIds(List<Long> awardIds) {
+        Objects.requireNonNull(awardIds, "awardIds must not be null");
+        List<Long> distinctAwardIds = awardIds.stream()
+                .map(awardId -> Objects.requireNonNull(awardId, "awardId must not be null"))
+                .distinct()
+                .toList();
+        if (distinctAwardIds.isEmpty()) {
+            return List.of();
+        }
+        return List.copyOf(awardDefinitionAssembler.toEntities(awardDao.queryAwardByAwardIds(distinctAwardIds)));
     }
 
     @Override

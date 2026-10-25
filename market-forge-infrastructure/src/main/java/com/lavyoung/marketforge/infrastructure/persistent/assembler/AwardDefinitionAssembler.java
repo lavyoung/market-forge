@@ -8,6 +8,8 @@ import com.lavyoung.marketforge.domain.award.model.vo.AwardTypeVO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.AwardPO;
 import org.mapstruct.*;
 
+import java.util.List;
+
 /**
  * 奖品定义领域实体与持久化对象转换器。
  *
@@ -37,6 +39,15 @@ public interface AwardDefinitionAssembler {
     @Mapping(target = "awardConfig", expression = "java(toAwardConfig(source))")
     @Mapping(target = "state", source = "state", qualifiedByName = "toDefinitionState")
     AwardDefinitionEntity toEntity(AwardPO source);
+
+    /**
+     * 批量将奖品持久化对象转换为领域定义。
+     *
+     * @param sources 奖品持久化对象集合
+     * @return 奖品定义领域实体集合
+     * @throws IllegalArgumentException 任意数据库记录包含未知类型、领取模式或状态时抛出
+     */
+    List<AwardDefinitionEntity> toEntities(List<AwardPO> sources);
 
     /**
      * 将奖品定义转换为数据库持久化对象。
