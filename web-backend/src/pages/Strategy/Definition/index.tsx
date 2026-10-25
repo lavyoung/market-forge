@@ -41,12 +41,19 @@ const stateLabels: Record<StrategyDefinitionState, { color: string; text: string
     disabled: {color: 'error', text: '已停用'},
 };
 
-const ruleModelOptions = [
+const strategyRuleModelOptions = [
     {label: '黑名单规则', value: 'rule_blacklist'},
     {label: '权重规则', value: 'rule_weight'},
+];
+
+const awardRuleModelOptions = [
     {label: '次数锁规则', value: 'rule_lock'},
     {label: '库存规则', value: 'rule_stock'},
-    {label: '幸运奖规则', value: 'rule_luck_award'},
+];
+
+const ruleConfigModelOptions = [
+    ...strategyRuleModelOptions,
+    {label: '次数锁规则', value: 'rule_lock'},
 ];
 
 const positiveIdRules = [
@@ -287,7 +294,7 @@ function StrategyDefinitionEditor({open, strategy, awardOptions, awardOptionsLoa
                    description="保存草稿会整体替换奖品和规则配置。发布时服务端会再次校验奖品状态、库存、概率空间和规则引用。"/>
             <ProFormText name="strategyDesc" label="策略描述"
                          rules={[{required: true, message: '请输入策略描述'}, {max: 256}]}/>
-            <ProFormSelect name="ruleModels" label="策略级规则" mode="multiple" options={ruleModelOptions}
+            <ProFormSelect name="ruleModels" label="策略级规则" mode="multiple" options={strategyRuleModelOptions}
                            tooltip="决定抽奖前责任链执行顺序；详细参数在规则配置中维护"/>
 
             <Typography.Title level={5}>奖品配置</Typography.Title>
@@ -312,7 +319,8 @@ function StrategyDefinitionEditor({open, strategy, awardOptions, awardOptionsLoa
                     <ProFormDigit name="sort" label="展示顺序" width="sm" min={1} fieldProps={{precision: 0}}
                                   rules={[{required: true, message: '请输入展示顺序'}]}/>
                     <ProFormSelect name="ruleModels" label="奖品级规则" width="md" mode="multiple"
-                                   options={ruleModelOptions}/>
+                                   options={awardRuleModelOptions}
+                                   tooltip="幸运奖由系统规则树模板维护，无需在奖品上重复声明"/>
                 </ProForm.Group>
             </ProFormList>
 
@@ -327,7 +335,7 @@ function StrategyDefinitionEditor({open, strategy, awardOptions, awardOptionsLoa
                     <ProFormSelect name="awardId" label="关联奖品" width="md" options={awardOptions}
                                    fieldProps={{showSearch: true, optionFilterProp: 'label', allowClear: true}}
                                    tooltip="策略规则留空；奖品规则必须选择当前策略中的奖品"/>
-                    <ProFormSelect name="ruleModel" label="规则模型" width="md" options={ruleModelOptions}
+                    <ProFormSelect name="ruleModel" label="规则模型" width="md" options={ruleConfigModelOptions}
                                    rules={[{required: true}]}/>
                 </ProForm.Group>
                 <ProForm.Group>
