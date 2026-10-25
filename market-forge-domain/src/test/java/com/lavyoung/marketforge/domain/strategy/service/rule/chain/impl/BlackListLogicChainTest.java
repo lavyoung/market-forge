@@ -4,6 +4,8 @@ import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.ILogicChain;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
+import com.lavyoung.marketforge.types.exception.BusinessException;
+import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -87,7 +89,7 @@ class BlackListLogicChainTest {
     }
 
     /**
-     * Given 黑名单奖品标识非法，When 执行节点，Then 抛出数字格式异常。
+     * Given 黑名单奖品标识非法，When 执行节点，Then 转换为稳定的规则值业务异常。
      */
     @Test
     void shouldRejectInvalidAwardId() {
@@ -97,8 +99,11 @@ class BlackListLogicChainTest {
                 .thenReturn("invalid:" + USER_ID);
         BlackListLogicChain chain = new BlackListLogicChain(repository);
 
-        // When & Then
-        assertThrows(NumberFormatException.class, () -> chain.logic(USER_ID, STRATEGY_ID));
+        // When
+        BusinessException exception = assertThrows(BusinessException.class, () -> chain.logic(USER_ID, STRATEGY_ID));
+
+        // Then
+        assertEquals(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, exception.getResponseCode());
     }
 
     /**

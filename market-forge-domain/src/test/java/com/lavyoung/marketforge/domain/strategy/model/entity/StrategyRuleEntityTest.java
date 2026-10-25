@@ -1,16 +1,12 @@
 package com.lavyoung.marketforge.domain.strategy.model.entity;
 
-import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-import java.util.Map;
-
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 验证 {@link StrategyRuleEntity} 的不可变数据和权重规则解析行为。
+ * 验证 {@link StrategyRuleEntity} 只保存不可变规则数据，不再承担具体规则值解析职责。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0-SNAPSHOT
@@ -18,40 +14,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class StrategyRuleEntityTest {
 
     /**
-     * Given 权重规则 record，When 解析规则值，Then 返回每个门槛对应的奖品列表。
+     * Given 完整规则数据，When 使用构建器创建实体，Then 应原样保留规则归属和持久化配置。
      */
     @Test
-    void shouldParseWeightRuleValues() {
-        // Given
+    void shouldRetainImmutableRuleData() {
+        // Given & When
         StrategyRuleEntity rule = StrategyRuleEntity.builder()
                 .strategyId(100_001L)
-                .ruleModel(RuleModel.WEIGHT.getCode())
-                .ruleValue("4000:100011/100012;5000:100013")
+                .awardId(200_001L)
+                .ruleType(2)
+                .ruleModel("rule_lock")
+                .ruleValue("3")
+                .ruleDesc("累计抽奖三次解锁")
                 .build();
 
-        // When
-        Map<String, List<Long>> weightValues = rule.ruleWeightValues();
-
         // Then
-        assertEquals(List.of(100_011L, 100_012L), weightValues.get("4000"));
-        assertEquals(List.of(100_013L), weightValues.get("5000"));
-    }
-
-    /**
-     * Given 非权重规则，When 请求权重配置，Then 返回空映射。
-     */
-    @Test
-    void shouldReturnEmptyWeightValuesForOtherRuleModels() {
-        // Given
-        StrategyRuleEntity rule = StrategyRuleEntity.builder()
-                .ruleModel(RuleModel.LOCK.getCode())
-                .ruleValue("1")
-                .build();
-
-        // When
-        Map<String, List<Long>> weightValues = rule.ruleWeightValues();
-
-        // Then
-        assertTrue(weightValues.isEmpty());
+        assertAll(
+                () -> assertEquals(100_001L, rule.strategyId()),
+                () -> assertEquals(200_001L, rule.awardId()),
+                () -> assertEquals(2, rule.ruleType()),
+                () -> assertEquals("rule_lock", rule.ruleModel()),
+                () -> assertEquals("3", rule.ruleValue()),
+                () -> assertEquals("累计抽奖三次解锁", rule.ruleDesc())
+        );
     }
 }

@@ -263,6 +263,39 @@ class StrategyRepositoryTest {
     }
 
     /**
+     * Given 次数锁规则值前后包含空格，When 批量查询解锁门槛，Then 应由领域值对象标准化并返回整数。
+     */
+    @Test
+    void shouldNormalizeAwardLockRuleValue() {
+        // Given
+        when(strategyRuleDao.selectList(any(Wrapper.class))).thenReturn(List.of(newLockRule(AWARD_ID, " 2 ")));
+
+        // When
+        Map<Long, Integer> result = repository.queryAwardRuleLockCounts(STRATEGY_ID, List.of(AWARD_ID));
+
+        // Then
+        assertEquals(Map.of(AWARD_ID, 2), result);
+        verify(strategyRuleDao).selectList(any(Wrapper.class));
+    }
+
+    /**
+     * Given 次数锁规则值为负数，When 批量查询解锁门槛，Then 应转换为统一的规则值非法业务异常。
+     */
+    @Test
+    void shouldRejectNegativeAwardLockRuleValue() {
+        // Given
+        when(strategyRuleDao.selectList(any(Wrapper.class))).thenReturn(List.of(newLockRule(AWARD_ID, "-1")));
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> repository.queryAwardRuleLockCounts(STRATEGY_ID, List.of(AWARD_ID)));
+
+        // Then
+        assertEquals(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, exception.getResponseCode());
+        verify(strategyRuleDao).selectList(any(Wrapper.class));
+    }
+
+    /**
      * Given Redis 库存充足，When 扣减奖品库存，Then 在分布式锁保护下完成原子扣减并释放锁。
      */
     @Test

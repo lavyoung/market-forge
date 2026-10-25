@@ -28,8 +28,8 @@ import static org.mockito.Mockito.*;
 /**
  * 策略定义发布就绪校验器测试。
  *
- * <p>验证完整奖池能够发布，并覆盖空奖池、库存、排序、概率、规则归属、权重引用、
- * 奖品缺失和奖品未启用等关键失败边界。</p>
+ * <p>验证完整奖池能够发布，并覆盖空奖池、库存、排序、概率、规则声明与配置一致性、
+ * 规则作用域、规则值格式、奖品缺失和奖品未启用等关键失败边界。</p>
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -158,6 +158,217 @@ class StrategyDefinitionPublicationValidatorTest {
     }
 
     /**
+     * Given 策略声明了权重规则但没有提供规则参数，When 校验发布条件，Then 应拒绝无法运行的声明。
+     */
+    @Test
+    void shouldRejectStrategyRuleDeclarationWithoutConfiguration() {
+        // Given
+        StrategyDefinitionAggregate aggregate = aggregate(validAwards(),
+                List.of(rule(SECOND_AWARD_ID, 2, "rule_lock", "1")), "rule_weight");
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class, () -> validator.validate(aggregate));
+
+        // Then
+        assertEquals(BusinessResponseCode.STRATEGY_CONFIG_INVALID, exception.getResponseCode());
+        verifyNoInteractions(awardDefinitionRepository);
+    }
+
+    /**
+     * Given 策略没有声明权重规则却保存了对应配置，When 校验发布条件，Then 应拒绝不会被责任链执行的配置。
+     */
+    @Test
+    void shouldRejectStrategyRuleConfigurationWithoutDeclaration() {
+        // Given
+        StrategyDefinitionAggregate aggregate = aggregate(stockOnlyAwards(),
+                List.of(rule(null, 1, "rule_weight", "100:200001/200002")), null);
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class, () -> validator.validate(aggregate));
+
+        // Then
+        assertEquals(BusinessResponseCode.STRATEGY_CONFIG_INVALID, exception.getResponseCode());
+        verifyNoInteractions(awardDefinitionRepository);
+    }
+
+    /**
+     * Given 次数锁被错误声明为策略责任链规则，When 校验发布条件，Then 应拒绝错误的规则作用域。
+     */
+    @Test
+    void shouldRejectLockRuleDeclaredAtStrategyScope() {
+        // Given
+        StrategyDefinitionAggregate aggregate = aggregate(stockOnlyAwards(), List.of(), "rule_lock");
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class, () -> validator.validate(aggregate));
+
+        // Then
+        assertEquals(BusinessResponseCode.STRATEGY_CONFIG_INVALID, exception.getResponseCode());
+        verifyNoInteractions(awardDefinitionRepository);
+    }
+
+    /**
+     * Given 权重规则被错误声明为奖品规则树入口，When 校验发布条件，Then 应拒绝不存在的规则树模板。
+     */
+    @Test
+    void shouldRejectWeightRuleDeclaredAtAwardScope() {
+        // Given
+        List<StrategyAwardEntity> awards = List.of(
+                award(FIRST_AWARD_ID, 1, new BigDecimal("30"), "rule_weight/rule_stock"),
+                award(SECOND_AWARD_ID, 2, new BigDecimal("70"), "rule_stock")
+        );
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> validator.validate(aggregate(awards, List.of(), null)));
+
+        // Then
+        assertEquals(BusinessResponseCode.STRATEGY_CONFIG_INVALID, exception.getResponseCode());
+        verifyNoInteractions(awardDefinitionRepository);
+    }
+
+    /**
+     * Given 奖品声明了次数锁但没有提供解锁次数，When 校验发布条件，Then 应拒绝不完整配置。
+     */
+    @Test
+    void shouldRejectLockRuleDeclarationWithoutConfiguration() {
+        // Given
+        StrategyDefinitionAggregate aggregate = aggregate(validAwards(),
+                List.of(rule(null, 1, "rule_weight", "100:200001/200002")), "rule_weight");
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class, () -> validator.validate(aggregate));
+
+        // Then
+        assertEquals(BusinessResponseCode.STRATEGY_CONFIG_INVALID, exception.getResponseCode());
+        verifyNoInteractions(awardDefinitionRepository);
+    }
+
+    /**
+     * Given 次数锁配置为负数，When 校验发布条件，Then 应拒绝不可能达到的解锁条件。
+     */
+    @Test
+    void shouldRejectNegativeLockCount() {
+        // Given
+        List<StrategyRuleEntity> rules = List.of(
+                rule(null, 1, "rule_weight", "100:200001/200002"),
+                rule(SECOND_AWARD_ID, 2, "rule_lock", "-1")
+        );
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> validator.validate(aggregate(validAwards(), rules, "rule_weight")));
+
+        // Then
+        assertEquals(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, exception.getResponseCode());
+        verifyNoInteractions(awardDefinitionRepository);
+    }
+
+    /**
+     * Given 次数锁配置不是整数，When 校验发布条件，Then 应返回稳定的规则值错误码。
+     */
+    @Test
+    void shouldRejectNonNumericLockCount() {
+        // Given
+        List<StrategyRuleEntity> rules = List.of(
+                rule(null, 1, "rule_weight", "100:200001/200002"),
+                rule(SECOND_AWARD_ID, 2, "rule_lock", "not-a-number")
+        );
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> validator.validate(aggregate(validAwards(), rules, "rule_weight")));
+
+        // Then
+        assertEquals(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, exception.getResponseCode());
+        verifyNoInteractions(awardDefinitionRepository);
+    }
+
+    /**
+     * Given 黑名单规则的兜底奖品不属于当前奖池，When 校验发布条件，Then 应拒绝悬空引用。
+     */
+    @Test
+    void shouldRejectBlacklistFallbackReferencingUnknownAward() {
+        // Given
+        StrategyDefinitionAggregate aggregate = aggregate(stockOnlyAwards(),
+                List.of(rule(null, 1, "rule_blacklist", "999999:user-001/user-002")), "rule_blacklist");
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class, () -> validator.validate(aggregate));
+
+        // Then
+        assertEquals(BusinessResponseCode.STRATEGY_CONFIG_INVALID, exception.getResponseCode());
+        verifyNoInteractions(awardDefinitionRepository);
+    }
+
+    /**
+     * Given 黑名单规则值缺少用户列表，When 校验发布条件，Then 应转换为稳定的规则值错误码。
+     */
+    @Test
+    void shouldConvertMalformedBlacklistValueToBusinessException() {
+        // Given
+        StrategyDefinitionAggregate aggregate = aggregate(stockOnlyAwards(),
+                List.of(rule(null, 1, "rule_blacklist", "200001:")), "rule_blacklist");
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class, () -> validator.validate(aggregate));
+
+        // Then
+        assertEquals(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, exception.getResponseCode());
+        verifyNoInteractions(awardDefinitionRepository);
+    }
+
+    /**
+     * Given 权重规则重复配置相同门槛，When 校验发布条件，Then 应拒绝存在覆盖歧义的档位。
+     */
+    @Test
+    void shouldRejectDuplicatedWeightThreshold() {
+        // Given
+        StrategyDefinitionAggregate aggregate = aggregate(stockOnlyAwards(),
+                List.of(rule(null, 1, "rule_weight", "100:200001;100:200002")), "rule_weight");
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class, () -> validator.validate(aggregate));
+
+        // Then
+        assertEquals(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, exception.getResponseCode());
+        verifyNoInteractions(awardDefinitionRepository);
+    }
+
+    /**
+     * Given 权重档位包含重复奖品，When 校验发布条件，Then 应转换为稳定的规则值错误码。
+     */
+    @Test
+    void shouldConvertDuplicatedWeightAwardsToBusinessException() {
+        // Given
+        StrategyDefinitionAggregate aggregate = aggregate(stockOnlyAwards(),
+                List.of(rule(null, 1, "rule_weight", "100:200001/200001")), "rule_weight");
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class, () -> validator.validate(aggregate));
+
+        // Then
+        assertEquals(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, exception.getResponseCode());
+        verifyNoInteractions(awardDefinitionRepository);
+    }
+
+    /**
+     * Given 奖品只声明库存规则且没有额外规则参数，When 校验发布条件，Then 应允许直接读取策略库存。
+     */
+    @Test
+    void shouldAcceptStockRuleWithoutStrategyRuleConfiguration() {
+        // Given
+        StrategyDefinitionAggregate aggregate = aggregate(stockOnlyAwards(), List.of(), null);
+        when(awardDefinitionRepository.queryByAwardIds(List.of(FIRST_AWARD_ID, SECOND_AWARD_ID)))
+                .thenReturn(List.of(awardDefinition(FIRST_AWARD_ID, AwardDefinitionStateVO.ACTIVE),
+                        awardDefinition(SECOND_AWARD_ID, AwardDefinitionStateVO.ACTIVE)));
+
+        // When & Then
+        assertDoesNotThrow(() -> validator.validate(aggregate));
+        verify(awardDefinitionRepository).queryByAwardIds(List.of(FIRST_AWARD_ID, SECOND_AWARD_ID));
+    }
+
+    /**
      * Given 批量查询没有返回全部奖品，When 校验发布条件，Then 应报告具体缺失奖品。
      */
     @Test
@@ -215,6 +426,13 @@ class StrategyDefinitionPublicationValidatorTest {
         return List.of(
                 award(FIRST_AWARD_ID, 1, new BigDecimal("30"), "rule_stock"),
                 award(SECOND_AWARD_ID, 2, new BigDecimal("70"), "rule_lock/rule_stock")
+        );
+    }
+
+    private List<StrategyAwardEntity> stockOnlyAwards() {
+        return List.of(
+                award(FIRST_AWARD_ID, 1, new BigDecimal("30"), "rule_stock"),
+                award(SECOND_AWARD_ID, 2, new BigDecimal("70"), "rule_stock")
         );
     }
 

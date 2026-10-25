@@ -1,10 +1,12 @@
 package com.lavyoung.marketforge.domain.strategy.service.rule.chain.impl;
 
+import com.lavyoung.marketforge.domain.strategy.model.vo.BlacklistRuleValueVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.AbstractLogicChain;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
-import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
+import com.lavyoung.marketforge.types.exception.BusinessException;
+import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -32,28 +34,38 @@ public class BlackListLogicChain extends AbstractLogicChain {
     /**
      * 根据黑名单规则判断是否直接返回指定奖品。
      *
+     * <p>规则值为空时继续执行后继节点；规则值存在时使用
+     * {@link BlacklistRuleValueVO} 完成统一解析。数据库中出现非法规则值时，
+     * 转换为稳定的业务异常，避免数组越界或数字转换异常泄漏到调用方。</p>
+     *
      * @param userId     参与抽奖的用户标识
      * @param strategyId 抽奖策略标识
-     * @return 命中黑名单时返回指定奖品及黑名单规则，否则返回后继节点结果
-     * @throws IllegalArgumentException       黑名单奖品标识不是有效整数时抛出
-     * @throws ArrayIndexOutOfBoundsException 黑名单配置不符合“奖品标识:用户列表”格式时抛出
-     * @throws NullPointerException           未命中规则且未装配后继节点时抛出
+     * @return 命中黑名单时返回兜底奖品，否则返回后继节点的处理结果
+     * @throws BusinessException    黑名单规则值格式非法时抛出
+     * @throws NullPointerException 未命中规则且没有后继节点时抛出
      */
     @Override
     public DefaultChainFactory.StrategyAwardVO logic(String userId, Long strategyId) {
-        log.info("抽奖责任链-黑名单处理开始 userId={} strategyId={} ruleModel={} ", userId, strategyId, ruleModel());
+        log.info("抽奖责任链-黑名单处理开始 userId={} strategyId={} ruleModel={}", userId, strategyId, ruleModel());
         String ruleValueStr = repository.queryStrategyRuleValue(strategyId, RuleModel.RULE_BLACKLIST.getCode());
         if (StringUtils.isBlank(ruleValueStr)) {
             return next().logic(userId, strategyId);
         }
-        // 一般是这样的格式 100:user1/user002
-        String[] splitRuleValue = ruleValueStr.split(Constants.COLON);
-        long awardId = Long.parseLong(splitRuleValue[0]);
-        String[] blackUserIds = splitRuleValue[1].split(Constants.SPLIT);
-        for (String blackUserId : blackUserIds) {
-            if (userId.equals(blackUserId)) {
-                return DefaultChainFactory.StrategyAwardVO.builder().awardId(awardId).ruleModel(ruleModel()).build();
-            }
+        BlacklistRuleValueVO ruleValue;
+        try {
+            ruleValue = BlacklistRuleValueVO.parse(ruleValueStr);
+        } catch (IllegalArgumentException exception) {
+            throw BusinessException.of(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID,
+                    exception,
+                    strategyId,
+                    RuleModel.RULE_BLACKLIST.getCode(),
+                    ruleValueStr);
+        }
+        if (ruleValue.contains(userId)) {
+            return DefaultChainFactory.StrategyAwardVO.builder()
+                    .awardId(ruleValue.fallbackAwardId())
+                    .ruleModel(ruleModel())
+                    .build();
         }
         log.info("抽奖责任链-黑名单结束放行 userId={} strategyId={} ruleModel={} ", userId, strategyId, ruleModel());
         return next().logic(userId, strategyId);

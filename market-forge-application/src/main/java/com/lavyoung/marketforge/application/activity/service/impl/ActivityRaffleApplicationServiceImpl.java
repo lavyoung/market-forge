@@ -18,6 +18,8 @@ import com.lavyoung.marketforge.domain.award.service.IAwardUnlockService;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
+import com.lavyoung.marketforge.domain.strategy.model.vo.WeightRuleValueVO;
+import com.lavyoung.marketforge.domain.strategy.model.vo.WeightTierVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.IRaffleAward;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
@@ -277,28 +279,45 @@ public class ActivityRaffleApplicationServiceImpl implements IActivityRaffleAppl
     }
 
     /**
-     * 查询策略权重规则，并反向整理为“奖品标识 -> 最低权重门槛”。
-     * <p>
-     * 权重规则是策略级规则，配置格式示例：
-     * {@code 4000:100011/100012;5000:100013}。
-     * 前端奖品列表需要按奖品展示门槛，所以这里会把规则反转为：
-     * {@code 100011 -> 4000, 100012 -> 4000, 100013 -> 5000}。
-     * 如果同一个奖品出现在多个权重档位，取最低门槛，表示用户最早达到多少次后可进入包含该奖品的权重奖池。
+     * 查询策略权重规则，并反向整理为“奖品标识 -> 最低累计次数门槛”。
      *
-     * @param strategyId 策略标识
-     * @return 奖品标识到最低权重门槛的映射；没有权重规则时返回空 Map
+     * <p>权重规则是策略级规则。例如配置
+     * {@code 4000:100011/100012;5000:100013} 表示两个权重子奖池。
+     * 前端奖品列表需要按照奖品展示最早可进入的门槛，因此本方法将其反转为
+     * {@code 100011 -> 4000, 100012 -> 4000, 100013 -> 5000}。</p>
+     *
+     * <p>如果同一奖品出现在多个权重档位，保留最低门槛。规则格式与业务
+     * 不变量统一由 {@link WeightRuleValueVO} 和 {@link WeightTierVO} 维护，
+     * Application 不再自行切割持久化字符串。</p>
+     *
+     * @param strategyId 策略业务标识
+     * @return 奖品标识到最低累计次数门槛的不可变映射；没有权重规则时返回空映射
+     * @throws BusinessException 权重规则值格式或业务语义非法时抛出
+     * @throws ArithmeticException 权重门槛超过 {@link Integer} 可表示范围时抛出
      */
     private Map<Long, Integer> queryRuleWeightCountMap(Long strategyId) {
         StrategyRuleEntity weightRule = strategyRepository.getStrategyRule(strategyId, RuleModel.WEIGHT);
         if (weightRule == null) {
             return Map.of();
         }
-        Map<Long, Integer> awardWeightCountMap = new HashMap<>();
-        weightRule.ruleWeightValues().forEach((weightCount, awardIds) -> {
-            int parsedWeightCount = Integer.parseInt(weightCount);
-            awardIds.forEach(awardId -> awardWeightCountMap.merge(awardId, parsedWeightCount, Math::min));
-        });
 
+        WeightRuleValueVO ruleValue;
+        try {
+            ruleValue = WeightRuleValueVO.parse(weightRule.ruleValue());
+        } catch (IllegalArgumentException exception) {
+            throw BusinessException.of(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID,
+                    exception,
+                    strategyId,
+                    RuleModel.WEIGHT.getCode(),
+                    weightRule.ruleValue()
+            );
+        }
+
+        Map<Long, Integer> awardWeightCountMap = new HashMap<>();
+        for (WeightTierVO tier : ruleValue.tiers()) {
+            int threshold = Math.toIntExact(tier.threshold());
+            tier.awardIds().forEach(awardId -> awardWeightCountMap.merge(awardId, threshold, Math::min));
+        }
         return Map.copyOf(awardWeightCountMap);
     }
 

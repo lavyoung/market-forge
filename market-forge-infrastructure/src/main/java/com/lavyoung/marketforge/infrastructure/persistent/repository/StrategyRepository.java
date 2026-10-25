@@ -5,6 +5,7 @@ import com.lavyoung.marketforge.domain.strategy.model.entity.AwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
+import com.lavyoung.marketforge.domain.strategy.model.vo.LockRuleValueVO;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyAwardRuleModelVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.ProbabilityAlgorithmType;
@@ -505,24 +506,25 @@ public class StrategyRepository implements IStrategyRepository {
     /**
      * 解析奖品级次数锁规则值。
      *
+     * <p>基础设施层只负责从持久化对象取得原始配置，并将领域值异常转换为
+     * 项目统一的业务异常。非负整数约束由 {@link LockRuleValueVO} 统一维护，
+     * 避免 Repository 与发布校验器各自实现一套转换逻辑。</p>
+     *
      * @param rulePO 奖品级策略规则持久化对象
-     * @return 非负解锁次数
+     * @return 奖品解锁所需的非负抽奖次数
      * @throws BusinessException 规则值为空、不是整数或小于零时抛出
      */
     private int parseAwardLockCount(StrategyRulePO rulePO) {
-        String ruleValue = rulePO.getRuleValue();
-        if (StringUtils.isBlank(ruleValue)) {
-            throw BusinessException.of(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, rulePO.getStrategyId(), rulePO.getAwardId(), ruleValue);
-        }
-
         try {
-            int lockCount = Integer.parseInt(ruleValue);
-            if (lockCount < 0) {
-                throw new NumberFormatException("negative lock count");
-            }
-            return lockCount;
-        } catch (NumberFormatException exception) {
-            throw BusinessException.of(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, exception, rulePO.getStrategyId(), rulePO.getAwardId(), ruleValue);
+            return LockRuleValueVO.parse(rulePO.getRuleValue()).requiredCount();
+        } catch (IllegalArgumentException exception) {
+            throw BusinessException.of(
+                    BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID,
+                    exception,
+                    rulePO.getStrategyId(),
+                    rulePO.getAwardId(),
+                    rulePO.getRuleValue()
+            );
         }
     }
 

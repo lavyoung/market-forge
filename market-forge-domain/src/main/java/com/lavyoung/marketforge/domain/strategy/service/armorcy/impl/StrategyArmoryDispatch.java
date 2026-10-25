@@ -3,6 +3,8 @@ package com.lavyoung.marketforge.domain.strategy.service.armorcy.impl;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
+import com.lavyoung.marketforge.domain.strategy.model.vo.WeightRuleValueVO;
+import com.lavyoung.marketforge.domain.strategy.model.vo.WeightTierVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyRepository;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyArmory;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatch;
@@ -21,7 +23,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -88,21 +89,14 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
 
     /**
      * {@inheritDoc}
-     * <p>
-     * 使用“策略标识_权重规则值”作为装配键，从相应的权重概率表中查询奖品。
-     *
-     * @param strategyId      策略标识
-     * @param ruleWeightValue 当前命中的权重规则值
-     * @return 随机选中的奖品标识
-     * @throws IllegalArgumentException 策略尚未装配或随机数范围无效时抛出
      */
     @Override
-    public long getRandomAwardIdAndWeight(Long strategyId, String ruleWeightValue) {
+    public long getRandomAwardIdAndWeight(Long strategyId, String weightThreshold) {
         Objects.requireNonNull(strategyId, "strategyId must not be null");
-        if (ruleWeightValue == null || ruleWeightValue.isBlank()) {
-            throw new IllegalArgumentException("ruleWeightValue must not be blank");
+        if (weightThreshold == null || weightThreshold.isBlank()) {
+            throw new IllegalArgumentException("weightThreshold must not be blank");
         }
-        return dispatch(strategyId + Constants.UNDERLINE + ruleWeightValue);
+        return dispatch(strategyId + Constants.UNDERLINE + weightThreshold);
     }
 
     @Override
@@ -189,13 +183,13 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
     /**
      * 装配策略下的全部权重概率空间。
      *
-     * <p>没有配置权重规则时不进行额外装配。每个权重档位只保留规则声明的
-     * 奖品，并使用独立装配键选择算法和保存概率数据。</p>
+     * <p>没有配置权重规则时不进行额外装配。规则存在时使用统一值对象解析档位，
+     * 每个档位按照“策略标识_次数门槛”建立独立概率快照。</p>
      *
      * @param strategyId     策略标识
      * @param strategyAwards 策略包含的全部奖品
      * @param generation     本次策略配置重建的统一代次
-     * @throws BusinessException 策略声明权重规则但无法查询到规则配置时抛出
+     * @throws BusinessException 权重规则缺失、格式非法或档位没有可用奖品时抛出
      */
     private void assembleWeightProbabilitySpaces(Long strategyId, List<StrategyAwardEntity> strategyAwards, long generation) {
         StrategyEntity strategy = repository.queryStrategyEntityByStrategyId(strategyId);
@@ -208,12 +202,18 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
             throw BusinessException.of(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, strategyId, RuleModel.WEIGHT.getCode());
         }
 
-        for (Map.Entry<String, List<Long>> entry : weightRule.ruleWeightValues().entrySet()) {
-            Set<Long> eligibleAwardIds = Set.copyOf(entry.getValue());
+        WeightRuleValueVO ruleValue;
+        try {
+            ruleValue = WeightRuleValueVO.parse(weightRule.ruleValue());
+        } catch (IllegalArgumentException exception) {
+            throw BusinessException.of(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, exception, strategyId, RuleModel.WEIGHT.getCode(), weightRule.ruleValue());
+        }
+        for (WeightTierVO tier : ruleValue.tiers()) {
+            Set<Long> eligibleAwardIds = Set.copyOf(tier.awardIds());
             List<StrategyAwardEntity> eligibleAwards = strategyAwards.stream()
                     .filter(award -> eligibleAwardIds.contains(award.awardId()))
                     .toList();
-            String assembleKey = strategyId + Constants.UNDERLINE + entry.getKey();
+            String assembleKey = strategyId + Constants.UNDERLINE + tier.threshold();
             assembleProbabilitySpace(assembleKey, eligibleAwards, generation);
         }
     }

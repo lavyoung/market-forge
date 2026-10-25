@@ -278,6 +278,116 @@ class ActivityRaffleApplicationServiceImplTest {
     }
 
     /**
+     * Given 同一奖品同时出现在多个权重档位，When 查询活动奖品列表，Then 展示用户最早可以进入的最低门槛。
+     */
+    @Test
+    void shouldUseLowestWeightThresholdForRepeatedAward() {
+        // Given
+        ActivityEntity activity = ActivityEntity.builder()
+                .activityId(ACTIVITY_ID)
+                .strategyId(STRATEGY_ID)
+                .awardUnlockScope(AwardUnlockScopeVO.TOTAL)
+                .build();
+        StrategyAwardEntity award = StrategyAwardEntity.builder()
+                .strategyId(STRATEGY_ID)
+                .awardId(101L)
+                .awardTitle("权重奖品")
+                .awardRate(new BigDecimal("1.0000"))
+                .ruleModels("rule_stock")
+                .sort(1)
+                .build();
+        when(activityRepository.getActivityEntityByIdActivityId(ACTIVITY_ID)).thenReturn(activity);
+        when(raffleAward.queryRaffleStrategyAwardList(STRATEGY_ID)).thenReturn(List.of(award));
+        when(strategyRepository.getStrategyRule(STRATEGY_ID, RuleModel.WEIGHT)).thenReturn(StrategyRuleEntity.builder()
+                .strategyId(STRATEGY_ID)
+                .ruleModel(RuleModel.WEIGHT.getCode())
+                .ruleValue("5:101;2:101")
+                .build());
+        when(strategyRepository.queryUserRaffleCount(USER_ID, STRATEGY_ID)).thenReturn(1L);
+
+        // When
+        List<ActivityAwardResult> results = newService().queryAwardList(new ActivityAwardListCommand(USER_ID, ACTIVITY_ID));
+
+        // Then
+        assertAll(
+                () -> assertEquals(1, results.size()),
+                () -> assertEquals(2, results.get(0).awardRuleWeightCount()),
+                () -> assertFalse(results.get(0).isAwardWeightUnlock()),
+                () -> assertEquals(1, results.get(0).waitAwardWeightCount())
+        );
+        verify(strategyRepository, never()).queryAwardRuleLockCounts(anyLong(), anyList());
+    }
+
+    /**
+     * Given 数据库中的权重规则格式非法，When 查询活动奖品列表，Then 应返回稳定的规则值业务异常。
+     */
+    @Test
+    void shouldRejectMalformedWeightRuleWhenQueryingAwardList() {
+        // Given
+        ActivityEntity activity = ActivityEntity.builder()
+                .activityId(ACTIVITY_ID)
+                .strategyId(STRATEGY_ID)
+                .awardUnlockScope(AwardUnlockScopeVO.TOTAL)
+                .build();
+        StrategyAwardEntity award = StrategyAwardEntity.builder()
+                .strategyId(STRATEGY_ID)
+                .awardId(101L)
+                .awardTitle("权重奖品")
+                .awardRate(BigDecimal.ONE)
+                .ruleModels("rule_stock")
+                .sort(1)
+                .build();
+        when(activityRepository.getActivityEntityByIdActivityId(ACTIVITY_ID)).thenReturn(activity);
+        when(raffleAward.queryRaffleStrategyAwardList(STRATEGY_ID)).thenReturn(List.of(award));
+        when(strategyRepository.getStrategyRule(STRATEGY_ID, RuleModel.WEIGHT)).thenReturn(StrategyRuleEntity.builder()
+                .strategyId(STRATEGY_ID)
+                .ruleModel(RuleModel.WEIGHT.getCode())
+                .ruleValue("5-101")
+                .build());
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> newService().queryAwardList(new ActivityAwardListCommand(USER_ID, ACTIVITY_ID)));
+
+        // Then
+        assertEquals(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, exception.getResponseCode());
+        verify(strategyRepository, never()).queryUserRaffleCount(anyString(), anyLong());
+    }
+
+    /**
+     * Given 权重门槛超过活动展示模型的整数范围，When 查询活动奖品列表，Then 应明确暴露数值溢出。
+     */
+    @Test
+    void shouldExposeWeightThresholdOverflowWhenQueryingAwardList() {
+        // Given
+        ActivityEntity activity = ActivityEntity.builder()
+                .activityId(ACTIVITY_ID)
+                .strategyId(STRATEGY_ID)
+                .awardUnlockScope(AwardUnlockScopeVO.TOTAL)
+                .build();
+        StrategyAwardEntity award = StrategyAwardEntity.builder()
+                .strategyId(STRATEGY_ID)
+                .awardId(101L)
+                .awardTitle("权重奖品")
+                .awardRate(BigDecimal.ONE)
+                .ruleModels("rule_stock")
+                .sort(1)
+                .build();
+        when(activityRepository.getActivityEntityByIdActivityId(ACTIVITY_ID)).thenReturn(activity);
+        when(raffleAward.queryRaffleStrategyAwardList(STRATEGY_ID)).thenReturn(List.of(award));
+        when(strategyRepository.getStrategyRule(STRATEGY_ID, RuleModel.WEIGHT)).thenReturn(StrategyRuleEntity.builder()
+                .strategyId(STRATEGY_ID)
+                .ruleModel(RuleModel.WEIGHT.getCode())
+                .ruleValue("2147483648:101")
+                .build());
+
+        // When & Then
+        assertThrows(ArithmeticException.class,
+                () -> newService().queryAwardList(new ActivityAwardListCommand(USER_ID, ACTIVITY_ID)));
+        verify(strategyRepository, never()).queryUserRaffleCount(anyString(), anyLong());
+    }
+
+    /**
      * Given 用户没有活动账户，When 查询活动账户额度，Then 返回全 0 结果。
      */
     @Test

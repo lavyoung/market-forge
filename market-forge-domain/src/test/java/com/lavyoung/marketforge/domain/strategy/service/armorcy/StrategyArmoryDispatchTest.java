@@ -42,7 +42,7 @@ class StrategyArmoryDispatchTest {
 
     private static final Long STRATEGY_ID = 100_001L;
     private static final String ASSEMBLE_KEY = "100001";
-    private static final String RULE_WEIGHT_VALUE = "4000";
+    private static final String WEIGHT_THRESHOLD = "4000";
     private static final String WEIGHT_ASSEMBLE_KEY = "100001_4000";
     private static final long EXPECTED_AWARD_ID = 100_011L;
     private static final long SNAPSHOT_VERSION = 7L;
@@ -205,7 +205,7 @@ class StrategyArmoryDispatchTest {
         when(probabilityAlgorithmRegistry.getRequired(ProbabilityAlgorithmType.DIRECT_LOOKUP)).thenReturn(directLookupAlgorithm);
         when(directLookupAlgorithm.dispatch(pointer.snapshotKey())).thenReturn(EXPECTED_AWARD_ID);
 
-        long awardId = strategyArmoryDispatch.getRandomAwardIdAndWeight(STRATEGY_ID, RULE_WEIGHT_VALUE);
+        long awardId = strategyArmoryDispatch.getRandomAwardIdAndWeight(STRATEGY_ID, WEIGHT_THRESHOLD);
 
         assertEquals(EXPECTED_AWARD_ID, awardId);
         verify(directLookupAlgorithm).dispatch(pointer.snapshotKey());

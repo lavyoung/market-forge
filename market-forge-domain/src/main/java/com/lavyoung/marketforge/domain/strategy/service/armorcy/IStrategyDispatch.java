@@ -1,5 +1,7 @@
 package com.lavyoung.marketforge.domain.strategy.service.armorcy;
 
+import com.lavyoung.marketforge.types.exception.BusinessException;
+
 import java.time.LocalDateTime;
 
 /**
@@ -23,14 +25,18 @@ public interface IStrategyDispatch {
     long getRandomAwardId(Long strategyId);
 
     /**
-     * 从指定权重门槛对应的已装配概率查找表中随机选取一个奖品。
+     * 从指定权重门槛对应的已装配概率快照中随机选取一个奖品。
+     *
+     * <p>权重概率快照使用“策略标识_次数门槛”作为装配键，因此调用方必须
+     * 传递命中的档位门槛，不能传递该档位中的奖品列表。</p>
      *
      * @param strategyId      策略标识
-     * @param ruleWeightValue 当前命中的权重规则值
+     * @param weightThreshold 当前命中的权重次数门槛
      * @return 随机选中的奖品标识
-     * @throws IllegalArgumentException 策略尚未装配或随机数范围无效时抛出
+     * @throws IllegalArgumentException 权重门槛为空时抛出
+     * @throws BusinessException        对应权重概率快照尚未装配时抛出
      */
-    long getRandomAwardIdAndWeight(Long strategyId, String ruleWeightValue);
+    long getRandomAwardIdAndWeight(Long strategyId, String weightThreshold);
 
     /**
      * 原子扣减指定策略奖品的一份 Redis 库存。

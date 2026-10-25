@@ -48,7 +48,7 @@ class RaffleStrategyRunnerTest {
     private static final Long DEFAULT_AWARD_ID = 100_011L;
     private static final Long BLACKLIST_AWARD_ID = 100_012L;
     private static final Long LUCK_AWARD_ID = 100_013L;
-    private static final String WEIGHT_KEY = "100011/100012";
+    private static final String WEIGHT_THRESHOLD = "4000";
 
     @Mock
     private IStrategyRepository repository;
@@ -107,7 +107,7 @@ class RaffleStrategyRunnerTest {
         // Then
         assertEquals(DEFAULT_AWARD_ID, award.awardId());
         verify(strategyDispatch).getRandomAwardId(STRATEGY_ID);
-        verify(strategyDispatch, never()).getRandomAwardIdAndWeight(STRATEGY_ID, WEIGHT_KEY);
+        verify(strategyDispatch, never()).getRandomAwardIdAndWeight(STRATEGY_ID, WEIGHT_THRESHOLD);
     }
 
     /**
@@ -142,7 +142,7 @@ class RaffleStrategyRunnerTest {
         when(repository.queryStrategyRuleValue(STRATEGY_ID, RuleModel.WEIGHT.getCode()))
                 .thenReturn("4000:100011/100012;5000:100011/100012/100013");
         when(repository.queryUserRaffleCount(USER_ID, STRATEGY_ID)).thenReturn(4_500L);
-        when(strategyDispatch.getRandomAwardIdAndWeight(STRATEGY_ID, WEIGHT_KEY))
+        when(strategyDispatch.getRandomAwardIdAndWeight(STRATEGY_ID, WEIGHT_THRESHOLD))
                 .thenReturn(DEFAULT_AWARD_ID);
 
         // When
@@ -151,7 +151,7 @@ class RaffleStrategyRunnerTest {
         // Then
         assertEquals(DEFAULT_AWARD_ID, award.awardId());
         verify(repository).queryUserRaffleCount(USER_ID, STRATEGY_ID);
-        verify(strategyDispatch).getRandomAwardIdAndWeight(STRATEGY_ID, WEIGHT_KEY);
+        verify(strategyDispatch).getRandomAwardIdAndWeight(STRATEGY_ID, WEIGHT_THRESHOLD);
         verify(strategyDispatch, never()).getRandomAwardId(STRATEGY_ID);
     }
 

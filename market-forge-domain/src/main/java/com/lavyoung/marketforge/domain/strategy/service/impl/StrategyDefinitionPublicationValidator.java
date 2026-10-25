@@ -5,6 +5,10 @@ import com.lavyoung.marketforge.domain.award.repository.IAwardDefinitionReposito
 import com.lavyoung.marketforge.domain.strategy.model.aggregate.StrategyDefinitionAggregate;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyAwardEntity;
 import com.lavyoung.marketforge.domain.strategy.model.entity.StrategyRuleEntity;
+import com.lavyoung.marketforge.domain.strategy.model.vo.BlacklistRuleValueVO;
+import com.lavyoung.marketforge.domain.strategy.model.vo.LockRuleValueVO;
+import com.lavyoung.marketforge.domain.strategy.model.vo.WeightRuleValueVO;
+import com.lavyoung.marketforge.domain.strategy.model.vo.WeightTierVO;
 import com.lavyoung.marketforge.domain.strategy.service.IStrategyDefinitionPublicationValidator;
 import com.lavyoung.marketforge.domain.strategy.service.armorcy.algorithm.ProbabilitySpaceFactory;
 import com.lavyoung.marketforge.types.common.Constants;
@@ -40,6 +44,25 @@ public class StrategyDefinitionPublicationValidator implements IStrategyDefiniti
     private static final int STRATEGY_RULE_TYPE = 1;
     private static final int AWARD_RULE_TYPE = 2;
 
+    /**
+     * 当前责任链已经注册的策略级规则。
+     */
+    private static final Set<String> ALLOWED_STRATEGY_RULE_MODELS = Set.of(RuleModel.RULE_BLACKLIST.getCode(),
+            RuleModel.WEIGHT.getCode());
+    /**
+     * 当前系统规则树模板允许作为奖品入口的规则。
+     *
+     * <p>幸运奖是规则树内部兜底节点，不由策略奖品直接声明。</p>
+     */
+    private static final Set<String> ALLOWED_AWARD_RULE_MODELS = Set.of(RuleModel.LOCK.getCode(),
+            RuleModel.RULE_STOCK.getCode());
+    /**
+     * 必须在 strategy_rule 表中提供参数的奖品规则。
+     *
+     * <p>库存规则直接读取策略库存，不需要额外规则值；次数锁需要配置解锁次数。</p>
+     */
+    private static final Set<String> REQUIRED_AWARD_RULE_CONFIGS = Set.of(RuleModel.LOCK.getCode());
+
     private final IAwardDefinitionRepository awardDefinitionRepository;
     private final ProbabilitySpaceFactory probabilitySpaceFactory;
 
@@ -70,13 +93,13 @@ public class StrategyDefinitionPublicationValidator implements IStrategyDefiniti
     }
 
     /**
-     * 校验策略奖品的库存、展示信息和顺序。
+     * 校验策略奖品的库存、展示信息、顺序和规则树入口。
      *
-     * <p>奖品标识重复和子配置归属已经由聚合构造器保证。这里补充只有发布时才需要
-     * 强制满足的条件：奖池非空、库存可用、标题有效以及展示顺序唯一。</p>
+     * <p>奖品标识重复和子配置归属由聚合构造器保证。发布阶段进一步要求奖池非空、
+     * 库存可用、顺序唯一，并且奖品规则只能使用系统已经提供规则树模板的入口。</p>
      *
      * @param aggregate 待发布策略聚合
-     * @throws BusinessException 奖品结构不满足发布要求时抛出
+     * @throws BusinessException 奖品结构或规则树入口不满足发布要求时抛出
      */
     private void validateAwards(StrategyDefinitionAggregate aggregate) {
         if (aggregate.awards().isEmpty()) {
@@ -97,26 +120,48 @@ public class StrategyDefinitionPublicationValidator implements IStrategyDefiniti
             if (award.sort() == null || award.sort() <= 0 || !sorts.add(award.sort())) {
                 throw invalidConfig(aggregate.strategyId(), award.awardId(), "sort");
             }
-
-            parseRuleModels(award.ruleModels(), Constants.SPLIT, aggregate.strategyId(), award.awardId());
+            Set<String> awardModels = parseRuleModels(award.ruleModels(), Constants.SPLIT, aggregate.strategyId(), award.awardId());
+            if (!ALLOWED_AWARD_RULE_MODELS.containsAll(awardModels)) {
+                Set<String> unsupportedModels = new HashSet<>(awardModels);
+                unsupportedModels.removeAll(ALLOWED_AWARD_RULE_MODELS);
+                throw invalidConfig(aggregate.strategyId(), award.awardId(),
+                        "unsupported award rule models " + unsupportedModels);
+            }
         }
     }
 
     /**
-     * 校验策略级规则和奖品级规则的类型、归属、模型和值。
+     * 校验规则声明、规则配置、作用域和参数值。
      *
-     * <p>策略级规则不能绑定奖品；奖品级规则必须绑定当前奖池中的奖品。
-     * 同一作用域内不允许重复配置同一种规则。</p>
+     * <p>策略根配置和奖品配置负责声明运行时需要执行的规则，strategy_rule 负责保存
+     * 需要参数的规则配置。两者必须匹配，防止出现“声明了但没参数”或“配置了但不会执行”
+     * 的无效数据。</p>
      *
      * @param aggregate 待发布策略聚合
-     * @throws BusinessException 规则配置不合法时抛出
+     * @throws BusinessException 规则声明、作用域或参数不合法时抛出
      */
     private void validateRules(StrategyDefinitionAggregate aggregate) {
         Set<Long> awardIds = aggregate.awards().stream()
                 .map(StrategyAwardEntity::awardId)
                 .collect(Collectors.toUnmodifiableSet());
-        parseRuleModels(aggregate.ruleModels(), ",", aggregate.strategyId(), "strategy");
-        Map<Long, Set<String>> awardRuleModels = aggregate.awards().stream()
+
+        Set<String> strategyModels = parseRuleModels(
+                aggregate.ruleModels(),
+                ",",
+                aggregate.strategyId(),
+                "strategy"
+        );
+        if (!ALLOWED_STRATEGY_RULE_MODELS.containsAll(strategyModels)) {
+            Set<String> unsupportedModels = new HashSet<>(strategyModels);
+            unsupportedModels.removeAll(ALLOWED_STRATEGY_RULE_MODELS);
+            throw invalidConfig(
+                    aggregate.strategyId(),
+                    "strategy",
+                    "unsupported strategy rule models " + unsupportedModels
+            );
+        }
+
+        Map<Long, Set<String>> awardModels = aggregate.awards().stream()
                 .collect(Collectors.toUnmodifiableMap(
                         StrategyAwardEntity::awardId,
                         award -> parseRuleModels(
@@ -126,6 +171,13 @@ public class StrategyDefinitionPublicationValidator implements IStrategyDefiniti
                                 award.awardId()
                         )
                 ));
+
+        RuleDeclarations declarations = new RuleDeclarations(strategyModels, awardModels);
+        Set<String> configuredStrategyModels = new HashSet<>();
+        Map<Long, Set<String>> configuredAwardModels = awardIds.stream()
+                .collect(Collectors.toMap(Function.identity(), ignored -> new HashSet<>()));
+        ConfiguredRules configuredRules = new ConfiguredRules(configuredStrategyModels, configuredAwardModels);
+
         Set<String> uniqueRules = new HashSet<>();
         for (StrategyRuleEntity rule : aggregate.rules()) {
             validateRuleOwnership(aggregate.strategyId(), rule, awardIds);
@@ -137,17 +189,30 @@ public class StrategyDefinitionPublicationValidator implements IStrategyDefiniti
             if (rule.ruleValue() == null || rule.ruleValue().isBlank()) {
                 throw invalidConfig(aggregate.strategyId(), rule.awardId(), "ruleValue");
             }
+            if (rule.ruleDesc() == null || rule.ruleDesc().isBlank()) {
+                throw invalidConfig(aggregate.strategyId(), rule.awardId(), "ruleDesc");
+            }
+
             String uniqueKey = rule.ruleType() + ":" + rule.awardId() + ":" + rule.ruleModel();
             if (!uniqueRules.add(uniqueKey)) {
-                throw invalidConfig(aggregate.strategyId(), rule.awardId(), "duplicated rule " + rule.ruleModel());
+                throw invalidConfig(
+                        aggregate.strategyId(),
+                        rule.awardId(),
+                        "duplicated rule " + rule.ruleModel()
+                );
             }
-            if (rule.ruleType() == AWARD_RULE_TYPE && !awardRuleModels.get(rule.awardId()).contains(rule.ruleModel())) {
-                throw invalidConfig(aggregate.strategyId(), rule.awardId(), "rule model is not declared by award");
-            }
-            if (ruleModel == RuleModel.WEIGHT) {
-                validateWeightRule(aggregate.strategyId(), rule, awardIds);
+
+            validateRuleDeclaration(aggregate.strategyId(), rule, declarations);
+            validateRuleValue(aggregate.strategyId(), rule, awardIds);
+
+            if (rule.ruleType() == STRATEGY_RULE_TYPE) {
+                configuredRules.strategyModels().add(rule.ruleModel());
+            } else {
+                configuredRules.awardModels().get(rule.awardId()).add(rule.ruleModel());
             }
         }
+
+        validateRequiredRuleConfigurations(aggregate.strategyId(), declarations, configuredRules);
     }
 
     /**
@@ -177,30 +242,167 @@ public class StrategyDefinitionPublicationValidator implements IStrategyDefiniti
     }
 
     /**
-     * 校验权重规则中的候选奖品全部属于当前策略。
+     * 校验规则配置是否已经在正确作用域声明。
      *
-     * <p>运行时会根据权重档位过滤奖池。如果规则引用了不存在的奖品而未在发布时拒绝，
-     * 运行时过滤会静默忽略错误标识，使运营配置与实际奖池不一致。</p>
+     * @param strategyId   策略业务标识
+     * @param rule         规则配置
+     * @param declarations 策略和奖品的规则声明
+     * @throws BusinessException 规则未声明或作用域不支持时抛出
+     */
+    private void validateRuleDeclaration(Long strategyId,
+                                         StrategyRuleEntity rule,
+                                         RuleDeclarations declarations) {
+        if (rule.ruleType() == STRATEGY_RULE_TYPE) {
+            if (!declarations.strategyModels().contains(rule.ruleModel())) {
+                throw invalidConfig(strategyId, "strategy",
+                        "rule configuration is not declared: " + rule.ruleModel());
+            }
+            return;
+        }
+
+        Set<String> declaredAwardModels = declarations.awardModels().get(rule.awardId());
+        if (declaredAwardModels == null || !declaredAwardModels.contains(rule.ruleModel())) {
+            throw invalidConfig(strategyId, rule.awardId(),
+                    "rule configuration is not declared by award: " + rule.ruleModel());
+        }
+        if (!REQUIRED_AWARD_RULE_CONFIGS.contains(rule.ruleModel())) {
+            throw invalidConfig(strategyId, rule.awardId(),
+                    "rule does not accept strategy_rule configuration: " + rule.ruleModel());
+        }
+    }
+
+    /**
+     * 校验所有需要参数的规则都已经提供配置。
+     *
+     * @param strategyId      策略业务标识
+     * @param declarations    规则声明
+     * @param configuredRules 已配置规则
+     * @throws BusinessException 规则声明缺少参数配置时抛出
+     */
+    private void validateRequiredRuleConfigurations(Long strategyId,
+                                                    RuleDeclarations declarations,
+                                                    ConfiguredRules configuredRules) {
+        Set<String> missingStrategyModels = new HashSet<>(declarations.strategyModels());
+        missingStrategyModels.removeAll(configuredRules.strategyModels());
+        if (!missingStrategyModels.isEmpty()) {
+            throw invalidConfig(strategyId, "strategy",
+                    "missing strategy rule configurations " + missingStrategyModels);
+        }
+
+        declarations.awardModels().forEach((awardId, declaredModels) -> {
+            Set<String> requiredModels = declaredModels.stream()
+                    .filter(REQUIRED_AWARD_RULE_CONFIGS::contains)
+                    .collect(Collectors.toSet());
+            requiredModels.removeAll(configuredRules.awardModels().get(awardId));
+            if (!requiredModels.isEmpty()) {
+                throw invalidConfig(strategyId, awardId,
+                        "missing award rule configurations " + requiredModels);
+            }
+        });
+    }
+
+    /**
+     * 按规则类型校验规则值格式。
      *
      * @param strategyId 策略业务标识
-     * @param rule       权重规则
-     * @param awardIds   当前策略全部奖品标识
-     * @throws BusinessException 权重规则格式错误、候选集合为空或引用未知奖品时抛出
+     * @param rule       规则配置
+     * @param awardIds   当前奖池奖品标识
+     * @throws BusinessException 规则值格式或引用不合法时抛出
+     */
+    private void validateRuleValue(Long strategyId, StrategyRuleEntity rule, Set<Long> awardIds) {
+        RuleModel ruleModel = RuleModel.get(rule.ruleModel());
+        switch (ruleModel) {
+            case WEIGHT -> validateWeightRule(strategyId, rule, awardIds);
+            case RULE_BLACKLIST -> validateBlacklistRule(strategyId, rule, awardIds);
+            case LOCK -> validateLockRule(strategyId, rule);
+            default -> throw invalidConfig(strategyId, rule.awardId(),
+                    "unsupported configurable rule " + rule.ruleModel());
+        }
+    }
+
+    /**
+     * 校验黑名单规则格式及其兜底奖品引用。
+     *
+     * <p>规则值自身的格式和用户列表约束由 {@link BlacklistRuleValueVO} 负责；
+     * 本方法只补充聚合范围约束，确保兜底奖品属于当前策略奖池。</p>
+     *
+     * @param strategyId 策略业务标识
+     * @param rule       黑名单规则配置
+     * @param awardIds   当前策略奖池中的奖品标识
+     * @throws BusinessException 规则值格式非法或兜底奖品不属于当前奖池时抛出
+     */
+    private void validateBlacklistRule(Long strategyId, StrategyRuleEntity rule, Set<Long> awardIds) {
+        BlacklistRuleValueVO ruleValue;
+        try {
+            ruleValue = BlacklistRuleValueVO.parse(rule.ruleValue());
+        } catch (IllegalArgumentException exception) {
+            throw BusinessException.of(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID,
+                    exception,
+                    strategyId,
+                    rule.ruleModel(),
+                    rule.ruleValue()
+            );
+        }
+
+        if (!awardIds.contains(ruleValue.fallbackAwardId())) {
+            throw invalidConfig(strategyId, "strategy",
+                    "blacklist fallback references unknown award " + ruleValue.fallbackAwardId()
+            );
+        }
+    }
+
+    /**
+     * 校验奖品次数锁规则值。
+     *
+     * <p>次数锁允许配置为零，表示奖品没有次数门槛；负数、空值和非整数
+     * 统一由 {@link LockRuleValueVO} 拒绝。</p>
+     *
+     * @param strategyId 策略业务标识
+     * @param rule       次数锁规则配置
+     * @throws BusinessException 次数锁规则值不是合法非负整数时抛出
+     */
+    private void validateLockRule(Long strategyId, StrategyRuleEntity rule) {
+        try {
+            LockRuleValueVO.parse(rule.ruleValue());
+        } catch (IllegalArgumentException exception) {
+            throw BusinessException.of(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID,
+                    exception,
+                    strategyId,
+                    rule.awardId(),
+                    rule.ruleValue()
+            );
+        }
+    }
+
+    /**
+     * 校验权重档位及其候选奖品引用。
+     *
+     * <p>档位格式、次数门槛、重复门槛和档位内重复奖品由
+     * {@link WeightRuleValueVO} 与 {@link WeightTierVO} 负责。
+     * 本方法只检查每个档位引用的奖品是否属于当前策略奖池。</p>
+     *
+     * @param strategyId 策略业务标识
+     * @param rule       权重规则配置
+     * @param awardIds   当前策略奖池中的奖品标识
+     * @throws BusinessException 权重规则值非法或档位引用奖池外奖品时抛出
      */
     private void validateWeightRule(Long strategyId, StrategyRuleEntity rule, Set<Long> awardIds) {
+        WeightRuleValueVO ruleValue;
         try {
-            Map<String, List<Long>> weightValues = rule.ruleWeightValues();
-            if (weightValues.isEmpty()) {
-                throw invalidConfig(strategyId, rule.awardId(), "weight rule is empty");
+            ruleValue = WeightRuleValueVO.parse(rule.ruleValue());
+        } catch (IllegalArgumentException exception) {
+            throw BusinessException.of(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID,
+                    exception,
+                    strategyId,
+                    rule.ruleModel(),
+                    rule.ruleValue()
+            );
+        }
+
+        for (WeightTierVO tier : ruleValue.tiers()) {
+            if (!awardIds.containsAll(tier.awardIds())) {
+                throw invalidConfig(strategyId, rule.awardId(), "weight " + tier.threshold() + " references unknown award");
             }
-            weightValues.forEach((weight, eligibleAwardIds) -> {
-                if (eligibleAwardIds.isEmpty() || !awardIds.containsAll(eligibleAwardIds)) {
-                    throw invalidConfig(strategyId, rule.awardId(), "weight " + weight + " references unknown award");
-                }
-            });
-        } catch (NumberFormatException | IndexOutOfBoundsException exception) {
-            throw BusinessException.of(BusinessResponseCode.STRATEGY_CONFIG_INVALID, exception,
-                    strategyId, rule.ruleModel(), rule.ruleValue());
         }
     }
 
@@ -264,5 +466,23 @@ public class StrategyDefinitionPublicationValidator implements IStrategyDefiniti
      */
     private BusinessException invalidConfig(Long strategyId, Object owner, Object reason) {
         return BusinessException.of(BusinessResponseCode.STRATEGY_CONFIG_INVALID, strategyId, owner, reason);
+    }
+
+    /**
+     * 策略和奖品声明的规则模型集合。
+     *
+     * @param strategyModels 策略级规则声明
+     * @param awardModels    按奖品标识分组的奖品级规则声明
+     */
+    private record RuleDeclarations(Set<String> strategyModels, Map<Long, Set<String>> awardModels) {
+    }
+
+    /**
+     * 已经提供参数配置的规则集合。
+     *
+     * @param strategyModels 已配置的策略级规则
+     * @param awardModels    按奖品标识分组的已配置奖品规则
+     */
+    private record ConfiguredRules(Set<String> strategyModels, Map<Long, Set<String>> awardModels) {
     }
 }

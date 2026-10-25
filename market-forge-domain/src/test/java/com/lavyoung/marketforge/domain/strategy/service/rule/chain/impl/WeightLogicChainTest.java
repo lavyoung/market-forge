@@ -5,6 +5,8 @@ import com.lavyoung.marketforge.domain.strategy.service.armorcy.IStrategyDispatc
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.ILogicChain;
 import com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
 import com.lavyoung.marketforge.types.domain.strategy.RuleModel;
+import com.lavyoung.marketforge.types.exception.BusinessException;
+import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -18,10 +20,10 @@ class WeightLogicChainTest {
     private static final String USER_ID = "user-001";
     private static final Long STRATEGY_ID = 100_001L;
     private static final Long AWARD_ID = 100_011L;
-    private static final String RULE_WEIGHT_VALUE = "100011/100012";
+    private static final String WEIGHT_THRESHOLD = "4000";
 
     /**
-     * Given 用户累计抽奖次数达到多个档位，When 执行权重节点，Then 使用最高可用档位对应的奖池值抽奖。
+     * Given 用户累计抽奖次数达到多个档位，When 执行权重节点，Then 使用最高可用档位门槛查找已装配快照。
      */
     @Test
     void shouldDispatchWithHighestEligibleWeight() {
@@ -31,7 +33,7 @@ class WeightLogicChainTest {
         when(repository.queryStrategyRuleValue(STRATEGY_ID, RuleModel.WEIGHT.getCode()))
                 .thenReturn("3000:100011;4000:100011/100012;5000:100011/100012/100013");
         when(repository.queryUserRaffleCount(USER_ID, STRATEGY_ID)).thenReturn(4_500L);
-        when(dispatch.getRandomAwardIdAndWeight(STRATEGY_ID, RULE_WEIGHT_VALUE)).thenReturn(AWARD_ID);
+        when(dispatch.getRandomAwardIdAndWeight(STRATEGY_ID, WEIGHT_THRESHOLD)).thenReturn(AWARD_ID);
         WeightLogicChain chain = new WeightLogicChain(repository, dispatch);
 
         // When
@@ -41,7 +43,7 @@ class WeightLogicChainTest {
         assertEquals(AWARD_ID, result.awardId());
         assertEquals(RuleModel.WEIGHT, result.ruleModel());
         verify(repository).queryUserRaffleCount(USER_ID, STRATEGY_ID);
-        verify(dispatch).getRandomAwardIdAndWeight(STRATEGY_ID, RULE_WEIGHT_VALUE);
+        verify(dispatch).getRandomAwardIdAndWeight(STRATEGY_ID, WEIGHT_THRESHOLD);
     }
 
     /**
@@ -95,7 +97,7 @@ class WeightLogicChainTest {
     }
 
     /**
-     * Given 权重规则缺少键值分隔符，When 执行节点，Then 抛出非法参数异常。
+     * Given 权重规则缺少键值分隔符，When 执行节点，Then 转换为稳定的规则值业务异常。
      */
     @Test
     void shouldRejectMalformedRuleValue() {
@@ -106,8 +108,12 @@ class WeightLogicChainTest {
                 .thenReturn("4000-100011");
         WeightLogicChain chain = new WeightLogicChain(repository, dispatch);
 
-        // When & Then
-        assertThrows(IllegalArgumentException.class, () -> chain.logic(USER_ID, STRATEGY_ID));
+        // When
+        BusinessException exception = assertThrows(BusinessException.class, () -> chain.logic(USER_ID, STRATEGY_ID));
+
+        // Then
+        assertEquals(BusinessResponseCode.STRATEGY_RULE_VALUE_INVALID, exception.getResponseCode());
+        verifyNoInteractions(dispatch);
     }
 
     /**
