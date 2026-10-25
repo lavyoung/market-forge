@@ -4,7 +4,10 @@ import com.lavyoung.marketforge.domain.strategy.model.vo.RuleLogicCheckTypeVO;
 import lombok.Builder;
 
 /**
- * 规则过滤后的动作结果。
+ * 旧版规则过滤器的动作结果。
+ * <p>
+ * 当前抽奖前置规则使用责任链工厂的策略奖品结果，奖品命中后的规则使用规则树工厂的动作结果。
+ * 保留本类型仅用于兼容仍依赖旧过滤器接口的代码。
  *
  * @param code      规则检查结果编码
  * @param msg       规则检查结果说明
@@ -14,8 +17,11 @@ import lombok.Builder;
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
  * @date 2026/09/04
+ * @deprecated 前置规则请使用 {@link com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory.StrategyAwardVO}，
+ * 后置规则请使用 {@link com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory.DefaultTreeFactory.TreeActionEntity}
  */
 @Builder
+@Deprecated(since = "1.0.0", forRemoval = false)
 public record RuleActionEntity<T extends RuleActionEntity.RaffleEntity>(
         String code,
         String msg,

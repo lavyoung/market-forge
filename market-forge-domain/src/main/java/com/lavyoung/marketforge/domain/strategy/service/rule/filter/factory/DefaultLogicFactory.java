@@ -12,15 +12,20 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 默认规则过滤器工厂。
+ * 旧版规则过滤器工厂。
  * <p>
  * 收集 Spring 容器中的规则过滤器，并依据 {@link LogicStrategy} 声明的规则模型建立索引。
+ * 当前抽奖规则分别由 {@link com.lavyoung.marketforge.domain.strategy.service.rule.chain.factory.DefaultChainFactory}
+ * 和 {@link com.lavyoung.marketforge.domain.strategy.service.rule.tree.factory.DefaultTreeFactory} 负责装配。
+ * 本工厂仅为已有调用方保留兼容能力，不再注册新的业务规则。
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
  * @date 2026/09/04
+ * @deprecated 使用责任链工厂处理抽奖前置规则，使用规则树工厂处理奖品命中后的规则
  */
 @Service
+@Deprecated(since = "1.0.0", forRemoval = false)
 public class DefaultLogicFactory {
 
     /**
