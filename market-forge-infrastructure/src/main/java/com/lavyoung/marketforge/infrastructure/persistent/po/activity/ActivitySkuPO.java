@@ -32,7 +32,7 @@ public class ActivitySkuPO extends BasePO {
     private Long id;
 
     /**
-     * 商品 SKU。
+     * SKU 业务标识。
      */
     private Long sku;
 
@@ -47,23 +47,39 @@ public class ActivitySkuPO extends BasePO {
     private Long activityCountId;
 
     /**
-     * 商品库存。
+     * 累计配置的库存总量。
+     *
+     * <p>正常兑换不能减少该字段，只有库存调整用例可以修改。</p>
      */
     private Long stockCount;
 
     /**
-     * 商品当前剩余库存。
+     * 当前剩余库存。
      *
-     * <p>该字段用于展示 SKU 当前是否还可兑换，也用于后续库存扣减。
-     * {@code stockCount} 是初始配置值，{@code stockCountSurplus} 是运行时剩余值。</p>
+     * <p>兑换成功时只减少该字段。它与总库存的差值表示已经消费的库存数量。</p>
      */
     private Long stockCountSurplus;
 
     /**
-     * 兑换一个该 SKU 所需消耗的积分数量。
+     * 兑换一个 SKU 所需的积分数量。
      *
      * <p>值为 {@code null} 表示该 SKU 不支持积分兑换，
      * 或价格尚未由运营配置完成。</p>
      */
     private Long creditAmount;
+
+    /**
+     * 乐观锁版本。
+     */
+    private Integer version;
+
+    /**
+     * 创建人标识。
+     */
+    private String createdBy;
+
+    /**
+     * 最后修改人标识。
+     */
+    private String updatedBy;
 }

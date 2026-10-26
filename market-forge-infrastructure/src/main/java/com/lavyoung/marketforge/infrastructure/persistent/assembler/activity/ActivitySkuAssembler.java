@@ -45,6 +45,9 @@ public interface ActivitySkuAssembler {
      * @return 活动 SKU 持久化对象
      */
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "version", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
     @Mapping(target = "createTime", ignore = true)
     @Mapping(target = "updateTime", ignore = true)
     ActivitySkuPO toPO(ActivitySkuEntity activitySkuEntity);

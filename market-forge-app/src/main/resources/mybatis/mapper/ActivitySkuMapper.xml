@@ -13,13 +13,16 @@
         <result column="stock_count" property="stockCount"/>
         <result column="stock_count_surplus" property="stockCountSurplus"/>
         <result column="credit_amount" property="creditAmount"/>
+        <result column="version" property="version"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="updated_by" property="updatedBy"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
     </resultMap>
 
     <sql id="activitySkuColumns">
         id, sku, activity_id, activity_count_id, stock_count, stock_count_surplus, credit_amount,
-        create_time, update_time
+        version, created_by, updated_by, create_time, update_time
     </sql>
 
     <select id="queryBySku" resultMap="activitySkuResultMap">
@@ -27,19 +30,63 @@
         <include refid="activitySkuColumns"/>
         FROM raffle_activity_sku
         WHERE sku = #{sku}
-        ORDER BY id DESC
         LIMIT 1
     </select>
 
+    <update id="updateConfiguration">
+        UPDATE raffle_activity_sku
+        SET activity_id = #{definition.activityId},
+        activity_count_id = #{definition.activityCountId},
+        credit_amount = #{definition.creditAmount},
+        version = version + 1,
+        updated_by = #{definition.updatedBy},
+        update_time = CURRENT_TIMESTAMP
+        WHERE sku = #{definition.sku}
+        AND version = #{definition.version}
+        AND (
+        (
+        activity_id = #{definition.activityId}
+        AND activity_count_id = #{definition.activityCountId}
+        )
+        OR stock_count = stock_count_surplus
+        )
+    </update>
+
+    <update id="adjustStock">
+        UPDATE raffle_activity_sku
+        SET stock_count = stock_count + #{adjustment.quantityDelta},
+        stock_count_surplus = stock_count_surplus + #{adjustment.quantityDelta},
+        version = version + 1,
+        updated_by = #{adjustment.operator},
+        update_time = CURRENT_TIMESTAMP
+        WHERE sku = #{adjustment.sku}
+        AND version = #{adjustment.expectedVersion}
+        AND stock_count = #{adjustment.stockCountBefore}
+        AND stock_count_surplus = #{adjustment.stockCountSurplusBefore}
+        AND stock_count + #{adjustment.quantityDelta} = #{adjustment.stockCountAfter}
+        AND stock_count_surplus + #{adjustment.quantityDelta} = #{adjustment.stockCountSurplusAfter}
+        AND stock_count + #{adjustment.quantityDelta} &gt; 0
+        AND stock_count_surplus + #{adjustment.quantityDelta} &gt;= 0
+    </update>
+
     <update id="decrementStockCount">
         UPDATE raffle_activity_sku
-        SET stock_count = stock_count - 1,
-        stock_count_surplus = stock_count_surplus - 1,
+        SET stock_count_surplus = stock_count_surplus - 1,
+        updated_by = 'system_stock_sync',
         update_time = CURRENT_TIMESTAMP
         WHERE sku = #{sku}
         AND activity_id = #{activityId}
         AND activity_count_id = #{activityCountId}
-        AND stock_count &gt; 0
+        AND stock_count_surplus &gt; 0
+    </update>
+
+    <update id="clearStockCountSurplus">
+        UPDATE raffle_activity_sku
+        SET stock_count_surplus = 0,
+        version = version + 1,
+        updated_by = 'system_stock_sync',
+        update_time = CURRENT_TIMESTAMP
+        WHERE sku = #{sku}
         AND stock_count_surplus &gt; 0
     </update>
 

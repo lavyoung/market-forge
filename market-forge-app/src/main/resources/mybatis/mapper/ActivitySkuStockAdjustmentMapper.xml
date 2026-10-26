@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lavyoung.marketforge.infrastructure.persistent.dao.activity.IActivitySkuStockAdjustmentDao">
+
+    <insert id="insertAdjustment">
+        INSERT INTO raffle_activity_sku_stock_adjustment
+        (
+        adjustment_id,
+        sku,
+        quantity_delta,
+        stock_count_before,
+        stock_count_after,
+        stock_count_surplus_before,
+        stock_count_surplus_after,
+        expected_version,
+        reason,
+        operator
+        )
+        VALUES
+        (
+        #{adjustment.adjustmentId},
+        #{adjustment.sku},
+        #{adjustment.quantityDelta},
+        #{adjustment.stockCountBefore},
+        #{adjustment.stockCountAfter},
+        #{adjustment.stockCountSurplusBefore},
+        #{adjustment.stockCountSurplusAfter},
+        #{adjustment.expectedVersion},
+        #{adjustment.reason},
+        #{adjustment.operator}
+        )
+    </insert>
+
+</mapper>

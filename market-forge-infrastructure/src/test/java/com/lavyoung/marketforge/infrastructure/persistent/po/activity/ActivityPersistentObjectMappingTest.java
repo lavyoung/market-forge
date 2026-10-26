@@ -55,7 +55,8 @@ class ActivityPersistentObjectMappingTest {
                     "id", "userId", "activityId", "monthCount", "monthCountSurplus", "month", "version"
             ),
             ActivitySkuPO.class, Set.of(
-                    "id", "sku", "activityId", "activityCountId", "stockCount", "stockCountSurplus", "creditAmount"
+                    "id", "sku", "activityId", "activityCountId", "stockCount", "stockCountSurplus", "creditAmount",
+                    "version", "createdBy", "updatedBy"
             ),
             ActivityStagePO.class, Set.of(
                     "id", "stageId", "channel", "source", "activityId", "state", "version", "createdBy", "updatedBy"
@@ -119,5 +120,34 @@ class ActivityPersistentObjectMappingTest {
             // Then
             assertEquals(expectedFields, actualFields, () -> persistentObjectType.getSimpleName() + " 字段与表结构不一致");
         });
+    }
+
+    /**
+     * 验证库存调整流水使用独立追加型持久化对象，而不是继承包含更新时间的基类。
+     *
+     * @throws NoSuchFieldException 调整流水缺少自增主键字段时抛出
+     */
+    @Test
+    void shouldMapStockAdjustmentAsAppendOnlyRecord() throws NoSuchFieldException {
+        // Given
+        Class<ActivitySkuStockAdjustmentPO> persistentObjectType = ActivitySkuStockAdjustmentPO.class;
+
+        // When
+        TableName tableName = persistentObjectType.getAnnotation(TableName.class);
+        TableId tableId = persistentObjectType.getDeclaredField("id").getAnnotation(TableId.class);
+        Set<String> actualFields = Arrays.stream(persistentObjectType.getDeclaredFields())
+                .filter(field -> !field.isSynthetic())
+                .map(Field::getName)
+                .collect(Collectors.toUnmodifiableSet());
+
+        // Then
+        assertAll(
+                () -> assertEquals("raffle_activity_sku_stock_adjustment", tableName.value()),
+                () -> assertEquals(IdType.AUTO, tableId.type()),
+                () -> assertFalse(BasePO.class.isAssignableFrom(persistentObjectType)),
+                () -> assertEquals(Set.of("id", "adjustmentId", "sku", "quantityDelta", "stockCountBefore",
+                        "stockCountAfter", "stockCountSurplusBefore", "stockCountSurplusAfter", "expectedVersion",
+                        "reason", "operator", "createTime"), actualFields)
+        );
     }
 }

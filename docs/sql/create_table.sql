@@ -211,18 +211,43 @@ CREATE TABLE raffle_activity_count
 CREATE TABLE raffle_activity_sku
 (
     id                  bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-    sku                 bigint          NOT NULL COMMENT '活动SKU',
-    activity_id         bigint          NOT NULL COMMENT '活动ID',
+    sku                 bigint      NOT NULL COMMENT '活动SKU业务标识',
+    activity_id         bigint      NOT NULL COMMENT '活动业务标识',
     activity_count_id   bigint          NOT NULL COMMENT '活动次数配置ID',
-    stock_count         bigint          NOT NULL COMMENT 'SKU库存总量',
-    stock_count_surplus bigint          NOT NULL COMMENT 'SKU剩余库存',
+    stock_count         bigint      NOT NULL COMMENT '累计配置的库存总量',
+    stock_count_surplus bigint      NOT NULL COMMENT '当前剩余库存',
     credit_amount       bigint          NULL COMMENT '兑换所需积分；为空表示不支持积分兑换',
+    version             int         NOT NULL DEFAULT 1 COMMENT '乐观锁版本',
+    created_by          varchar(64) NOT NULL COMMENT '创建人标识',
+    updated_by          varchar(64) NOT NULL COMMENT '最后修改人标识',
     create_time         datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time         datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
-    UNIQUE KEY uq_sku_activity_count (sku, activity_id, activity_count_id)
+    UNIQUE KEY uq_activity_sku (sku),
+    KEY idx_activity_sku_activity (activity_id, update_time, id),
+    KEY idx_activity_sku_count (activity_count_id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='抽奖活动SKU表';
+
+CREATE TABLE raffle_activity_sku_stock_adjustment
+(
+    id                         bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    adjustment_id              bigint          NOT NULL COMMENT '库存调整业务标识',
+    sku                        bigint          NOT NULL COMMENT '活动SKU业务标识',
+    quantity_delta             bigint          NOT NULL COMMENT '调整数量；正数增加，负数减少',
+    stock_count_before         bigint          NOT NULL COMMENT '调整前库存总量',
+    stock_count_after          bigint          NOT NULL COMMENT '调整后库存总量',
+    stock_count_surplus_before bigint          NOT NULL COMMENT '调整前剩余库存',
+    stock_count_surplus_after  bigint          NOT NULL COMMENT '调整后剩余库存',
+    expected_version           int             NOT NULL COMMENT '调整时预期的SKU版本',
+    reason                     varchar(256)    NOT NULL COMMENT '调整原因',
+    operator                   varchar(64)     NOT NULL COMMENT '操作人标识',
+    create_time                datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_sku_stock_adjustment_id (adjustment_id),
+    KEY idx_sku_stock_adjustment_query (sku, create_time, id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='活动SKU库存调整流水表';
 
 CREATE TABLE behavior_rebate_config
 (

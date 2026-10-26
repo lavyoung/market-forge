@@ -112,8 +112,10 @@ INSERT INTO raffle_activity_stage
 VALUES (900905001, 900905001, 'web', 'official', 100301, 'create', 1, 'system_seed', 'system_seed');
 
 INSERT INTO raffle_activity_sku
-(sku, activity_id, activity_count_id, stock_count, stock_count_surplus, credit_amount)
-VALUES (9011, 100301, 100301, 100000, 100000, 100);
+(sku, activity_id, activity_count_id, stock_count, stock_count_surplus, credit_amount,
+ version, created_by, updated_by)
+VALUES (9011, 100301, 100301, 100000, 100000, 100,
+        1, 'system_seed', 'system_seed');
 
 INSERT INTO behavior_rebate_config
     (behavior_type, rebate_type, rebate_config, rebate_desc)
