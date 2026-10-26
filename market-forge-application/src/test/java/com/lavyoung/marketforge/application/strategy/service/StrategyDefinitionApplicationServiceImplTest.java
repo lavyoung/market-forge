@@ -305,6 +305,108 @@ class StrategyDefinitionApplicationServiceImplTest {
     }
 
     /**
+     * Given 发布配置校验失败，When 发布策略，Then 不得装配概率快照或推进数据库状态。
+     */
+    @Test
+    void shouldNotWarmUpOrPublishWhenPublicationValidationFails() {
+        // Given
+        StrategyDefinitionAggregate draft = aggregate(StrategyDefinitionStateVO.DRAFT, 3, "待发布策略");
+        BusinessException failure = BusinessException.of(BusinessResponseCode.STRATEGY_CONFIG_INVALID, STRATEGY_ID);
+        when(strategyDefinitionRepository.queryByStrategyId(STRATEGY_ID)).thenReturn(Optional.of(draft));
+        doThrow(failure).when(publicationValidator).validate(draft);
+
+        // When
+        BusinessException actual = assertThrows(BusinessException.class, () -> service.changeState(
+                new ChangeStrategyDefinitionStateCommand(STRATEGY_ID, "active", 3, "operator-002")));
+
+        // Then
+        assertSame(failure, actual);
+        verifyNoInteractions(strategyArmory, stateTransaction);
+    }
+
+    /**
+     * Given 概率快照装配过程抛出系统异常，When 发布策略，Then 原异常向上暴露且数据库状态保持草稿。
+     */
+    @Test
+    void shouldNotPublishWhenRuntimeWarmUpThrowsException() {
+        // Given
+        StrategyDefinitionAggregate draft = aggregate(StrategyDefinitionStateVO.DRAFT, 3, "待发布策略");
+        IllegalStateException failure = new IllegalStateException("redis unavailable");
+        when(strategyDefinitionRepository.queryByStrategyId(STRATEGY_ID)).thenReturn(Optional.of(draft));
+        when(strategyArmory.assembleLotteryStrategy(STRATEGY_ID)).thenThrow(failure);
+
+        // When
+        IllegalStateException actual = assertThrows(IllegalStateException.class, () -> service.changeState(
+                new ChangeStrategyDefinitionStateCommand(STRATEGY_ID, "active", 3, "operator-002")));
+
+        // Then
+        assertSame(failure, actual);
+        verify(publicationValidator).validate(draft);
+        verifyNoInteractions(stateTransaction);
+    }
+
+    /**
+     * Given 快照已完成预热但数据库状态或版本被并发修改，When 执行状态条件更新，Then 返回冲突且不伪造发布成功。
+     */
+    @Test
+    void shouldExposeConflictWhenStateChangesAfterRuntimeWarmUp() {
+        // Given
+        StrategyDefinitionAggregate draft = aggregate(StrategyDefinitionStateVO.DRAFT, 3, "待发布策略");
+        BusinessException conflict = BusinessException.of(BusinessResponseCode.STRATEGY_DEFINITION_CONFLICT, STRATEGY_ID, 3);
+        when(strategyDefinitionRepository.queryByStrategyId(STRATEGY_ID)).thenReturn(Optional.of(draft));
+        when(strategyArmory.assembleLotteryStrategy(STRATEGY_ID)).thenReturn(true);
+        doThrow(conflict).when(stateTransaction).changeState(any());
+
+        // When
+        BusinessException actual = assertThrows(BusinessException.class, () -> service.changeState(
+                new ChangeStrategyDefinitionStateCommand(STRATEGY_ID, "active", 3, "operator-002")));
+
+        // Then
+        assertSame(conflict, actual);
+        InOrder inOrder = inOrder(publicationValidator, strategyArmory, stateTransaction);
+        inOrder.verify(publicationValidator).validate(draft);
+        inOrder.verify(strategyArmory).assembleLotteryStrategy(STRATEGY_ID);
+        inOrder.verify(stateTransaction).changeState(any());
+        verify(strategyDefinitionRepository).queryByStrategyId(STRATEGY_ID);
+    }
+
+    /**
+     * Given 调用方持有过期版本，When 发布草稿策略，Then 应在校验和预热之前返回乐观锁冲突。
+     */
+    @Test
+    void shouldRejectStalePublishBeforeValidationAndWarmUp() {
+        // Given
+        StrategyDefinitionAggregate draft = aggregate(StrategyDefinitionStateVO.DRAFT, 4, "待发布策略");
+        when(strategyDefinitionRepository.queryByStrategyId(STRATEGY_ID)).thenReturn(Optional.of(draft));
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class, () -> service.changeState(
+                new ChangeStrategyDefinitionStateCommand(STRATEGY_ID, "active", 3, "operator-002")));
+
+        // Then
+        assertSame(BusinessResponseCode.STRATEGY_DEFINITION_CONFLICT, exception.getResponseCode());
+        verifyNoInteractions(publicationValidator, strategyArmory, stateTransaction);
+    }
+
+    /**
+     * Given 策略已经处于生效状态，When 重复提交发布请求，Then 拒绝非法状态迁移且不重复刷新快照。
+     */
+    @Test
+    void shouldRejectRepeatedPublishWithoutRefreshingSnapshot() {
+        // Given
+        StrategyDefinitionAggregate active = aggregate(StrategyDefinitionStateVO.ACTIVE, 4, "已生效策略");
+        when(strategyDefinitionRepository.queryByStrategyId(STRATEGY_ID)).thenReturn(Optional.of(active));
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class, () -> service.changeState(
+                new ChangeStrategyDefinitionStateCommand(STRATEGY_ID, "active", 4, "operator-002")));
+
+        // Then
+        assertSame(BusinessResponseCode.STRATEGY_STATE_ERROR, exception.getResponseCode());
+        verifyNoInteractions(publicationValidator, strategyArmory, stateTransaction);
+    }
+
+    /**
      * Given 已生效策略，When 停用，Then 应只执行状态短事务而不重复校验和预热。
      */
     @Test

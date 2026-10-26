@@ -180,6 +180,11 @@ public enum BusinessResponseCode implements IResponseCode {
     ACTIVITY_STAGE_STATE_ERROR(500_006_005, "activity.stage.state-error", "活动展台状态异常"),
     ACTIVITY_STAGE_CONFLICT(500_006_006, "activity.stage.conflict", "活动展台已被修改，请刷新后重试"),
 
+    ACTIVITY_COUNT_DEFINITION_CREATE_FAILED(500_007_001, "activity.count.definition.create-failed", "活动次数配置创建失败"),
+    ACTIVITY_COUNT_DEFINITION_DUPLICATED(500_007_002, "activity.count.definition.duplicated", "活动次数配置已存在"),
+    ACTIVITY_COUNT_DEFINITION_CONFLICT(500_007_003, "activity.count.definition.conflict", "活动次数配置已被修改，请刷新后重试"),
+    ACTIVITY_COUNT_DEFINITION_REFERENCED(500_007_004, "activity.count.definition.referenced", "活动次数配置已被开放活动引用，不能修改"),
+
     // 600 - 用户中奖与发奖域
     USER_AWARD_RECORD_NOT_FOUND(600_001_001, "user-award.record.not-found", "用户中奖记录不存在"),
     USER_AWARD_RECORD_CREATE_FAILED(600_001_002, "user-award.record.create-failed", "用户中奖记录创建失败"),

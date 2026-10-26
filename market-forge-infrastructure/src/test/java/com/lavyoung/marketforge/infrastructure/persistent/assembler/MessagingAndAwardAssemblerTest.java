@@ -1,6 +1,7 @@
 package com.lavyoung.marketforge.infrastructure.persistent.assembler;
 
 import cn.hutool.json.JSONUtil;
+import com.lavyoung.marketforge.domain.award.event.AwardFulfillmentSnapshot;
 import com.lavyoung.marketforge.domain.award.event.SendAwardRecordEvent;
 import com.lavyoung.marketforge.domain.award.model.entity.UserAwardRecordEntity;
 import com.lavyoung.marketforge.domain.award.model.vo.AwardStateVO;
@@ -59,6 +60,8 @@ class MessagingAndAwardAssemblerTest {
                 .userId("user-001")
                 .orderId("order-001")
                 .awardId(100011L)
+                .fulfillmentSnapshot(new AwardFulfillmentSnapshot(
+                        "CREDIT_100", "internal_credit", "automatic", null, "{\"amount\":100}", 1))
                 .awardTitle("测试奖品")
                 .build();
         TaskEntity expected = TaskEntity.builder()

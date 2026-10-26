@@ -8,16 +8,47 @@
                type="com.lavyoung.marketforge.infrastructure.persistent.po.activity.ActivityCountPO">
         <id column="id" property="id"/>
         <result column="activity_count_id" property="activityCountId"/>
+        <result column="activity_count_name" property="activityCountName"/>
         <result column="total_count" property="totalCount"/>
         <result column="day_count" property="dayCount"/>
         <result column="month_count" property="monthCount"/>
+        <result column="version" property="version"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="updated_by" property="updatedBy"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
     </resultMap>
 
     <sql id="activityCountColumns">
-        id, activity_count_id, total_count, day_count, month_count, create_time, update_time
+        id, activity_count_id, activity_count_name, total_count, day_count, month_count,
+        version, created_by, updated_by, create_time, update_time
     </sql>
+
+    <sql id="activityCountDefinitionSearchWhere">
+        <where>
+            <if test="activityCountId != null">
+                activity_count_id = #{activityCountId}
+            </if>
+            <if test="activityCountName != null">
+                AND activity_count_name LIKE CONCAT(#{activityCountName}, '%')
+            </if>
+        </where>
+    </sql>
+
+    <select id="countActivityCountDefinitions" resultType="long">
+        SELECT COUNT(*)
+        FROM raffle_activity_count
+        <include refid="activityCountDefinitionSearchWhere"/>
+    </select>
+
+    <select id="queryActivityCountDefinitionPage" resultMap="activityCountResultMap">
+        SELECT
+        <include refid="activityCountColumns"/>
+        FROM raffle_activity_count
+        <include refid="activityCountDefinitionSearchWhere"/>
+        ORDER BY update_time DESC, id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
 
     <select id="queryByActivityCountId" resultMap="activityCountResultMap">
         SELECT
@@ -26,5 +57,41 @@
         WHERE activity_count_id = #{activityCountId}
         LIMIT 1
     </select>
+
+    <select id="lockByActivityCountId" resultMap="activityCountResultMap">
+        SELECT
+        <include refid="activityCountColumns"/>
+        FROM raffle_activity_count
+        WHERE activity_count_id = #{activityCountId}
+        LIMIT 1
+        FOR UPDATE
+    </select>
+
+    <select id="existsOpenActivityReference" resultType="boolean">
+        SELECT COUNT(*) &gt; 0
+        FROM raffle_activity
+        WHERE activity_count_id = #{activityCountId}
+        AND state = 'open'
+    </select>
+
+    <update id="updateIfNotReferencedByOpenActivity"
+            parameterType="com.lavyoung.marketforge.infrastructure.persistent.po.activity.ActivityCountPO">
+        UPDATE raffle_activity_count count_config
+        SET activity_count_name = #{activityCountName},
+        total_count = #{totalCount},
+        day_count = #{dayCount},
+        month_count = #{monthCount},
+        version = version + 1,
+        updated_by = #{updatedBy},
+        update_time = CURRENT_TIMESTAMP
+        WHERE count_config.activity_count_id = #{activityCountId}
+        AND count_config.version = #{version}
+        AND NOT EXISTS (
+        SELECT 1
+        FROM raffle_activity activity
+        WHERE activity.activity_count_id = count_config.activity_count_id
+        AND activity.state = 'open'
+        )
+    </update>
 
 </mapper>

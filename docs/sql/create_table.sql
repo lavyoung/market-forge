@@ -163,6 +163,7 @@ CREATE TABLE raffle_activity
     PRIMARY KEY (id),
     UNIQUE KEY uq_activity_id (activity_id),
     KEY idx_activity_time (begin_date_time, end_date_time),
+    KEY idx_activity_count_state (activity_count_id, state),
     KEY idx_activity_state_update (state, update_time, id),
     KEY idx_activity_name_update (activity_name, update_time, id)
 ) ENGINE = InnoDB
@@ -192,12 +193,16 @@ CREATE TABLE raffle_activity_stage
 CREATE TABLE raffle_activity_count
 (
     id                bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-    activity_count_id bigint          NOT NULL COMMENT '活动次数配置ID',
-    total_count       int             NOT NULL COMMENT '总次数',
-    day_count         int             NOT NULL COMMENT '日次数',
-    month_count       int             NOT NULL COMMENT '月次数',
-    create_time       datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time       datetime        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    activity_count_id   bigint      NOT NULL COMMENT '活动次数配置ID',
+    activity_count_name varchar(64) NOT NULL COMMENT '活动次数配置名称',
+    total_count         int         NOT NULL COMMENT '总次数',
+    day_count           int         NOT NULL COMMENT '日次数',
+    month_count         int         NOT NULL COMMENT '月次数',
+    version             int         NOT NULL DEFAULT 1 COMMENT '乐观锁版本',
+    created_by          varchar(64) NOT NULL COMMENT '创建人标识',
+    updated_by          varchar(64) NOT NULL COMMENT '最后修改人标识',
+    create_time         datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time         datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uq_activity_count_id (activity_count_id)
 ) ENGINE = InnoDB

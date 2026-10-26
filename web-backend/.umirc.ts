@@ -46,6 +46,11 @@ export default defineConfig({
                     component: './Activity/Definition',
                 },
                 {
+                    name: '次数配置',
+                    path: '/activity/count',
+                    component: './Activity/Count',
+                },
+                {
                     name: '抽奖订单',
                     path: '/activity/order',
                     component: './Activity/Order',

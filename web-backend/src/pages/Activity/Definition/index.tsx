@@ -5,6 +5,7 @@ import {
     queryActivityDefinitions,
     updateActivityDefinition,
 } from '@/services/activity/activity-definition';
+import {queryActivityCountOptions} from '@/services/activity/activity-count-definition';
 import type {
     ActivityDefinitionFormValues,
     ActivityDefinitionItem,
@@ -215,7 +216,11 @@ function ActivityDefinitionPage() {
                     ]} rules={[{required: true}]}/>
                 </ProForm.Group>
                 <ProForm.Group>
-                    <ProFormText name="activityCountId" label="活动次数配置 ID" width="md" rules={positiveIdRules}/>
+                    <ProFormSelect name="activityCountId" label="活动次数配置" width="md"
+                                   placeholder="输入配置 ID 或名称搜索"
+                                   request={loadActivityCountOptions}
+                                   fieldProps={{showSearch: true, filterOption: false, allowClear: true}}
+                                   rules={[{required: true, message: '请选择活动次数配置'}]}/>
                     <ProFormText name="strategyId" label="抽奖策略 ID" width="md" rules={positiveIdRules}/>
                 </ProForm.Group>
             </ModalForm>
@@ -250,6 +255,10 @@ function toFormValues(activity?: ActivityDefinitionItem): ActivityDefinitionForm
         beginDateTime: activity.beginDateTime.slice(0, 16),
         endDateTime: activity.endDateTime.slice(0, 16),
     };
+}
+
+function loadActivityCountOptions({keyWords}: { keyWords?: string }) {
+    return queryActivityCountOptions(keyWords);
 }
 
 function StockProgress({activity}: { activity: ActivityDefinitionItem }) {

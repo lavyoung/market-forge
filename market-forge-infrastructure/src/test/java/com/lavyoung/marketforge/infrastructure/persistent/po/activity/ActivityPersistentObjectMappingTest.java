@@ -41,7 +41,8 @@ class ActivityPersistentObjectMappingTest {
                     "awardUnlockScope", "version", "createdBy", "updatedBy"
             ),
             ActivityCountPO.class, Set.of(
-                    "id", "activityCountId", "totalCount", "dayCount", "monthCount"
+                    "id", "activityCountId", "activityCountName", "totalCount", "dayCount", "monthCount",
+                    "version", "createdBy", "updatedBy"
             ),
             ActivityAccountPO.class, Set.of(
                     "id", "userId", "activityId", "totalCount", "totalCountSurplus", "dayCount",

@@ -9,6 +9,7 @@ import com.lavyoung.marketforge.domain.activity.model.entity.ActivityDefinitionE
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityDefinitionStateChange;
 import com.lavyoung.marketforge.domain.activity.model.vo.ActivityDefinitionStateVO;
 import com.lavyoung.marketforge.domain.activity.model.vo.AwardUnlockScopeVO;
+import com.lavyoung.marketforge.domain.activity.repository.IActivityCountDefinitionRepository;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityDefinitionRepository;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
@@ -31,6 +32,7 @@ public class ActivityDefinitionApplicationServiceImpl implements IActivityDefini
     private static final int ACTIVITY_ID_LENGTH = 18;
 
     private final IActivityDefinitionRepository activityDefinitionRepository;
+    private final IActivityCountDefinitionRepository activityCountDefinitionRepository;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -77,6 +79,11 @@ public class ActivityDefinitionApplicationServiceImpl implements IActivityDefini
         if (!current.state().canTransitionTo(targetState)) {
             throw BusinessException.of(BusinessResponseCode.ACTIVITY_DEFINITION_STATE_ERROR,
                     current.activityId(), current.state().getCode(), targetState.getCode());
+        }
+        if (targetState == ActivityDefinitionStateVO.OPEN) {
+            activityCountDefinitionRepository.lockByActivityCountId(current.activityCountId())
+                    .orElseThrow(() -> BusinessException.of(
+                            BusinessResponseCode.ACTIVITY_COUNT_NOT_FOUND, current.activityCountId()));
         }
         ActivityDefinitionStateChange stateChange = new ActivityDefinitionStateChange(current.activityId(),
                 current.state(), targetState, validCommand.expectedVersion(), validCommand.operator());

@@ -224,3 +224,58 @@ export interface ActivityDefinitionFormValues {
     strategyId: string;
     awardUnlockScope: AwardUnlockScope;
 }
+
+/**
+ * 活动次数配置列表项及详情。
+ */
+export interface ActivityCountDefinitionItem {
+    /** 活动次数配置业务标识。 */
+    activityCountId: string;
+    /** 配置名称。 */
+    activityCountName: string;
+    /** 一次入账增加的总抽奖次数。 */
+    totalCount: number;
+    /** 一次入账增加的日抽奖次数。 */
+    dayCount: number;
+    /** 一次入账增加的月抽奖次数。 */
+    monthCount: number;
+    /** 乐观锁版本。 */
+    version: number;
+    /** 创建人。 */
+    createdBy: string;
+    /** 最后修改人。 */
+    updatedBy: string;
+    /** 创建时间。 */
+    createTime: string;
+    /** 最后修改时间。 */
+    updateTime: string;
+}
+
+/**
+ * 活动次数配置分页查询条件。
+ */
+export interface ActivityCountDefinitionQuery {
+    current?: number;
+    pageSize?: number;
+    activityCountId?: string;
+    activityCountName?: string;
+}
+
+/**
+ * ProTable 所需的活动次数配置分页结果。
+ */
+export interface ActivityCountDefinitionPage {
+    data: ActivityCountDefinitionItem[];
+    total: number;
+    success: boolean;
+}
+
+/**
+ * 创建或编辑活动次数配置的业务字段。
+ */
+export interface ActivityCountDefinitionFormValues {
+    activityCountName: string;
+    totalCount: number;
+    dayCount: number;
+    monthCount: number;
+}

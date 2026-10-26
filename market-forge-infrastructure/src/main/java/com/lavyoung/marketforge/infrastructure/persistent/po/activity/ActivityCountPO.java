@@ -35,6 +35,11 @@ public class ActivityCountPO extends BasePO {
     private Long activityCountId;
 
     /**
+     * 活动次数配置名称。
+     */
+    private String activityCountName;
+
+    /**
      * 可参与的总次数。
      */
     private Integer totalCount;
@@ -48,4 +53,19 @@ public class ActivityCountPO extends BasePO {
      * 每月可参与次数。
      */
     private Integer monthCount;
+
+    /**
+     * 乐观锁版本。
+     */
+    private Integer version;
+
+    /**
+     * 创建人标识。
+     */
+    private String createdBy;
+
+    /**
+     * 最后修改人标识。
+     */
+    private String updatedBy;
 }

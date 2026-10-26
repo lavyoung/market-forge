@@ -5,10 +5,12 @@ import com.lavyoung.marketforge.application.activity.model.ChangeActivityDefinit
 import com.lavyoung.marketforge.application.activity.model.CreateActivityDefinitionCommand;
 import com.lavyoung.marketforge.application.activity.model.UpdateActivityDefinitionCommand;
 import com.lavyoung.marketforge.application.activity.service.impl.ActivityDefinitionApplicationServiceImpl;
+import com.lavyoung.marketforge.domain.activity.model.entity.ActivityCountDefinitionEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityDefinitionEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityDefinitionStateChange;
 import com.lavyoung.marketforge.domain.activity.model.vo.ActivityDefinitionStateVO;
 import com.lavyoung.marketforge.domain.activity.model.vo.AwardUnlockScopeVO;
+import com.lavyoung.marketforge.domain.activity.repository.IActivityCountDefinitionRepository;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityDefinitionRepository;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
@@ -35,11 +37,14 @@ class ActivityDefinitionApplicationServiceImplTest {
     @Mock
     private IActivityDefinitionRepository repository;
 
+    @Mock
+    private IActivityCountDefinitionRepository activityCountDefinitionRepository;
+
     private ActivityDefinitionApplicationServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new ActivityDefinitionApplicationServiceImpl(repository);
+        service = new ActivityDefinitionApplicationServiceImpl(repository, activityCountDefinitionRepository);
     }
 
     @Test
@@ -98,6 +103,9 @@ class ActivityDefinitionApplicationServiceImplTest {
         ActivityDefinitionEntity draft = definition(100301L, ActivityDefinitionStateVO.DRAFT, 1, 500);
         ActivityDefinitionEntity opened = definition(100301L, ActivityDefinitionStateVO.OPEN, 2, 500);
         when(repository.queryByActivityId(100301L)).thenReturn(Optional.of(draft), Optional.of(opened));
+        when(activityCountDefinitionRepository.lockByActivityCountId(100301L)).thenReturn(Optional.of(
+                new ActivityCountDefinitionEntity(100301L, "基础次数包", 100, 10, 50, 1,
+                        "admin", "admin", null, null)));
         when(repository.changeState(any())).thenReturn(true);
 
         // When
@@ -110,6 +118,22 @@ class ActivityDefinitionApplicationServiceImplTest {
         assertAll(() -> assertEquals(ActivityDefinitionStateVO.OPEN, captor.getValue().targetState()),
                 () -> assertEquals(1, captor.getValue().expectedVersion()),
                 () -> assertEquals("open", result.state()));
+    }
+
+    @Test
+    void shouldRejectOpeningWhenActivityCountDefinitionDoesNotExist() {
+        // Given
+        ActivityDefinitionEntity draft = definition(100301L, ActivityDefinitionStateVO.DRAFT, 1, 500);
+        when(repository.queryByActivityId(100301L)).thenReturn(Optional.of(draft));
+        when(activityCountDefinitionRepository.lockByActivityCountId(100301L)).thenReturn(Optional.empty());
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class, () -> service.changeState(
+                new ChangeActivityDefinitionStateCommand(100301L, "open", 1, "admin")));
+
+        // Then
+        assertEquals(BusinessResponseCode.ACTIVITY_COUNT_NOT_FOUND, exception.getResponseCode());
+        verify(repository, never()).changeState(any());
     }
 
     @Test

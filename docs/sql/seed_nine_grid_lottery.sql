@@ -94,8 +94,9 @@ VALUES (900904021, '900904001', 'rule_lock', 'rule_stock', '1', '0000'),
        (900904025, '900904002', 'rule_stock', 'rule_luck_award', '1', '0001'),
        (900904026, '900904002', 'rule_stock', 'default', '1', '0000');
 
-INSERT INTO raffle_activity_count (id, activity_count_id, total_count, day_count, month_count)
-VALUES (100301, 100301, 100, 10, 100);
+INSERT INTO raffle_activity_count
+(id, activity_count_id, activity_count_name, total_count, day_count, month_count, version, created_by, updated_by)
+VALUES (100301, 100301, '九宫格活动基础次数包', 100, 10, 100, 1, 'system_seed', 'system_seed');
 
 INSERT INTO raffle_activity
 (id, activity_id, activity_name, activity_desc, begin_date_time, end_date_time,
