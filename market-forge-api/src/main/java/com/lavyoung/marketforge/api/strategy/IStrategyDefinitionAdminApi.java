@@ -6,6 +6,7 @@ import com.lavyoung.marketforge.api.strategy.request.StrategyDefinitionSearchReq
 import com.lavyoung.marketforge.api.strategy.request.UpdateStrategyDefinitionRequest;
 import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionResponse;
 import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionSummaryResponse;
+import com.lavyoung.marketforge.api.strategy.response.StrategyReadinessResponse;
 import com.lavyoung.marketforge.types.model.PageResult;
 import com.lavyoung.marketforge.types.model.Response;
 import io.swagger.v3.oas.annotations.Operation;
@@ -87,6 +88,27 @@ public interface IStrategyDefinitionAdminApi {
     @Operation(operationId = "getStrategyDefinition", summary = "查询策略定义详情")
     @GetMapping("/{strategyId}")
     Response<StrategyDefinitionResponse> getStrategyDefinition(@Positive(message = "策略标识必须为正数") @PathVariable("strategyId") Long strategyId);
+
+    /**
+     * 检查策略是否满足发布条件并预览正式抽奖概率空间。
+     *
+     * <p>该接口只执行读取和校验，不修改策略状态，也不刷新运行时概率快照。</p>
+     *
+     * @param strategyId 策略业务标识
+     * @return 包含错误、警告、建议和概率区间的就绪检查结果
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 策略不存在时抛出
+     * @throws RuntimeException                                           检查依赖发生系统故障时抛出
+     */
+    @Operation(operationId = "checkStrategyReadiness", summary = "检查策略发布就绪状态")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "检查完成；是否就绪由响应内容决定"),
+            @ApiResponse(responseCode = "400", description = "策略标识非法"),
+            @ApiResponse(responseCode = "401", description = "运营人员尚未登录"),
+            @ApiResponse(responseCode = "403", description = "没有查询权限"),
+            @ApiResponse(responseCode = "404", description = "策略不存在")
+    })
+    @GetMapping("/{strategyId}/readiness")
+    Response<StrategyReadinessResponse> checkStrategyReadiness(@Positive(message = "策略标识必须为正数") @PathVariable("strategyId") Long strategyId);
 
     /**
      * 修改完整草稿策略。

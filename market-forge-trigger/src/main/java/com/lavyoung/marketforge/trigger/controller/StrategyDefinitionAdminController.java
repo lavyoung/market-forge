@@ -8,9 +8,11 @@ import com.lavyoung.marketforge.api.strategy.request.StrategyDefinitionSearchReq
 import com.lavyoung.marketforge.api.strategy.request.UpdateStrategyDefinitionRequest;
 import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionResponse;
 import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionSummaryResponse;
+import com.lavyoung.marketforge.api.strategy.response.StrategyReadinessResponse;
 import com.lavyoung.marketforge.application.strategy.model.*;
 import com.lavyoung.marketforge.application.strategy.service.IStrategyDefinitionApplicationService;
 import com.lavyoung.marketforge.application.strategy.service.IStrategyDefinitionSearchService;
+import com.lavyoung.marketforge.application.strategy.service.IStrategyReadinessApplicationService;
 import com.lavyoung.marketforge.trigger.assembler.StrategyDefinitionApiAssembler;
 import com.lavyoung.marketforge.trigger.security.AdminSessionManager;
 import com.lavyoung.marketforge.types.model.PageResult;
@@ -36,6 +38,7 @@ public class StrategyDefinitionAdminController implements IStrategyDefinitionAdm
 
     private final IStrategyDefinitionSearchService strategyDefinitionSearchService;
     private final IStrategyDefinitionApplicationService strategyDefinitionApplicationService;
+    private final IStrategyReadinessApplicationService strategyReadinessApplicationService;
     private final StrategyDefinitionApiAssembler strategyDefinitionApiAssembler;
     private final AdminSessionManager adminSessionManager;
 
@@ -57,6 +60,12 @@ public class StrategyDefinitionAdminController implements IStrategyDefinitionAdm
     public Response<StrategyDefinitionResponse> getStrategyDefinition(Long strategyId) {
         StrategyDefinitionResult result = strategyDefinitionApplicationService.queryByStrategyId(strategyId);
         return Response.success(strategyDefinitionApiAssembler.toResponse(result));
+    }
+
+    @Override
+    public Response<StrategyReadinessResponse> checkStrategyReadiness(Long strategyId) {
+        StrategyReadinessResult result = strategyReadinessApplicationService.check(strategyId);
+        return Response.success(strategyDefinitionApiAssembler.toReadinessResponse(result));
     }
 
     @Override

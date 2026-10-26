@@ -1,6 +1,7 @@
 import {queryAwardDefinitions} from '@/services/award/award-definition';
 import {
     changeStrategyDefinitionState,
+    checkStrategyReadiness,
     copyStrategyDefinition,
     createStrategyDefinition,
     getStrategyDefinition,
@@ -14,11 +15,22 @@ import type {
     StrategyDefinitionQuery,
     StrategyDefinitionState,
     StrategyDefinitionSummary,
+    StrategyProbabilityInterval,
+    StrategyReadiness,
+    StrategyReadinessIssue,
     StrategyRuleConfig,
     StrategyRuleEditorValues,
 } from '@/services/strategy/types';
 import {getApiErrorMessage} from '@/services/errors';
-import {CopyOutlined, EditOutlined, EyeOutlined, PlusOutlined, RocketOutlined, StopOutlined} from '@ant-design/icons';
+import {
+    CopyOutlined,
+    EditOutlined,
+    EyeOutlined,
+    PlusOutlined,
+    RocketOutlined,
+    SafetyCertificateOutlined,
+    StopOutlined
+} from '@ant-design/icons';
 import type {ActionType, ProColumns} from '@ant-design/pro-components';
 import {
     ModalForm,
@@ -79,6 +91,10 @@ function StrategyDefinitionPage() {
     const [detailLoading, setDetailLoading] = useState(false);
     const [editorOpen, setEditorOpen] = useState(false);
     const [editingStrategy, setEditingStrategy] = useState<StrategyDefinition>();
+    const [readinessOpen, setReadinessOpen] = useState(false);
+    const [readinessLoading, setReadinessLoading] = useState(false);
+    const [readinessStrategy, setReadinessStrategy] = useState<StrategyDefinitionSummary>();
+    const [readinessReport, setReadinessReport] = useState<StrategyReadiness>();
 
     useEffect(() => {
         void loadActiveAwardOptions();
@@ -185,6 +201,20 @@ function StrategyDefinitionPage() {
         });
     };
 
+    const openReadiness = async (strategy: StrategyDefinitionSummary) => {
+        setReadinessOpen(true);
+        setReadinessLoading(true);
+        setReadinessStrategy(strategy);
+        setReadinessReport(undefined);
+        try {
+            setReadinessReport(await checkStrategyReadiness(strategy.strategyId));
+        } catch (error) {
+            message.error(getApiErrorMessage(error, '策略发布检查失败'));
+        } finally {
+            setReadinessLoading(false);
+        }
+    };
+
     const columns: ProColumns<StrategyDefinitionSummary>[] = [
         {title: '策略 ID', dataIndex: 'strategyId', copyable: true, width: 160},
         {title: '策略描述', dataIndex: 'strategyDesc', ellipsis: true, width: 220},
@@ -214,7 +244,7 @@ function StrategyDefinitionPage() {
             title: '操作',
             valueType: 'option',
             fixed: 'right',
-            width: 300,
+            width: 330,
             render: (_, record) => [
                 <Button key="detail" type="link" icon={<EyeOutlined/>} onClick={() => openDetail(record)}>查看</Button>,
                 record.state === 'draft' ? (
@@ -222,8 +252,8 @@ function StrategyDefinitionPage() {
                             onClick={() => openEditEditor(record)}>编辑</Button>
                 ) : null,
                 record.state === 'draft' ? (
-                    <Button key="publish" type="link" icon={<RocketOutlined/>}
-                            onClick={() => confirmStateChange(record, 'active')}>发布</Button>
+                    <Button key="readiness" type="link" icon={<SafetyCertificateOutlined/>}
+                            onClick={() => openReadiness(record)}>检查并发布</Button>
                 ) : null,
                 record.state !== 'draft' ? (
                     <Button key="copy" type="link" icon={<CopyOutlined/>}
@@ -269,9 +299,93 @@ function StrategyDefinitionPage() {
                     onClose={() => setDetailStrategy(undefined)}>
                 {detailStrategy ? <StrategyDefinitionDetail strategy={detailStrategy}/> : null}
             </Drawer>
+
+            <Drawer
+                title="策略发布检查"
+                width={920}
+                open={readinessOpen}
+                loading={readinessLoading}
+                onClose={() => setReadinessOpen(false)}
+                extra={readinessStrategy?.state === 'draft' && readinessReport?.ready ? (
+                    <Button type="primary" icon={<RocketOutlined/>} onClick={() => {
+                        setReadinessOpen(false);
+                        confirmStateChange(readinessStrategy, 'active');
+                    }}>确认发布</Button>
+                ) : null}
+            >
+                {readinessReport ? <StrategyReadinessDetail report={readinessReport}/> : null}
+            </Drawer>
         </PageContainer>
     );
 }
+
+function StrategyReadinessDetail({report}: { report: StrategyReadiness }) {
+    const issues = [
+        ...report.errors.map((issue) => ({...issue, level: '错误'})),
+        ...report.warnings.map((issue) => ({...issue, level: '警告'})),
+        ...report.suggestions.map((issue) => ({...issue, level: '建议'})),
+    ];
+    return (
+        <Space direction="vertical" size={24} style={{width: '100%'}}>
+            <Alert
+                showIcon
+                type={report.ready ? 'success' : 'error'}
+                message={report.ready ? '策略满足发布条件' : `发现 ${report.errors.length} 项阻断问题`}
+                description={report.ready ? '可以确认发布；发布时服务端仍会再次校验并刷新运行时概率快照。' : '请修复全部错误后重新执行发布检查。'}
+            />
+            <Descriptions bordered size="small" column={2}>
+                <Descriptions.Item label="策略 ID">{report.strategyId}</Descriptions.Item>
+                <Descriptions.Item label="检查结果">
+                    <Tag color={report.ready ? 'success' : 'error'}>{report.ready ? '已就绪' : '未就绪'}</Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="概率预览">
+                    {report.probabilityPreview.available ? '可用' : '不可用'}
+                </Descriptions.Item>
+                <Descriptions.Item label="总整数权重">{report.probabilityPreview.totalWeight}</Descriptions.Item>
+            </Descriptions>
+            <div>
+                <Typography.Title level={5}>检查明细</Typography.Title>
+                <Table<StrategyReadinessIssue & { level: string }>
+                    rowKey={(record) => `${record.level}-${record.code}-${record.path}`}
+                    size="small"
+                    pagination={false}
+                    dataSource={issues}
+                    locale={{emptyText: <Empty description="没有发现错误、警告或建议"/>}}
+                    columns={readinessIssueColumns}
+                />
+            </div>
+            <div>
+                <Typography.Title level={5}>概率命中区间</Typography.Title>
+                <Table<StrategyProbabilityInterval>
+                    rowKey="awardId"
+                    size="small"
+                    pagination={false}
+                    dataSource={report.probabilityPreview.intervals}
+                    locale={{emptyText: <Empty description="当前无法生成概率预览"/>}}
+                    columns={probabilityIntervalColumns}
+                />
+            </div>
+        </Space>
+    );
+}
+
+const readinessIssueColumns: ColumnsType<StrategyReadinessIssue & { level: string }> = [
+    {
+        title: '级别', dataIndex: 'level', width: 80,
+        render: (level) => <Tag
+            color={level === '错误' ? 'error' : level === '警告' ? 'warning' : 'processing'}>{level}</Tag>,
+    },
+    {title: '配置位置', dataIndex: 'path', width: 220},
+    {title: '问题说明', dataIndex: 'message'},
+    {title: '问题编码', dataIndex: 'code', width: 220, ellipsis: true},
+];
+
+const probabilityIntervalColumns: ColumnsType<StrategyProbabilityInterval> = [
+    {title: '奖品 ID', dataIndex: 'awardId', width: 180},
+    {title: '整数权重', dataIndex: 'weight', width: 110},
+    {title: '命中区间', width: 160, render: (_, record) => `[${record.startInclusive}, ${record.endExclusive})`},
+    {title: '理论概率', dataIndex: 'probability', render: (value) => `${(Number(value) * 100).toFixed(6)}%`},
+];
 
 function StrategyDefinitionEditor({open, strategy, awardOptions, awardOptionsLoading, onOpenChange, onFinish}: {
     open: boolean;

@@ -3,6 +3,7 @@ package com.lavyoung.marketforge.trigger.assembler;
 import com.lavyoung.marketforge.api.strategy.request.*;
 import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionResponse;
 import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionSummaryResponse;
+import com.lavyoung.marketforge.api.strategy.response.StrategyReadinessResponse;
 import com.lavyoung.marketforge.application.strategy.model.*;
 import com.lavyoung.marketforge.types.model.PageResult;
 import org.junit.jupiter.api.Test;
@@ -224,6 +225,36 @@ class StrategyDefinitionApiAssemblerTest {
                 () -> assertEquals("active", response.state()),
                 () -> assertEquals(4, response.version()),
                 () -> assertEquals(now, response.updateTime())
+        );
+    }
+
+    /**
+     * Given 包含超出 JavaScript 安全整数范围的策略和奖品标识，When 转换就绪结果，Then 两类标识都应完整字符串化。
+     */
+    @Test
+    void shouldMapReadinessResultAndPreserveLongIdentifiers() {
+        // Given
+        StrategyReadinessResult result = new StrategyReadinessResult(
+                STRATEGY_ID,
+                List.of(new StrategyReadinessIssueResult("strategy.rate.invalid", "awards[*].awardRate", "概率非法")),
+                List.of(),
+                List.of(),
+                new StrategyProbabilityPreviewResult(true, 10, List.of(
+                        new StrategyProbabilityIntervalResult(
+                                AWARD_ID, 10, 0, 10, new BigDecimal("1.000000000000"))))
+        );
+
+        // When
+        StrategyReadinessResponse response = ASSEMBLER.toReadinessResponse(result);
+
+        // Then
+        assertAll(
+                () -> assertEquals(STRATEGY_ID.toString(), response.strategyId()),
+                () -> assertFalse(response.ready()),
+                () -> assertEquals("strategy.rate.invalid", response.errors().get(0).code()),
+                () -> assertEquals(AWARD_ID.toString(), response.probabilityPreview().intervals().get(0).awardId()),
+                () -> assertEquals(new BigDecimal("1.000000000000"),
+                        response.probabilityPreview().intervals().get(0).probability())
         );
     }
 

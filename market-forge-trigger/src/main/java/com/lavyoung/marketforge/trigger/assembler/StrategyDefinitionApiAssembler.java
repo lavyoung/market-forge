@@ -1,10 +1,7 @@
 package com.lavyoung.marketforge.trigger.assembler;
 
 import com.lavyoung.marketforge.api.strategy.request.*;
-import com.lavyoung.marketforge.api.strategy.response.StrategyAwardConfigResponse;
-import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionResponse;
-import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionSummaryResponse;
-import com.lavyoung.marketforge.api.strategy.response.StrategyRuleConfigResponse;
+import com.lavyoung.marketforge.api.strategy.response.*;
 import com.lavyoung.marketforge.application.strategy.model.*;
 import com.lavyoung.marketforge.types.common.Constants;
 import com.lavyoung.marketforge.types.model.PageRequest;
@@ -162,6 +159,43 @@ public interface StrategyDefinitionApiAssembler {
      * @return 完整策略定义响应
      */
     StrategyDefinitionResponse toResponse(StrategyDefinitionResult result);
+
+    /**
+     * 将策略就绪检查应用结果转换为 REST 响应。
+     *
+     * <p>策略和奖品的 {@link Long} 标识只在该协议边界转换为字符串，
+     * 防止浏览器使用 JavaScript number 接收十八位业务标识时丢失精度。</p>
+     *
+     * @param result 策略就绪检查应用结果
+     * @return 对外策略就绪检查响应
+     * @throws NullPointerException 应用结果为空时抛出
+     */
+    default StrategyReadinessResponse toReadinessResponse(StrategyReadinessResult result) {
+        Objects.requireNonNull(result, "result must not be null");
+        StrategyProbabilityPreviewResult preview = result.probabilityPreview();
+        List<StrategyProbabilityIntervalResponse> intervals = preview.intervals().stream()
+                .map(interval -> new StrategyProbabilityIntervalResponse(
+                        interval.awardId().toString(), interval.weight(), interval.startInclusive(),
+                        interval.endExclusive(), interval.probability()))
+                .toList();
+        StrategyProbabilityPreviewResponse previewResponse = new StrategyProbabilityPreviewResponse(
+                preview.available(), preview.totalWeight(), intervals);
+        return new StrategyReadinessResponse(
+                result.strategyId().toString(), result.ready(), toIssueResponses(result.errors()),
+                toIssueResponses(result.warnings()), toIssueResponses(result.suggestions()), previewResponse);
+    }
+
+    /**
+     * 批量转换策略就绪检查问题。
+     *
+     * @param issues Application 问题结果
+     * @return API 问题响应
+     */
+    default List<StrategyReadinessIssueResponse> toIssueResponses(List<StrategyReadinessIssueResult> issues) {
+        return issues.stream()
+                .map(issue -> new StrategyReadinessIssueResponse(issue.code(), issue.path(), issue.message()))
+                .toList();
+    }
 
     /**
      * 将策略应用列表项转换为 API 摘要响应。

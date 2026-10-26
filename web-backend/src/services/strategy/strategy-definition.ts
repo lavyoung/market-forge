@@ -10,6 +10,7 @@ import type {
     StrategyDefinitionQuery,
     StrategyDefinitionState,
     StrategyDefinitionSummary,
+    StrategyReadiness,
     StrategyRuleEditorValues,
     StrategyRulePayload,
 } from './types';
@@ -48,6 +49,20 @@ export async function queryStrategyDefinitions(params: StrategyDefinitionQuery):
 export async function getStrategyDefinition(strategyId: string): Promise<StrategyDefinition> {
     const response = await request<ApiResponse<StrategyDefinition>>(
         `${STRATEGY_DEFINITION_PATH}/${encodeURIComponent(strategyId)}`,
+        {method: 'GET', withCredentials: true},
+    );
+    return requireResponseData(response);
+}
+
+/**
+ * 检查策略是否满足发布条件并获取正式概率空间预览。
+ *
+ * @param strategyId 策略业务标识
+ * @returns 错误、警告、建议和奖品概率区间
+ */
+export async function checkStrategyReadiness(strategyId: string): Promise<StrategyReadiness> {
+    const response = await request<ApiResponse<StrategyReadiness>>(
+        `${STRATEGY_DEFINITION_PATH}/${encodeURIComponent(strategyId)}/readiness`,
         {method: 'GET', withCredentials: true},
     );
     return requireResponseData(response);

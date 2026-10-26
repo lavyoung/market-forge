@@ -9,9 +9,12 @@ import com.lavyoung.marketforge.api.strategy.request.StrategyDefinitionSearchReq
 import com.lavyoung.marketforge.api.strategy.request.UpdateStrategyDefinitionRequest;
 import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionResponse;
 import com.lavyoung.marketforge.api.strategy.response.StrategyDefinitionSummaryResponse;
+import com.lavyoung.marketforge.api.strategy.response.StrategyProbabilityPreviewResponse;
+import com.lavyoung.marketforge.api.strategy.response.StrategyReadinessResponse;
 import com.lavyoung.marketforge.application.strategy.model.*;
 import com.lavyoung.marketforge.application.strategy.service.IStrategyDefinitionApplicationService;
 import com.lavyoung.marketforge.application.strategy.service.IStrategyDefinitionSearchService;
+import com.lavyoung.marketforge.application.strategy.service.IStrategyReadinessApplicationService;
 import com.lavyoung.marketforge.application.strategy.service.IStrategySnapshotRefreshApplicationService;
 import com.lavyoung.marketforge.trigger.assembler.StrategyDefinitionApiAssembler;
 import com.lavyoung.marketforge.trigger.security.AdminSessionManager;
@@ -55,6 +58,8 @@ class StrategyDefinitionAdminControllerTest {
     @Mock
     private IStrategyDefinitionApplicationService applicationService;
     @Mock
+    private IStrategyReadinessApplicationService readinessApplicationService;
+    @Mock
     private StrategyDefinitionApiAssembler assembler;
     @Mock
     private AdminSessionManager adminSessionManager;
@@ -63,7 +68,8 @@ class StrategyDefinitionAdminControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new StrategyDefinitionAdminController(searchService, applicationService, assembler, adminSessionManager);
+        controller = new StrategyDefinitionAdminController(
+                searchService, applicationService, readinessApplicationService, assembler, adminSessionManager);
     }
 
     /**
@@ -105,6 +111,29 @@ class StrategyDefinitionAdminControllerTest {
 
         // Then
         assertSame(response, actual.data());
+        verify(adminSessionManager, never()).currentOperator();
+    }
+
+    /**
+     * Given 策略标识，When 查询发布就绪状态，Then 应委托专用应用服务且不读取写操作身份。
+     */
+    @Test
+    void shouldCheckStrategyReadinessWithoutReadingOperatorSession() {
+        // Given
+        StrategyReadinessResult result = new StrategyReadinessResult(
+                STRATEGY_ID, List.of(), List.of(), List.of(), new StrategyProbabilityPreviewResult(false, 0, List.of()));
+        StrategyReadinessResponse response = new StrategyReadinessResponse(
+                STRATEGY_ID.toString(), true, List.of(), List.of(), List.of(),
+                new StrategyProbabilityPreviewResponse(false, 0, List.of()));
+        when(readinessApplicationService.check(STRATEGY_ID)).thenReturn(result);
+        when(assembler.toReadinessResponse(result)).thenReturn(response);
+
+        // When
+        Response<StrategyReadinessResponse> actual = controller.checkStrategyReadiness(STRATEGY_ID);
+
+        // Then
+        assertSame(response, actual.data());
+        verify(readinessApplicationService).check(STRATEGY_ID);
         verify(adminSessionManager, never()).currentOperator();
     }
 

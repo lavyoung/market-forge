@@ -86,6 +86,56 @@ export interface StrategyDefinition extends StrategyDefinitionSummary {
     rules: StrategyRuleConfig[];
 }
 
+/** 策略发布就绪检查发现的问题。 */
+export interface StrategyReadinessIssue {
+    /** 稳定的问题编码。 */
+    code: string;
+    /** 问题对应的策略配置路径。 */
+    path: string;
+    /** 面向运营人员的问题说明。 */
+    message: string;
+}
+
+/** 奖品在整数概率空间中的命中区间。 */
+export interface StrategyProbabilityInterval {
+    /** 奖品业务标识。 */
+    awardId: string;
+    /** 约简后的整数权重。 */
+    weight: number;
+    /** 左闭区间起点。 */
+    startInclusive: number;
+    /** 右开区间终点。 */
+    endExclusive: number;
+    /** 理论命中概率。 */
+    probability: number;
+}
+
+/** 策略整数概率空间预览。 */
+export interface StrategyProbabilityPreview {
+    /** 是否成功生成概率预览。 */
+    available: boolean;
+    /** 概率空间总整数权重。 */
+    totalWeight: number;
+    /** 按正式抽奖顺序排列的奖品区间。 */
+    intervals: StrategyProbabilityInterval[];
+}
+
+/** 策略发布就绪检查结果。 */
+export interface StrategyReadiness {
+    /** 策略业务标识。 */
+    strategyId: string;
+    /** 是否满足发布条件。 */
+    ready: boolean;
+    /** 阻止发布的错误。 */
+    errors: StrategyReadinessIssue[];
+    /** 不阻止发布的风险提示。 */
+    warnings: StrategyReadinessIssue[];
+    /** 配置优化建议。 */
+    suggestions: StrategyReadinessIssue[];
+    /** 正式抽奖概率空间预览。 */
+    probabilityPreview: StrategyProbabilityPreview;
+}
+
 /**
  * ProTable 提交的策略查询条件。
  */
