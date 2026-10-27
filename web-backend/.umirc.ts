@@ -51,6 +51,11 @@ export default defineConfig({
                     component: './Activity/Count',
                 },
                 {
+                    name: '活动 SKU',
+                    path: '/activity/sku',
+                    component: './Activity/Sku',
+                },
+                {
                     name: '抽奖订单',
                     path: '/activity/order',
                     component: './Activity/Order',

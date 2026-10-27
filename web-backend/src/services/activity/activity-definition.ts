@@ -125,6 +125,28 @@ export async function queryOpenActivityOptions(keywords?: string): Promise<Array
     }));
 }
 
+/**
+ * 查询可供 SKU 配置选择的草稿活动。
+ *
+ * @param keywords 活动标识或活动名称关键字
+ * @returns 草稿活动下拉选项
+ */
+export async function queryDraftActivityOptions(keywords?: string): Promise<Array<{ label: string; value: string }>> {
+    const normalizedKeywords = normalizeText(keywords);
+    const numericKeywords = normalizedKeywords && /^[1-9][0-9]{0,17}$/.test(normalizedKeywords);
+    const page = await queryActivityDefinitions({
+        current: 1,
+        pageSize: 100,
+        state: 'draft',
+        activityId: numericKeywords ? normalizedKeywords : undefined,
+        activityName: normalizedKeywords && !numericKeywords ? normalizedKeywords : undefined,
+    });
+    return page.data.map((activity) => ({
+        label: `${activity.activityName} (${activity.activityId})`,
+        value: activity.activityId,
+    }));
+}
+
 async function writeActivityDefinition<T>(path: string, method: 'POST' | 'PUT' | 'PATCH', data: unknown): Promise<ApiResponse<T>> {
     const csrfToken = await getAdminCsrfToken();
     return request<ApiResponse<T>>(path, {

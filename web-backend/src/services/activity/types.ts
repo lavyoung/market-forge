@@ -279,3 +279,73 @@ export interface ActivityCountDefinitionFormValues {
     dayCount: number;
     monthCount: number;
 }
+
+/**
+ * 活动 SKU 列表项及详情。
+ */
+export interface ActivitySkuDefinitionItem {
+    /** SKU 业务标识。 */
+    sku: string;
+    /** 所属活动业务标识。 */
+    activityId: string;
+    /** 兑换后获得的次数配置标识。 */
+    activityCountId: string;
+    /** 累计配置库存总量。 */
+    stockCount: number;
+    /** 当前剩余库存。 */
+    stockCountSurplus: number;
+    /** 已消费库存。 */
+    consumedCount: number;
+    /** 积分兑换价格；为空表示不支持积分兑换。 */
+    creditAmount: number | null;
+    /** 是否支持积分兑换。 */
+    supportsCreditExchange: boolean;
+    /** 乐观锁版本。 */
+    version: number;
+    /** 创建人。 */
+    createdBy: string;
+    /** 最后修改人。 */
+    updatedBy: string;
+    /** 创建时间。 */
+    createTime: string;
+    /** 最后修改时间。 */
+    updateTime: string;
+}
+
+/**
+ * 活动 SKU 分页查询条件。
+ */
+export interface ActivitySkuDefinitionQuery {
+    current?: number;
+    pageSize?: number;
+    sku?: string;
+    activityId?: string;
+    activityCountId?: string;
+}
+
+/**
+ * ProTable 所需的活动 SKU 分页结果。
+ */
+export interface ActivitySkuDefinitionPage {
+    data: ActivitySkuDefinitionItem[];
+    total: number;
+    success: boolean;
+}
+
+/**
+ * 创建或编辑活动 SKU 的业务字段。
+ */
+export interface ActivitySkuDefinitionFormValues {
+    activityId: string;
+    activityCountId: string;
+    stockCount?: number;
+    creditAmount?: number;
+}
+
+/**
+ * 活动 SKU 库存调整表单字段。
+ */
+export interface ActivitySkuStockAdjustmentFormValues {
+    quantityDelta: number;
+    reason: string;
+}
