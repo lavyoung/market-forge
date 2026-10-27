@@ -25,6 +25,35 @@
         version, created_by, updated_by, create_time, update_time
     </sql>
 
+    <sql id="activitySkuDefinitionSearchWhere">
+        <where>
+            <if test="sku != null">
+                sku = #{sku}
+            </if>
+            <if test="activityId != null">
+                AND activity_id = #{activityId}
+            </if>
+            <if test="activityCountId != null">
+                AND activity_count_id = #{activityCountId}
+            </if>
+        </where>
+    </sql>
+
+    <select id="countActivitySkuDefinitions" resultType="long">
+        SELECT COUNT(*)
+        FROM raffle_activity_sku
+        <include refid="activitySkuDefinitionSearchWhere"/>
+    </select>
+
+    <select id="queryActivitySkuDefinitionPage" resultMap="activitySkuResultMap">
+        SELECT
+        <include refid="activitySkuColumns"/>
+        FROM raffle_activity_sku
+        <include refid="activitySkuDefinitionSearchWhere"/>
+        ORDER BY update_time DESC, id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
     <select id="queryBySku" resultMap="activitySkuResultMap">
         SELECT
         <include refid="activitySkuColumns"/>

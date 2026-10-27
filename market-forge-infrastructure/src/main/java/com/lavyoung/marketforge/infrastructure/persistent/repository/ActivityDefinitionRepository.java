@@ -72,6 +72,12 @@ public class ActivityDefinitionRepository implements IActivityDefinitionReposito
         return updated;
     }
 
+    @Override
+    public Optional<ActivityDefinitionEntity> lockByActivityId(Long activityId) {
+        Objects.requireNonNull(activityId, "activityId must not be null");
+        return activityDao.lockByActivityId(activityId).map(activityDefinitionAssembler::toEntity);
+    }
+
     private void evictActivity(Long activityId) {
         redisService.delete(Constants.RedisKeys.ACTIVITY_DETAIL_KEY + activityId);
     }

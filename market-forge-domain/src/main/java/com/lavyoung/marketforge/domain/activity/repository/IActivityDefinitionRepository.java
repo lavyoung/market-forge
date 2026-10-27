@@ -42,4 +42,16 @@ public interface IActivityDefinitionRepository {
      * @return 更新成功返回 {@code true}
      */
     boolean changeState(ActivityDefinitionStateChange stateChange);
+
+    /**
+     * 使用排他锁查询活动定义。
+     *
+     * <p>修改活动关联配置前必须锁定活动行，并在同一个数据库事务内完成状态校验和
+     * 配置写入。活动开放操作更新同一行，因此两类操作会通过数据库行锁串行执行。</p>
+     *
+     * @param activityId 活动业务标识
+     * @return 已锁定的活动定义；活动不存在时返回空
+     * @throws NullPointerException 活动标识为空时抛出
+     */
+    Optional<ActivityDefinitionEntity> lockByActivityId(Long activityId);
 }

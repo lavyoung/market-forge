@@ -21,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DuplicateKeyException;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -94,6 +95,25 @@ class ActivityDefinitionRepositoryTest {
                 () -> assertEquals("open", captor.getValue().targetState()),
                 () -> assertEquals(2, captor.getValue().expectedVersion()));
         verify(redisService).delete(Constants.RedisKeys.ACTIVITY_DETAIL_KEY + 100301L);
+    }
+
+    @Test
+    void shouldLockAndConvertActivityDefinition() {
+        // Given
+        ActivityPO po = new ActivityPO();
+        ActivityDefinitionEntity expected = definition(ActivityDefinitionStateVO.DRAFT);
+        when(activityDao.lockByActivityId(100301L)).thenReturn(Optional.of(po));
+        when(assembler.toEntity(po)).thenReturn(expected);
+
+        // When
+        Optional<ActivityDefinitionEntity> actual = repository.lockByActivityId(100301L);
+
+        // Then
+        assertAll(
+                () -> assertEquals(Optional.of(expected), actual),
+                () -> verify(activityDao).lockByActivityId(100301L),
+                () -> verifyNoInteractions(redisService)
+        );
     }
 
     private ActivityDefinitionEntity definition(ActivityDefinitionStateVO state) {

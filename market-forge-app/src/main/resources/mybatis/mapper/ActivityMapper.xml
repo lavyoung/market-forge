@@ -104,4 +104,12 @@
         AND version = #{expectedVersion}
     </update>
 
+    <select id="lockByActivityId" resultMap="activityResultMap">
+        SELECT
+        <include refid="activityColumns"/>
+        FROM raffle_activity
+        WHERE activity_id = #{activityId}
+        LIMIT 1
+        FOR UPDATE
+    </select>
 </mapper>

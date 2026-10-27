@@ -59,4 +59,12 @@ public interface IActivityDao extends BaseMapper<ActivityPO> {
      * @return 影响行数
      */
     int changeDefinitionState(ActivityDefinitionStateUpdateParam stateUpdate);
+
+    /**
+     * 使用排他锁查询活动定义。
+     *
+     * @param activityId 活动业务标识
+     * @return 已锁定的活动持久化对象；活动不存在时返回空
+     */
+    Optional<ActivityPO> lockByActivityId(@Param("activityId") Long activityId);
 }

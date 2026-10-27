@@ -1,11 +1,13 @@
 package com.lavyoung.marketforge.infrastructure.persistent.dao.activity;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.lavyoung.marketforge.infrastructure.persistent.model.ActivitySkuDefinitionSearchParam;
 import com.lavyoung.marketforge.infrastructure.persistent.po.activity.ActivitySkuPO;
 import com.lavyoung.marketforge.infrastructure.persistent.po.activity.ActivitySkuStockAdjustmentPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -17,6 +19,22 @@ import java.util.Optional;
  */
 @Mapper
 public interface IActivitySkuDao extends BaseMapper<ActivitySkuPO> {
+
+    /**
+     * 统计满足运营查询条件的活动 SKU 数量。
+     *
+     * @param searchParam 查询条件和分页窗口
+     * @return 匹配记录总数
+     */
+    long countActivitySkuDefinitions(ActivitySkuDefinitionSearchParam searchParam);
+
+    /**
+     * 分页查询活动 SKU 定义。
+     *
+     * @param searchParam 查询条件和分页窗口
+     * @return 按更新时间和主键倒序排列的 SKU 记录
+     */
+    List<ActivitySkuPO> queryActivitySkuDefinitionPage(ActivitySkuDefinitionSearchParam searchParam);
 
     /**
      * 根据商品 SKU 查询活动商品配置。

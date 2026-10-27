@@ -155,6 +155,10 @@ public enum BusinessResponseCode implements IResponseCode {
     ACTIVITY_SKU_DEFINITION_CONFLICT(500_003_014, "activity.sku.definition.conflict", "活动 SKU 已被修改，请刷新后重试"),
     ACTIVITY_SKU_STOCK_ADJUSTMENT_FAILED(500_003_015, "activity.sku.stock-adjustment.failed", "活动 SKU 库存调整失败"),
     ACTIVITY_SKU_STOCK_ADJUSTMENT_DUPLICATED(500_003_016, "activity.sku.stock-adjustment.duplicated", "活动 SKU 库存调整已处理"),
+    ACTIVITY_SKU_CONFIG_INVALID(500_003_017, "activity.sku.config.invalid", "活动 SKU 配置不合法"),
+    ACTIVITY_SKU_ACTIVITY_COUNT_MISMATCH(500_003_018, "activity.sku.activity-count.mismatch", "活动 SKU 次数配置与所属活动不一致"),
+    ACTIVITY_SKU_ACTIVITY_STATE_ERROR(500_003_019, "activity.sku.activity-state.error", "当前活动状态不允许修改 SKU"),
+    ACTIVITY_SKU_RELATION_CHANGE_NOT_ALLOWED(500_003_020, "activity.sku.relation-change.not-allowed", "已使用的活动 SKU 不允许修改业务归属"),
 
     ACTIVITY_ORDER_NOT_FOUND(500_004_001, "activity.order.not-found", "活动订单不存在"),
     ACTIVITY_ORDER_CREATE_FAILED(500_004_002, "activity.order.create-failed", "活动订单创建失败"),
