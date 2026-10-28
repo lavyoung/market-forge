@@ -48,12 +48,12 @@ class ActivityDefinitionApplicationServiceImplTest {
     }
 
     @Test
-    void shouldCreateDraftWithFullRemainingStock() {
+    void shouldCreateDraftWithoutActivityLevelStock() {
         // Given
         CreateActivityDefinitionCommand command = new CreateActivityDefinitionCommand("新活动", "活动说明",
-                begin(), end(), 500, 100301L, 100001L, "total", "admin");
+                begin(), end(), 100301L, 100001L, "total", "admin");
         when(repository.queryByActivityId(anyLong())).thenAnswer(invocation -> Optional.of(
-                definition(invocation.getArgument(0), ActivityDefinitionStateVO.DRAFT, 1, 500)));
+                definition(invocation.getArgument(0), ActivityDefinitionStateVO.DRAFT, 1)));
 
         // When
         ActivityDefinitionResult result = service.create(command);
@@ -62,7 +62,8 @@ class ActivityDefinitionApplicationServiceImplTest {
         ArgumentCaptor<ActivityDefinitionEntity> captor = ArgumentCaptor.forClass(ActivityDefinitionEntity.class);
         verify(repository).create(captor.capture());
         assertAll(() -> assertEquals(18, captor.getValue().activityId().toString().length()),
-                () -> assertEquals(500, captor.getValue().stockCountSurplus()),
+                () -> assertEquals(100301L, captor.getValue().activityCountId()),
+                () -> assertEquals(100001L, captor.getValue().strategyId()),
                 () -> assertEquals(ActivityDefinitionStateVO.DRAFT, captor.getValue().state()),
                 () -> assertEquals("draft", result.state()));
     }
@@ -71,7 +72,7 @@ class ActivityDefinitionApplicationServiceImplTest {
     void shouldRejectEditingOpenActivity() {
         // Given
         when(repository.queryByActivityId(100301L)).thenReturn(Optional.of(
-                definition(100301L, ActivityDefinitionStateVO.OPEN, 2, 500)));
+                definition(100301L, ActivityDefinitionStateVO.OPEN, 2)));
 
         // When
         BusinessException exception = assertThrows(BusinessException.class,
@@ -86,7 +87,7 @@ class ActivityDefinitionApplicationServiceImplTest {
     void shouldRejectStaleVersionBeforeUpdate() {
         // Given
         when(repository.queryByActivityId(100301L)).thenReturn(Optional.of(
-                definition(100301L, ActivityDefinitionStateVO.DRAFT, 3, 500)));
+                definition(100301L, ActivityDefinitionStateVO.DRAFT, 3)));
 
         // When
         BusinessException exception = assertThrows(BusinessException.class,
@@ -100,8 +101,8 @@ class ActivityDefinitionApplicationServiceImplTest {
     @Test
     void shouldOpenDraftWithOptimisticLock() {
         // Given
-        ActivityDefinitionEntity draft = definition(100301L, ActivityDefinitionStateVO.DRAFT, 1, 500);
-        ActivityDefinitionEntity opened = definition(100301L, ActivityDefinitionStateVO.OPEN, 2, 500);
+        ActivityDefinitionEntity draft = definition(100301L, ActivityDefinitionStateVO.DRAFT, 1);
+        ActivityDefinitionEntity opened = definition(100301L, ActivityDefinitionStateVO.OPEN, 2);
         when(repository.queryByActivityId(100301L)).thenReturn(Optional.of(draft), Optional.of(opened));
         when(activityCountDefinitionRepository.lockByActivityCountId(100301L)).thenReturn(Optional.of(
                 new ActivityCountDefinitionEntity(100301L, "基础次数包", 100, 10, 50, 1,
@@ -123,7 +124,7 @@ class ActivityDefinitionApplicationServiceImplTest {
     @Test
     void shouldRejectOpeningWhenActivityCountDefinitionDoesNotExist() {
         // Given
-        ActivityDefinitionEntity draft = definition(100301L, ActivityDefinitionStateVO.DRAFT, 1, 500);
+        ActivityDefinitionEntity draft = definition(100301L, ActivityDefinitionStateVO.DRAFT, 1);
         when(repository.queryByActivityId(100301L)).thenReturn(Optional.of(draft));
         when(activityCountDefinitionRepository.lockByActivityCountId(100301L)).thenReturn(Optional.empty());
 
@@ -140,7 +141,7 @@ class ActivityDefinitionApplicationServiceImplTest {
     void shouldReportLostConditionalUpdateAsConflict() {
         // Given
         when(repository.queryByActivityId(100301L)).thenReturn(Optional.of(
-                definition(100301L, ActivityDefinitionStateVO.DRAFT, 1, 500)));
+                definition(100301L, ActivityDefinitionStateVO.DRAFT, 1)));
         when(repository.updateDraft(any())).thenReturn(false);
 
         // When
@@ -152,14 +153,13 @@ class ActivityDefinitionApplicationServiceImplTest {
     }
 
     private UpdateActivityDefinitionCommand updateCommand(int version) {
-        return new UpdateActivityDefinitionCommand(100301L, "新活动", "活动说明", begin(), end(), 500,
+        return new UpdateActivityDefinitionCommand(100301L, "新活动", "活动说明", begin(), end(),
                 100301L, 100001L, "total", version, "admin");
     }
 
-    private ActivityDefinitionEntity definition(Long activityId, ActivityDefinitionStateVO state, int version,
-                                                int stockCount) {
-        return new ActivityDefinitionEntity(activityId, "新活动", "活动说明", begin(), end(), stockCount,
-                stockCount, 100301L, 100001L, AwardUnlockScopeVO.TOTAL, state, version, "admin", "admin", null, null);
+    private ActivityDefinitionEntity definition(Long activityId, ActivityDefinitionStateVO state, int version) {
+        return new ActivityDefinitionEntity(activityId, "新活动", "活动说明", begin(), end(), 100301L,
+                100001L, AwardUnlockScopeVO.TOTAL, state, version, "admin", "admin", null, null);
     }
 
     private LocalDateTime begin() {

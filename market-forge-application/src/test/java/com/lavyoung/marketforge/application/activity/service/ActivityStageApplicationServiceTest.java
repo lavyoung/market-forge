@@ -194,6 +194,6 @@ class ActivityStageApplicationServiceTest {
     private ActivityEntity openActivity() {
         return new ActivityEntity(
                 100001L, "测试活动", "发布测试", LocalDateTime.now().minusDays(1), LocalDateTime.now().plusDays(7),
-                1000, 1000, 200001L, 300001L, AwardUnlockScopeVO.TOTAL, ActivityStateVO.OPEN.getCode());
+                200001L, 300001L, AwardUnlockScopeVO.TOTAL, ActivityStateVO.OPEN.getCode());
     }
 }

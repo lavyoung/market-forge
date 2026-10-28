@@ -157,8 +157,6 @@ class RaffleRaffleActivityAccountQuotaServiceServiceImplTest {
                 .activityDesc("测试活动说明")
                 .beginDateTime(LocalDateTime.now().minusDays(1))
                 .endDateTime(LocalDateTime.now().plusDays(1))
-                .stockCount(100)
-                .stockCountSurplus(100)
                 .activityCountId(ACTIVITY_COUNT_ID)
                 .strategyId(100001L)
                 .state("open")

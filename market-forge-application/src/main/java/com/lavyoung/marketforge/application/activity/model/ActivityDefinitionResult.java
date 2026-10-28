@@ -5,16 +5,15 @@ import java.time.LocalDateTime;
 /**
  * 活动定义运营查询结果。
  *
- * <p>用于 Application 层向 Trigger 层返回完整的活动配置。该模型面向运营查询，
- * 不向外层暴露领域实体、持久化对象或 MyBatis 类型。</p>
+ * <p>用于 Application 层向 Trigger 层返回完整的活动级配置，不向外层暴露领域实体、
+ * 持久化对象或 MyBatis 类型。额度商品库存由活动 SKU 查询结果返回，奖品库存由
+ * 策略奖品查询结果返回。</p>
  *
  * @param activityId        活动业务标识
  * @param activityName      活动名称
  * @param activityDesc      活动说明
  * @param beginDateTime     活动开始时间
  * @param endDateTime       活动结束时间
- * @param stockCount        活动库存总量
- * @param stockCountSurplus 活动剩余库存
  * @param activityCountId   活动次数配置标识
  * @param strategyId        抽奖策略标识
  * @param awardUnlockScope  奖品解锁次数统计范围
@@ -26,7 +25,7 @@ import java.time.LocalDateTime;
  * @param updateTime        最后修改时间
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @date 2026/10/22
+ * @date 2026/10/28
  */
 public record ActivityDefinitionResult(
         Long activityId,
@@ -34,8 +33,6 @@ public record ActivityDefinitionResult(
         String activityDesc,
         LocalDateTime beginDateTime,
         LocalDateTime endDateTime,
-        int stockCount,
-        int stockCountSurplus,
         Long activityCountId,
         Long strategyId,
         String awardUnlockScope,

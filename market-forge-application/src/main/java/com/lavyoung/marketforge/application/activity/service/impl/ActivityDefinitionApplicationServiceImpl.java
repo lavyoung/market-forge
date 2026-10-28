@@ -23,8 +23,13 @@ import java.util.Objects;
 /**
  * 活动定义运营应用服务。
  *
- * <p>负责生成业务标识、构建领域实体、校验生命周期与版本，并把持久化条件更新失败
- * 转换为稳定的并发冲突。HTTP、Session 和 MyBatis 细节均不进入本类。</p>
+ * <p>负责生成活动业务标识、构建活动定义实体、校验生命周期与乐观锁版本，并把
+ * 持久化条件更新失败转换为稳定的并发冲突。该服务只编排活动级配置，额度商品库存
+ * 由活动 SKU 应用服务负责，奖品库存由策略奖品及库存同步链路负责。</p>
+ *
+ * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
+ * @version 1.0.0
+ * @date 2026/10/28
  */
 @Service
 @RequiredArgsConstructor
@@ -97,22 +102,19 @@ public class ActivityDefinitionApplicationServiceImpl implements IActivityDefini
         try {
             AwardUnlockScopeVO scope = parseScope(command.awardUnlockScope());
             return new ActivityDefinitionEntity(activityId, command.activityName(), command.activityDesc(),
-                    command.beginDateTime(), command.endDateTime(), command.stockCount(), command.stockCount(),
-                    command.activityCountId(), command.strategyId(), scope, ActivityDefinitionStateVO.DRAFT, 1,
-                    command.operator(), command.operator(), null, null);
+                    command.beginDateTime(), command.endDateTime(), command.activityCountId(), command.strategyId(),
+                    scope, ActivityDefinitionStateVO.DRAFT, 1, command.operator(), command.operator(), null, null);
         } catch (NullPointerException | IllegalArgumentException exception) {
             throw BusinessException.of(BusinessResponseCode.ACTIVITY_CONFIG_INVALID, exception, command.activityName());
         }
     }
 
-    private ActivityDefinitionEntity updateDefinition(ActivityDefinitionEntity current,
-                                                      UpdateActivityDefinitionCommand command) {
+    private ActivityDefinitionEntity updateDefinition(ActivityDefinitionEntity current, UpdateActivityDefinitionCommand command) {
         try {
             return new ActivityDefinitionEntity(current.activityId(), command.activityName(), command.activityDesc(),
-                    command.beginDateTime(), command.endDateTime(), command.stockCount(), command.stockCount(),
-                    command.activityCountId(), command.strategyId(), parseScope(command.awardUnlockScope()),
-                    current.state(), command.expectedVersion(), current.createdBy(), command.operator(),
-                    current.createTime(), current.updateTime());
+                    command.beginDateTime(), command.endDateTime(), command.activityCountId(), command.strategyId(),
+                    parseScope(command.awardUnlockScope()), current.state(), command.expectedVersion(),
+                    current.createdBy(), command.operator(), current.createTime(), current.updateTime());
         } catch (NullPointerException | IllegalArgumentException exception) {
             throw BusinessException.of(BusinessResponseCode.ACTIVITY_CONFIG_INVALID, exception, current.activityId());
         }
@@ -141,9 +143,8 @@ public class ActivityDefinitionApplicationServiceImpl implements IActivityDefini
 
     private ActivityDefinitionResult toResult(ActivityDefinitionEntity entity) {
         return new ActivityDefinitionResult(entity.activityId(), entity.activityName(), entity.activityDesc(),
-                entity.beginDateTime(), entity.endDateTime(), entity.stockCount(), entity.stockCountSurplus(),
-                entity.activityCountId(), entity.strategyId(), entity.awardUnlockScope().getCode(),
-                entity.state().getCode(), entity.version(), entity.createdBy(), entity.updatedBy(),
-                entity.createTime(), entity.updateTime());
+                entity.beginDateTime(), entity.endDateTime(), entity.activityCountId(), entity.strategyId(),
+                entity.awardUnlockScope().getCode(), entity.state().getCode(), entity.version(), entity.createdBy(),
+                entity.updatedBy(), entity.createTime(), entity.updateTime());
     }
 }

@@ -303,9 +303,8 @@ class ActivitySkuDefinitionApplicationServiceImplTest {
     }
 
     private ActivityDefinitionEntity activity(Long activityId, Long activityCountId, ActivityDefinitionStateVO state) {
-        return new ActivityDefinitionEntity(activityId, "测试活动", "测试活动说明", begin(), end(), 1000,
-                1000, activityCountId, 400001L, AwardUnlockScopeVO.TOTAL, state, 1,
-                "admin", "admin", null, null);
+        return new ActivityDefinitionEntity(activityId, "测试活动", "测试活动说明", begin(), end(),
+                activityCountId, 400001L, AwardUnlockScopeVO.TOTAL, state, 1, "admin", "admin", null, null);
     }
 
     private ActivityCountDefinitionEntity activityCountDefinition() {
