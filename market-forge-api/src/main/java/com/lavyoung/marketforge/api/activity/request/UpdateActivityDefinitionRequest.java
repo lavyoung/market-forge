@@ -13,7 +13,6 @@ import java.time.LocalDateTime;
  * @param activityDesc     活动说明
  * @param beginDateTime    开始时间
  * @param endDateTime      结束时间
- * @param stockCount       库存总量
  * @param activityCountId  次数配置标识
  * @param strategyId       抽奖策略标识
  * @param awardUnlockScope 奖品解锁统计范围
@@ -25,7 +24,6 @@ public record UpdateActivityDefinitionRequest(
         @NotBlank(message = "活动说明不能为空") @Size(max = 256, message = "活动说明长度不能超过 256 个字符") String activityDesc,
         @NotNull(message = "活动开始时间不能为空") LocalDateTime beginDateTime,
         @NotNull(message = "活动结束时间不能为空") LocalDateTime endDateTime,
-        @Positive(message = "活动库存必须为正数") int stockCount,
         @NotNull(message = "活动次数配置不能为空") @Positive(message = "活动次数配置标识必须为正数") Long activityCountId,
         @NotNull(message = "抽奖策略不能为空") @Positive(message = "抽奖策略标识必须为正数") Long strategyId,
         @NotBlank(message = "奖品解锁统计范围不能为空")

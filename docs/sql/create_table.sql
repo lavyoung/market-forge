@@ -149,8 +149,6 @@ CREATE TABLE raffle_activity
     activity_desc      varchar(256) NOT NULL COMMENT '活动描述',
     begin_date_time     datetime        NOT NULL COMMENT '开始时间',
     end_date_time       datetime        NOT NULL COMMENT '结束时间',
-    stock_count         int             NOT NULL COMMENT '库存总量',
-    stock_count_surplus int             NOT NULL COMMENT '剩余库存',
     activity_count_id   bigint          NOT NULL COMMENT '活动次数配置ID',
     strategy_id         bigint          NOT NULL COMMENT '抽奖策略ID',
     award_unlock_scope varchar(16)  NOT NULL COMMENT '奖品解锁次数范围：day-当日、total-活动累计',

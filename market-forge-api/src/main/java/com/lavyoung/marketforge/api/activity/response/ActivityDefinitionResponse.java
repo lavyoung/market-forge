@@ -16,8 +16,6 @@ import java.time.LocalDateTime;
  * @param activityDesc      活动说明
  * @param beginDateTime     活动开始时间
  * @param endDateTime       活动结束时间
- * @param stockCount        活动库存总量
- * @param stockCountSurplus 活动剩余库存
  * @param activityCountId   活动次数配置标识
  * @param strategyId        抽奖策略标识
  * @param awardUnlockScope  奖品解锁次数统计范围
@@ -43,10 +41,6 @@ public record ActivityDefinitionResponse(
         LocalDateTime beginDateTime,
         @Schema(description = "活动结束时间", example = "2036-12-31T23:59:59", type = "string", format = "date-time")
         LocalDateTime endDateTime,
-        @Schema(description = "活动库存总量", example = "100000")
-        int stockCount,
-        @Schema(description = "活动剩余库存", example = "99999")
-        int stockCountSurplus,
         @Schema(description = "活动次数配置标识", example = "100301", type = "string")
         String activityCountId,
         @Schema(description = "抽奖策略标识", example = "900901001", type = "string")

@@ -119,7 +119,6 @@ class ActivityDefinitionRepositoryTest {
     private ActivityDefinitionEntity definition(ActivityDefinitionStateVO state) {
         return new ActivityDefinitionEntity(100301L, "活动", "活动说明",
                 LocalDateTime.of(2026, 11, 1, 0, 0), LocalDateTime.of(2026, 11, 30, 23, 59),
-                1000, 1000, 100301L, 100001L, AwardUnlockScopeVO.TOTAL, state, 1,
-                "admin", "admin", null, null);
+                100301L, 100001L, AwardUnlockScopeVO.TOTAL, state, 1, "admin", "admin", null, null);
     }
 }

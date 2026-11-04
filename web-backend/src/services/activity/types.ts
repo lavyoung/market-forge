@@ -159,10 +159,6 @@ export interface ActivityDefinitionItem {
     beginDateTime: string;
     /** 活动结束时间。 */
     endDateTime: string;
-    /** 活动库存总量。 */
-    stockCount: number;
-    /** 活动剩余库存。 */
-    stockCountSurplus: number;
     /** 活动次数配置标识。 */
     activityCountId: string;
     /** 抽奖策略标识。 */
@@ -219,7 +215,6 @@ export interface ActivityDefinitionFormValues {
     activityDesc: string;
     beginDateTime: string;
     endDateTime: string;
-    stockCount: number;
     activityCountId: string;
     strategyId: string;
     awardUnlockScope: AwardUnlockScope;

@@ -13,7 +13,6 @@ import java.time.LocalDateTime;
  * @param activityDesc     活动说明
  * @param beginDateTime    开始时间
  * @param endDateTime      结束时间
- * @param stockCount       库存总量
  * @param activityCountId  次数配置标识
  * @param strategyId       抽奖策略标识
  * @param awardUnlockScope 奖品解锁统计范围
@@ -32,9 +31,6 @@ public record CreateActivityDefinitionRequest(
         @NotNull(message = "活动结束时间不能为空")
         @Schema(description = "结束时间", example = "2026-11-30T23:59:59", requiredMode = Schema.RequiredMode.REQUIRED)
         LocalDateTime endDateTime,
-        @Positive(message = "活动库存必须为正数")
-        @Schema(description = "库存总量", example = "10000", requiredMode = Schema.RequiredMode.REQUIRED)
-        int stockCount,
         @NotNull(message = "活动次数配置不能为空") @Positive(message = "活动次数配置标识必须为正数")
         @Schema(description = "活动次数配置标识", example = "100301", requiredMode = Schema.RequiredMode.REQUIRED)
         Long activityCountId,

@@ -51,16 +51,17 @@ class ActivityDefinitionApiAssemblerTest {
         // Given
         CreateActivityDefinitionRequest request = new CreateActivityDefinitionRequest("新活动", "活动说明",
                 LocalDateTime.of(2026, 11, 1, 0, 0), LocalDateTime.of(2026, 11, 30, 23, 59),
-                1000, 100301L, 100001L, "total");
+                100301L, 100001L, "total");
 
         // When
         CreateActivityDefinitionCommand command = ASSEMBLER.toCreateCommand(request, "admin");
 
         // Then
-        assertAll(() -> assertEquals("新活动", command.activityName()),
-                () -> assertEquals(1000, command.stockCount()),
+        assertAll(
+                () -> assertEquals("新活动", command.activityName()),
                 () -> assertEquals(100301L, command.activityCountId()),
-                () -> assertEquals("admin", command.operator()));
+                () -> assertEquals("admin", command.operator())
+        );
     }
 
     @Test
@@ -79,7 +80,6 @@ class ActivityDefinitionApiAssemblerTest {
                 () -> assertEquals(ACTIVITY_COUNT_ID.toString(), response.activityCountId()),
                 () -> assertEquals(STRATEGY_ID.toString(), response.strategyId()),
                 () -> assertEquals(result.activityName(), response.activityName()),
-                () -> assertEquals(result.stockCountSurplus(), response.stockCountSurplus()),
                 () -> assertEquals(result.version(), response.version()),
                 () -> assertEquals(21L, pageResponse.total()),
                 () -> assertEquals(response, pageResponse.records().get(0))
@@ -93,6 +93,6 @@ class ActivityDefinitionApiAssemblerTest {
     }
 
     private ActivityDefinitionResult result() {
-        return new ActivityDefinitionResult(ACTIVITY_ID, "九宫格活动抽奖", "九宫格抽奖活动演示数据", LocalDateTime.of(2026, 1, 1, 0, 0), LocalDateTime.of(2036, 12, 31, 23, 59, 59), 100000, 99999, ACTIVITY_COUNT_ID, STRATEGY_ID, "total", "open", 2, "admin", "operator", LocalDateTime.of(2026, 10, 22, 10, 0), LocalDateTime.of(2026, 10, 22, 10, 30));
+        return new ActivityDefinitionResult(ACTIVITY_ID, "九宫格活动抽奖", "九宫格抽奖活动演示数据", LocalDateTime.of(2026, 1, 1, 0, 0), LocalDateTime.of(2036, 12, 31, 23, 59, 59), ACTIVITY_COUNT_ID, STRATEGY_ID, "total", "open", 2, "admin", "operator", LocalDateTime.of(2026, 10, 22, 10, 0), LocalDateTime.of(2026, 10, 22, 10, 30));
     }
 }

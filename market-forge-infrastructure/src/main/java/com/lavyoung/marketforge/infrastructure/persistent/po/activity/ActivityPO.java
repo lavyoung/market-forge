@@ -12,12 +12,16 @@ import java.time.LocalDateTime;
 
 /**
  * 抽奖活动持久化对象。
- * <p>
- * 保存活动的时间范围、库存、参与次数配置、抽奖策略及启用状态。
+ *
+ * <p>对应 {@code raffle_activity} 表，保存活动名称、有效期、参与次数配置、
+ * 抽奖策略、奖品解锁范围和生命周期状态。</p>
+ *
+ * <p>活动定义不保存库存。额度商品库存由 {@code raffle_activity_sku} 维护，
+ * 策略奖品库存由 {@code strategy_award} 维护。</p>
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @date 2026/09/18
+ * @date 2026/11/04
  */
 @Getter
 @Setter
@@ -57,16 +61,6 @@ public class ActivityPO extends BasePO {
     private LocalDateTime endDateTime;
 
     /**
-     * 活动库存总量。
-     */
-    private Integer stockCount;
-
-    /**
-     * 活动剩余库存。
-     */
-    private Integer stockCountSurplus;
-
-    /**
      * 活动参与次数配置标识。
      */
     private Long activityCountId;
@@ -75,16 +69,17 @@ public class ActivityPO extends BasePO {
      * 活动关联的抽奖策略标识。
      */
     private Long strategyId;
+
     /**
      * 奖品次数锁统计范围。
      *
-     * <p>数据库保存 {@code day} 或 {@code total}，转换为领域实体时
-     * 由 ActivityAssembler 解析为 AwardUnlockScopeVO。</p>
+     * <p>数据库保存 {@code day} 或 {@code total}，转换为领域实体时由
+     * Assembler 解析为 {@code AwardUnlockScopeVO}。</p>
      */
     private String awardUnlockScope;
 
     /**
-     * 活动状态。
+     * 活动生命周期状态。
      */
     private String state;
 

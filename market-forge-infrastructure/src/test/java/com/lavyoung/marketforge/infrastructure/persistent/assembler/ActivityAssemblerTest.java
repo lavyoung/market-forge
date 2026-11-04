@@ -35,8 +35,6 @@ class ActivityAssemblerTest {
                 .activityDesc("测试活动")
                 .beginDateTime(LocalDateTime.of(2026, 9, 18, 10, 0))
                 .endDateTime(LocalDateTime.of(2026, 10, 18, 10, 0))
-                .stockCount(1000)
-                .stockCountSurplus(900)
                 .activityCountId(100001L)
                 .strategyId(100006L)
                 .awardUnlockScope(AwardUnlockScopeVO.TOTAL)

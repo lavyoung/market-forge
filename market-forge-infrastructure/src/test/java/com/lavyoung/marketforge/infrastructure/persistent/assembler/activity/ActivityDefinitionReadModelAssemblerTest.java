@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * {@link ActivityDefinitionReadModelAssembler} 映射契约测试。
  *
- * <p>验证活动配置、库存、关联标识、生命周期和审计字段均能完整投影到应用读模型。</p>
+ * <p>验证活动配置、关联标识、生命周期和审计字段均能完整投影到应用读模型。</p>
  */
 class ActivityDefinitionReadModelAssemblerTest {
 
@@ -34,8 +34,6 @@ class ActivityDefinitionReadModelAssemblerTest {
                 () -> assertEquals(source.getActivityDesc(), result.activityDesc()),
                 () -> assertEquals(source.getBeginDateTime(), result.beginDateTime()),
                 () -> assertEquals(source.getEndDateTime(), result.endDateTime()),
-                () -> assertEquals(source.getStockCount(), result.stockCount()),
-                () -> assertEquals(source.getStockCountSurplus(), result.stockCountSurplus()),
                 () -> assertEquals(source.getActivityCountId(), result.activityCountId()),
                 () -> assertEquals(source.getStrategyId(), result.strategyId()),
                 () -> assertEquals(source.getAwardUnlockScope(), result.awardUnlockScope()),
@@ -55,8 +53,6 @@ class ActivityDefinitionReadModelAssemblerTest {
         po.setActivityDesc("九宫格抽奖活动演示数据");
         po.setBeginDateTime(LocalDateTime.of(2026, 1, 1, 0, 0));
         po.setEndDateTime(LocalDateTime.of(2036, 12, 31, 23, 59, 59));
-        po.setStockCount(100000);
-        po.setStockCountSurplus(99999);
         po.setActivityCountId(100301L);
         po.setStrategyId(900901001L);
         po.setAwardUnlockScope("total");

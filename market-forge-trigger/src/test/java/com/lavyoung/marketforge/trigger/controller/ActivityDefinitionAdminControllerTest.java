@@ -75,14 +75,14 @@ class ActivityDefinitionAdminControllerTest {
         // Given
         CreateActivityDefinitionRequest request = new CreateActivityDefinitionRequest("新活动", "活动说明",
                 LocalDateTime.of(2026, 11, 1, 0, 0), LocalDateTime.of(2026, 11, 30, 23, 59),
-                1000, 100301L, 100001L, "total");
+                100301L, 100001L, "total");
         CreateActivityDefinitionCommand command = new CreateActivityDefinitionCommand("新活动", "活动说明",
-                request.beginDateTime(), request.endDateTime(), 1000, 100301L, 100001L, "total", "admin");
+                request.beginDateTime(), request.endDateTime(), 100301L, 100001L, "total", "admin");
         ActivityDefinitionResult result = new ActivityDefinitionResult(100302L, "新活动", "活动说明",
-                request.beginDateTime(), request.endDateTime(), 1000, 1000, 100301L, 100001L, "total",
+                request.beginDateTime(), request.endDateTime(), 100301L, 100001L, "total",
                 "draft", 1, "admin", "admin", null, null);
         ActivityDefinitionResponse response = new ActivityDefinitionResponse("100302", "新活动", "活动说明",
-                request.beginDateTime(), request.endDateTime(), 1000, 1000, "100301", "100001", "total",
+                request.beginDateTime(), request.endDateTime(), "100301", "100001", "total",
                 "draft", 1, "admin", "admin", null, null);
         when(adminSessionManager.currentOperator()).thenReturn(new AdminOperatorResponse("admin", "管理员", Set.of("ROLE_ADMIN")));
         when(activityDefinitionApiAssembler.toCreateCommand(request, "admin")).thenReturn(command);

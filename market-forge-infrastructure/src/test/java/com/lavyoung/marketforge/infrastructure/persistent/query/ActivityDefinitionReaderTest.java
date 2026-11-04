@@ -100,6 +100,9 @@ class ActivityDefinitionReaderTest {
     }
 
     private ActivityDefinitionResult result() {
-        return new ActivityDefinitionResult(100301L, "九宫格活动抽奖", "九宫格抽奖活动演示数据", LocalDateTime.of(2026, 1, 1, 0, 0), LocalDateTime.of(2036, 12, 31, 23, 59, 59), 100000, 99999, 100301L, 900901001L, "total", "open", 2, "admin", "operator", LocalDateTime.of(2026, 10, 22, 10, 0), LocalDateTime.of(2026, 10, 22, 11, 0));
+        return new ActivityDefinitionResult(100301L, "九宫格活动抽奖", "九宫格抽奖活动演示数据",
+                LocalDateTime.of(2026, 1, 1, 0, 0), LocalDateTime.of(2036, 12, 31, 23, 59, 59),
+                100301L, 900901001L, "total", "open", 2, "admin", "operator",
+                LocalDateTime.of(2026, 10, 22, 10, 0), LocalDateTime.of(2026, 10, 22, 11, 0));
     }
 }

@@ -19,13 +19,12 @@ import {
     ModalForm,
     PageContainer,
     ProForm,
-    ProFormDigit,
     ProFormSelect,
     ProFormText,
     ProFormTextArea,
     ProTable,
 } from '@ant-design/pro-components';
-import {Button, Descriptions, Drawer, message, Modal, Progress, Tag, Typography} from 'antd';
+import {Button, Descriptions, Drawer, message, Modal, Tag} from 'antd';
 import {useRef, useState} from 'react';
 
 const stateLabels: Record<ActivityDefinitionState, { color: string; text: string }> = {
@@ -120,13 +119,6 @@ function ActivityDefinitionPage() {
             },
             render: (_, record) => <Tag color={stateLabels[record.state].color}>{stateLabels[record.state].text}</Tag>,
         },
-        {
-            title: '库存',
-            dataIndex: 'stockCountSurplus',
-            hideInSearch: true,
-            width: 190,
-            render: (_, record) => <StockProgress activity={record}/>,
-        },
         {title: '活动次数配置', dataIndex: 'activityCountId', copyable: true, hideInSearch: true, width: 150},
         {title: '抽奖策略', dataIndex: 'strategyId', copyable: true, hideInSearch: true, width: 150},
         {
@@ -171,7 +163,7 @@ function ActivityDefinitionPage() {
     ];
 
     return (
-        <PageContainer title="活动定义" subTitle="管理活动基础配置、库存与生命周期">
+        <PageContainer title="活动定义" subTitle="管理活动规则引用与生命周期">
             <ProTable<ActivityDefinitionItem, ActivityDefinitionQuery>
                 actionRef={actionRef}
                 rowKey="activityId"
@@ -180,7 +172,7 @@ function ActivityDefinitionPage() {
                 request={queryActivityDefinitions}
                 search={{labelWidth: 'auto', defaultCollapsed: false, collapseRender: false, span: 8}}
                 pagination={{defaultPageSize: 20, showSizeChanger: true}}
-                scroll={{x: 1590}}
+                scroll={{x: 1400}}
                 toolBarRender={() => [
                     <Button key="create" type="primary" icon={<PlusOutlined/>} onClick={openCreateEditor}>
                         新建活动
@@ -208,8 +200,6 @@ function ActivityDefinitionPage() {
                                  rules={[{required: true}]}/>
                 </ProForm.Group>
                 <ProForm.Group>
-                    <ProFormDigit name="stockCount" label="库存总量" width="md" min={1} fieldProps={{precision: 0}}
-                                  rules={[{required: true}]}/>
                     <ProFormSelect name="awardUnlockScope" label="奖品解锁口径" width="md" options={[
                         {label: '每日次数', value: 'day'},
                         {label: '累计次数', value: 'total'},
@@ -245,7 +235,7 @@ const positiveIdRules = [
 function toFormValues(activity?: ActivityDefinitionItem): ActivityDefinitionFormValues | undefined {
     if (!activity) {
         return {
-            activityName: '', activityDesc: '', beginDateTime: '', endDateTime: '', stockCount: 1,
+            activityName: '', activityDesc: '', beginDateTime: '', endDateTime: '',
             activityCountId: '', strategyId: '', awardUnlockScope: 'total',
         };
     }
@@ -259,20 +249,6 @@ function toFormValues(activity?: ActivityDefinitionItem): ActivityDefinitionForm
 
 function loadActivityCountOptions({keyWords}: { keyWords?: string }) {
     return queryActivityCountOptions(keyWords);
-}
-
-function StockProgress({activity}: { activity: ActivityDefinitionItem }) {
-    const remainingPercent = activity.stockCount > 0
-        ? Math.min(Math.round((Math.max(activity.stockCountSurplus, 0) / activity.stockCount) * 100), 100)
-        : 0;
-    return (
-        <div>
-            <Typography.Text>
-                {activity.stockCountSurplus.toLocaleString()} / {activity.stockCount.toLocaleString()}
-            </Typography.Text>
-            <Progress percent={remainingPercent} size="small" showInfo={false}/>
-        </div>
-    );
 }
 
 function ActivityDefinitionDetail({activity}: { activity: ActivityDefinitionItem }) {
@@ -294,8 +270,6 @@ function ActivityDefinitionDetail({activity}: { activity: ActivityDefinitionItem
             <Descriptions.Item label="乐观锁版本">{activity.version}</Descriptions.Item>
             <Descriptions.Item label="开始时间">{activity.beginDateTime}</Descriptions.Item>
             <Descriptions.Item label="结束时间">{activity.endDateTime}</Descriptions.Item>
-            <Descriptions.Item label="库存总量">{activity.stockCount.toLocaleString()}</Descriptions.Item>
-            <Descriptions.Item label="剩余库存">{activity.stockCountSurplus.toLocaleString()}</Descriptions.Item>
             <Descriptions.Item label="活动次数配置">{activity.activityCountId}</Descriptions.Item>
             <Descriptions.Item label="抽奖策略">{activity.strategyId}</Descriptions.Item>
             <Descriptions.Item label="解锁口径">{unlockScopeLabels[activity.awardUnlockScope]}</Descriptions.Item>
