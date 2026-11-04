@@ -1,6 +1,6 @@
 package com.lavyoung.marketforge.domain.award.event;
 
-import java.util.Objects;
+import static com.lavyoung.marketforge.types.validation.ModelPreconditions.requireText;
 
 /**
  * 中奖发生时固定的奖品履约快照。
@@ -51,10 +51,4 @@ public record AwardFulfillmentSnapshot(
         }
     }
 
-    private static void requireText(String value, String fieldName) {
-        Objects.requireNonNull(value, fieldName + " must not be null");
-        if (value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-    }
 }

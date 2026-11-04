@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -39,6 +40,26 @@ class ActivitySkuDefinitionAssemblerTest {
                 () -> assertNull(po.getId()),
                 () -> assertEquals(expected, actual)
         );
+    }
+
+    @Test
+    void shouldConvertSkuDefinitionList() {
+        // Given
+        LocalDateTime createTime = LocalDateTime.of(2026, 10, 26, 10, 0);
+        LocalDateTime updateTime = LocalDateTime.of(2026, 10, 26, 11, 0);
+        ActivitySkuDefinitionEntity first = new ActivitySkuDefinitionEntity(
+                9011L, 100301L, 100302L, 100, 80, 50L, 3,
+                "creator", "operator", createTime, updateTime);
+        ActivitySkuDefinitionEntity second = new ActivitySkuDefinitionEntity(
+                9012L, 100301L, 100303L, 200, 160, 100L, 5,
+                "creator", "operator", createTime, updateTime);
+        List<ActivitySkuPO> poList = List.of(definitionAssembler.toPO(first), definitionAssembler.toPO(second));
+
+        // When
+        List<ActivitySkuDefinitionEntity> actual = definitionAssembler.toEntities(poList);
+
+        // Then
+        assertEquals(List.of(first, second), actual);
     }
 
     @Test

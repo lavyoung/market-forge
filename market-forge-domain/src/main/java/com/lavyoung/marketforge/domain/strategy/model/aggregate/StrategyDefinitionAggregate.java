@@ -8,6 +8,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
+import static com.lavyoung.marketforge.types.validation.ModelPreconditions.requireText;
+
 /**
  * 策略定义聚合。
  *
@@ -168,16 +170,5 @@ public record StrategyDefinitionAggregate(
         return new StrategyDefinitionAggregate(newStrategyId, strategyDesc, ruleModels,
                 StrategyDefinitionStateVO.DRAFT, 1, operator,
                 operator, null, null, copiedAwards, copiedRules);
-    }
-
-
-    private static void requireText(String value, String fieldName, int maximumLength) {
-        Objects.requireNonNull(value, fieldName + " must not be null");
-        if (value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        if (value.length() > maximumLength) {
-            throw new IllegalArgumentException(fieldName + " length must not exceed " + maximumLength);
-        }
     }
 }

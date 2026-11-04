@@ -45,6 +45,16 @@ public interface IActivitySkuDao extends BaseMapper<ActivitySkuPO> {
     Optional<ActivitySkuPO> queryBySku(@Param("sku") Long sku);
 
     /**
+     * 查询指定活动的全部 SKU。
+     *
+     * <p>使用单次查询返回活动就绪检查所需的完整 SKU 数据，避免先查标识再逐条查询。</p>
+     *
+     * @param activityId 活动业务标识
+     * @return 按更新时间和主键稳定排序的 SKU 持久化对象
+     */
+    List<ActivitySkuPO> queryByActivityId(@Param("activityId") Long activityId);
+    
+    /**
      * 按乐观锁版本更新 SKU 普通配置。
      *
      * <p>该操作禁止修改库存。若活动或次数配置发生变化，SQL 必须同时确认 SKU

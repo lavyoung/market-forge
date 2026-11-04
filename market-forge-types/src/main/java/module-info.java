@@ -12,6 +12,7 @@
     exports com.lavyoung.marketforge.types.messaging;
     exports com.lavyoung.marketforge.types.utils;
     exports com.lavyoung.marketforge.types.concurrent;
+    exports com.lavyoung.marketforge.types.validation;
 
     requires static lombok;
     requires org.slf4j;

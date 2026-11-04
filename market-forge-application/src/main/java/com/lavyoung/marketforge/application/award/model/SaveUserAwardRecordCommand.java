@@ -5,6 +5,8 @@ import com.lavyoung.marketforge.domain.award.event.AwardFulfillmentSnapshot;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+import static com.lavyoung.marketforge.types.validation.ModelPreconditions.requireText;
+
 /**
  * 保存用户中奖记录的应用命令。
  *
@@ -47,12 +49,6 @@ public record SaveUserAwardRecordCommand(
         requirePositive(awardId, "awardId");
         Objects.requireNonNull(fulfillmentSnapshot, "fulfillmentSnapshot must not be null");
         Objects.requireNonNull(awardTime, "awardTime must not be null");
-    }
-
-    private static void requireText(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
     }
 
     private static void requirePositive(Long value, String fieldName) {

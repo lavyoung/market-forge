@@ -73,6 +73,7 @@ module market.forge.domain {
     opens com.lavyoung.marketforge.domain.activity.service.quota.rule;
     opens com.lavyoung.marketforge.domain.activity.service.quota.rule.impl;
     opens com.lavyoung.marketforge.domain.activity.service.partake.impl;
+    opens com.lavyoung.marketforge.domain.activity.service.impl;
     opens com.lavyoung.marketforge.domain.award.service.impl;
     opens com.lavyoung.marketforge.domain.credit.service.impl;
     opens com.lavyoung.marketforge.domain.activity.model.entity to com.fasterxml.jackson.databind;

@@ -9,6 +9,8 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
+import static com.lavyoung.marketforge.types.validation.ModelPreconditions.requireText;
+
 /**
  * 奖品定义领域实体。
  *
@@ -136,13 +138,4 @@ public record AwardDefinitionEntity(
         }
     }
 
-    private static void requireText(String value, String fieldName, int maximumLength) {
-        Objects.requireNonNull(value, fieldName + " must not be null");
-        if (value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        if (value.length() > maximumLength) {
-            throw new IllegalArgumentException(fieldName + " length must not exceed " + maximumLength);
-        }
-    }
 }

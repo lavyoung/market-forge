@@ -2,6 +2,8 @@ package com.lavyoung.marketforge.application.activity.model;
 
 import java.util.Objects;
 
+import static com.lavyoung.marketforge.types.validation.ModelPreconditions.requireText;
+
 /**
  * 活动抽奖应用命令。
  *
@@ -27,12 +29,6 @@ public record ActivityRaffleCommand(
         requireText(userId, "userId");
         requirePositive(activityId, "activityId");
         requirePositive(sku, "sku");
-    }
-
-    private static void requireText(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
     }
 
     private static void requirePositive(Long value, String fieldName) {

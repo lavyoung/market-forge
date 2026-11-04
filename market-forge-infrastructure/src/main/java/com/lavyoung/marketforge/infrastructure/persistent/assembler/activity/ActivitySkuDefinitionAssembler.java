@@ -7,6 +7,8 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
 import org.mapstruct.ReportingPolicy;
 
+import java.util.List;
+
 /**
  * 活动 SKU 运营定义与持久化对象转换器。
  *
@@ -26,6 +28,17 @@ public interface ActivitySkuDefinitionAssembler {
      * @return SKU 运营定义
      */
     ActivitySkuDefinitionEntity toEntity(ActivitySkuPO po);
+
+    /**
+     * 批量转换活动 SKU 持久化对象。
+     *
+     * <p>就绪检查通过一条 SQL 读取全部活动 SKU，再由 MapStruct 统一完成模型转换，
+     * 避免 Repository 手写字段复制或在循环中执行额外查询。</p>
+     *
+     * @param poList SKU 持久化对象集合
+     * @return SKU 运营定义集合
+     */
+    List<ActivitySkuDefinitionEntity> toEntities(List<ActivitySkuPO> poList);
 
     /**
      * 将 SKU 运营定义转换为持久化对象。

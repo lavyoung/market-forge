@@ -62,6 +62,14 @@
         LIMIT 1
     </select>
 
+    <select id="queryByActivityId" resultMap="activitySkuResultMap">
+        SELECT
+        <include refid="activitySkuColumns"/>
+        FROM raffle_activity_sku
+        WHERE activity_id = #{activityId}
+        ORDER BY update_time DESC, id DESC
+    </select>
+
     <update id="updateConfiguration">
         UPDATE raffle_activity_sku
         SET activity_id = #{definition.activityId},

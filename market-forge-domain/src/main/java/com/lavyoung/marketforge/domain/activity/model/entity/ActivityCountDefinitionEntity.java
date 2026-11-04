@@ -3,6 +3,8 @@ package com.lavyoung.marketforge.domain.activity.model.entity;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+import static com.lavyoung.marketforge.types.validation.ModelPreconditions.requireText;
+
 /**
  * 活动次数配置运营定义实体。
  *
@@ -93,13 +95,4 @@ public record ActivityCountDefinitionEntity(
                 newMonthCount, version, createdBy, operator, createTime, updateTime);
     }
 
-    private static void requireText(String value, String fieldName, int maximumLength) {
-        Objects.requireNonNull(value, fieldName + " must not be null");
-        if (value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        if (value.length() > maximumLength) {
-            throw new IllegalArgumentException(fieldName + " length must not exceed " + maximumLength);
-        }
-    }
 }

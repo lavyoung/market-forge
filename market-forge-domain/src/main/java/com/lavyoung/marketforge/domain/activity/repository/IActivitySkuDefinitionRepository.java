@@ -3,6 +3,7 @@ package com.lavyoung.marketforge.domain.activity.repository;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivitySkuDefinitionEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivitySkuStockAdjustmentEntity;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -28,6 +29,27 @@ public interface IActivitySkuDefinitionRepository {
      * @return 匹配的 SKU 定义；不存在时返回 {@link Optional#empty()}
      */
     Optional<ActivitySkuDefinitionEntity> queryBySku(Long sku);
+
+    /**
+     * 查询指定活动的全部 SKU 运营定义。
+     *
+     * <p>活动开放前的就绪检查需要一次性检查全部 SKU 的活动归属、次数配置、
+     * 库存和积分价格，因此必须通过单次批量查询返回，禁止先查询 SKU 标识，
+     * 再在循环中逐条读取详情。</p>
+     *
+     * <p>实现层应使用 {@code raffle_activity_sku.activity_id} 索引查询，并保持稳定
+     * 排序，便于就绪报告使用确定的 SKU 顺序定位问题。</p>
+     *
+     * <p>该方法不负责加行锁。活动开放和 SKU 配置修改会共同使用活动定义行作为
+     * 并发互斥点：开放活动先锁定活动定义行，再读取 SKU；SKU 修改也必须先锁定
+     * 同一活动定义行。</p>
+     *
+     * @param activityId 活动业务标识
+     * @return 当前活动的 SKU 定义；没有配置时返回空集合
+     * @throws NullPointerException     活动标识为空时抛出
+     * @throws IllegalArgumentException 活动标识不是正数时抛出
+     */
+    List<ActivitySkuDefinitionEntity> queryByActivityId(Long activityId);
 
     /**
      * 创建活动 SKU。

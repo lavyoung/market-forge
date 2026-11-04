@@ -2,7 +2,9 @@ package com.lavyoung.marketforge.domain.activity.repository;
 
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityCountDefinitionEntity;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * 活动次数配置运营仓储端口。
@@ -30,6 +32,22 @@ public interface IActivityCountDefinitionRepository {
      * @throws NullPointerException 活动次数配置标识为空时抛出
      */
     Optional<ActivityCountDefinitionEntity> queryByActivityCountId(Long activityCountId);
+
+    /**
+     * 批量查询活动次数配置定义。
+     *
+     * <p>活动开放就绪检查会先查询活动的全部 SKU，再收集这些 SKU 引用的次数配置标识。
+     * 本方法通过一次批量查询返回全部定义，避免在 SKU 循环中逐条访问数据库。</p>
+     *
+     * <p>实现层必须正确处理空集合：空集合直接返回空列表，不得生成非法的
+     * {@code IN ()} SQL。返回结果不要求与输入集合顺序一致。</p>
+     *
+     * @param activityCountIds 待查询的活动次数配置标识集合
+     * @return 已存在的活动次数配置；输入为空或全部不存在时返回空集合
+     * @throws NullPointerException     标识集合或集合元素为空时抛出
+     * @throws IllegalArgumentException 集合中存在非正数标识时抛出
+     */
+    List<ActivityCountDefinitionEntity> queryByActivityCountIds(Set<Long> activityCountIds);
 
     /**
      * 使用排他锁读取活动次数配置。

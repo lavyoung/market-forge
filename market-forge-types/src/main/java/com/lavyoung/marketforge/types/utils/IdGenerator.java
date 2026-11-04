@@ -3,8 +3,9 @@ package com.lavyoung.marketforge.types.utils;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static com.lavyoung.marketforge.types.validation.ModelPreconditions.requireText;
 
 /**
  * 轻量级业务 ID 生成工具。
@@ -137,11 +138,4 @@ public final class IdGenerator {
         return "0".repeat(length - value.length()) + value;
     }
 
-    private static String requireText(String value, String name) {
-        Objects.requireNonNull(value, name + " must not be null");
-        if (value.isBlank()) {
-            throw new IllegalArgumentException(name + " must not be blank");
-        }
-        return value;
-    }
 }

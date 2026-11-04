@@ -58,6 +58,17 @@
         LIMIT 1
     </select>
 
+    <select id="queryByActivityCountIds" resultMap="activityCountResultMap">
+        SELECT
+        <include refid="activityCountColumns"/>
+        FROM raffle_activity_count
+        WHERE activity_count_id IN
+        <foreach collection="activityCountIds" item="activityCountId" open="(" separator="," close=")">
+            #{activityCountId}
+        </foreach>
+        ORDER BY activity_count_id
+    </select>
+
     <select id="lockByActivityCountId" resultMap="activityCountResultMap">
         SELECT
         <include refid="activityCountColumns"/>

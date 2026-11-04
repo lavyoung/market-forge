@@ -1,6 +1,6 @@
 package com.lavyoung.marketforge.domain.strategy.model.vo;
 
-import java.util.Objects;
+import static com.lavyoung.marketforge.types.validation.ModelPreconditions.requireText;
 
 /**
  * 策略就绪检查发现的单个问题。
@@ -15,7 +15,7 @@ import java.util.Objects;
  * @param message 面向运营人员的问题说明
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @date 2026/10/25
+ * @date 2026/11/04
  */
 public record StrategyReadinessIssueVO(
         String code,
@@ -26,29 +26,15 @@ public record StrategyReadinessIssueVO(
     /**
      * 创建并规范化策略就绪问题。
      *
+     * <p>公共工具只负责非空白校验，首尾空格由当前值对象显式去除，避免基础工具
+     * 静默修改其他领域模型的数据。</p>
+     *
      * @throws NullPointerException     问题编码、配置路径或问题说明为空时抛出
      * @throws IllegalArgumentException 问题编码、配置路径或问题说明为空白字符串时抛出
      */
     public StrategyReadinessIssueVO {
-        code = requireText(code, "code");
-        path = requireText(path, "path");
-        message = requireText(message, "message");
-    }
-
-    /**
-     * 校验并去除文本首尾空格。
-     *
-     * @param value     待校验文本
-     * @param fieldName 字段名称
-     * @return 去除首尾空格后的文本
-     * @throws NullPointerException     文本为空时抛出
-     * @throws IllegalArgumentException 文本为空白字符串时抛出
-     */
-    private static String requireText(String value, String fieldName) {
-        String normalized = Objects.requireNonNull(value, fieldName + " must not be null").trim();
-        if (normalized.isEmpty()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        return normalized;
+        code = requireText(code, "code").trim();
+        path = requireText(path, "path").trim();
+        message = requireText(message, "message").trim();
     }
 }

@@ -6,6 +6,7 @@ import {
     updateActivityDefinition,
 } from '@/services/activity/activity-definition';
 import {queryActivityCountOptions} from '@/services/activity/activity-count-definition';
+import {queryActivityStrategyOptions} from '@/services/strategy/strategy-definition';
 import type {
     ActivityDefinitionFormValues,
     ActivityDefinitionItem,
@@ -211,7 +212,11 @@ function ActivityDefinitionPage() {
                                    request={loadActivityCountOptions}
                                    fieldProps={{showSearch: true, filterOption: false, allowClear: true}}
                                    rules={[{required: true, message: '请选择活动次数配置'}]}/>
-                    <ProFormText name="strategyId" label="抽奖策略 ID" width="md" rules={positiveIdRules}/>
+                    <ProFormSelect name="strategyId" label="抽奖策略" width="md"
+                                   placeholder="输入策略 ID 或描述搜索"
+                                   request={loadStrategyOptions}
+                                   fieldProps={{showSearch: true, filterOption: false, allowClear: true}}
+                                   rules={[{required: true, message: '请选择抽奖策略'}]}/>
                 </ProForm.Group>
             </ModalForm>
 
@@ -226,11 +231,6 @@ function ActivityDefinitionPage() {
         </PageContainer>
     );
 }
-
-const positiveIdRules = [
-    {required: true, message: '请输入业务标识'},
-    {pattern: /^[1-9][0-9]{0,18}$/, message: '业务标识格式不合法'},
-];
 
 function toFormValues(activity?: ActivityDefinitionItem): ActivityDefinitionFormValues | undefined {
     if (!activity) {
@@ -249,6 +249,10 @@ function toFormValues(activity?: ActivityDefinitionItem): ActivityDefinitionForm
 
 function loadActivityCountOptions({keyWords}: { keyWords?: string }) {
     return queryActivityCountOptions(keyWords);
+}
+
+function loadStrategyOptions({keyWords}: { keyWords?: string }) {
+    return queryActivityStrategyOptions(keyWords);
 }
 
 function ActivityDefinitionDetail({activity}: { activity: ActivityDefinitionItem }) {

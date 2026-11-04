@@ -12,6 +12,9 @@ import com.lavyoung.marketforge.domain.activity.model.vo.ActivityDefinitionState
 import com.lavyoung.marketforge.domain.activity.model.vo.AwardUnlockScopeVO;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityCountDefinitionRepository;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityDefinitionRepository;
+import com.lavyoung.marketforge.domain.strategy.model.aggregate.StrategyDefinitionAggregate;
+import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyDefinitionStateVO;
+import com.lavyoung.marketforge.domain.strategy.repository.IStrategyDefinitionRepository;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +25,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -40,11 +44,15 @@ class ActivityDefinitionApplicationServiceImplTest {
     @Mock
     private IActivityCountDefinitionRepository activityCountDefinitionRepository;
 
+    @Mock
+    private IStrategyDefinitionRepository strategyDefinitionRepository;
+
     private ActivityDefinitionApplicationServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new ActivityDefinitionApplicationServiceImpl(repository, activityCountDefinitionRepository);
+        service = new ActivityDefinitionApplicationServiceImpl(repository, activityCountDefinitionRepository,
+                strategyDefinitionRepository);
     }
 
     @Test
@@ -52,6 +60,7 @@ class ActivityDefinitionApplicationServiceImplTest {
         // Given
         CreateActivityDefinitionCommand command = new CreateActivityDefinitionCommand("新活动", "活动说明",
                 begin(), end(), 100301L, 100001L, "total", "admin");
+        mockExistingReferences();
         when(repository.queryByActivityId(anyLong())).thenAnswer(invocation -> Optional.of(
                 definition(invocation.getArgument(0), ActivityDefinitionStateVO.DRAFT, 1)));
 
@@ -66,6 +75,37 @@ class ActivityDefinitionApplicationServiceImplTest {
                 () -> assertEquals(100001L, captor.getValue().strategyId()),
                 () -> assertEquals(ActivityDefinitionStateVO.DRAFT, captor.getValue().state()),
                 () -> assertEquals("draft", result.state()));
+    }
+
+    @Test
+    void shouldRejectCreatingWhenActivityCountDefinitionDoesNotExist() {
+        // Given
+        CreateActivityDefinitionCommand command = createCommand();
+        when(activityCountDefinitionRepository.queryByActivityCountId(100301L)).thenReturn(Optional.empty());
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class, () -> service.create(command));
+
+        // Then
+        assertEquals(BusinessResponseCode.ACTIVITY_COUNT_NOT_FOUND, exception.getResponseCode());
+        verifyNoInteractions(strategyDefinitionRepository);
+        verify(repository, never()).create(any());
+    }
+
+    @Test
+    void shouldRejectCreatingWhenStrategyDefinitionDoesNotExist() {
+        // Given
+        CreateActivityDefinitionCommand command = createCommand();
+        when(activityCountDefinitionRepository.queryByActivityCountId(100301L))
+                .thenReturn(Optional.of(activityCountDefinition()));
+        when(strategyDefinitionRepository.queryByStrategyId(100001L)).thenReturn(Optional.empty());
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class, () -> service.create(command));
+
+        // Then
+        assertEquals(BusinessResponseCode.STRATEGY_NOT_FOUND, exception.getResponseCode());
+        verify(repository, never()).create(any());
     }
 
     @Test
@@ -142,6 +182,7 @@ class ActivityDefinitionApplicationServiceImplTest {
         // Given
         when(repository.queryByActivityId(100301L)).thenReturn(Optional.of(
                 definition(100301L, ActivityDefinitionStateVO.DRAFT, 1)));
+        mockExistingReferences();
         when(repository.updateDraft(any())).thenReturn(false);
 
         // When
@@ -150,6 +191,84 @@ class ActivityDefinitionApplicationServiceImplTest {
 
         // Then
         assertEquals(BusinessResponseCode.ACTIVITY_DEFINITION_CONFLICT, exception.getResponseCode());
+    }
+
+    @Test
+    void shouldUpdateDraftWhenReferencesExist() {
+        // Given
+        ActivityDefinitionEntity current = definition(100301L, ActivityDefinitionStateVO.DRAFT, 1);
+        ActivityDefinitionEntity updated = definition(100301L, ActivityDefinitionStateVO.DRAFT, 2);
+        when(repository.queryByActivityId(100301L)).thenReturn(Optional.of(current), Optional.of(updated));
+        mockExistingReferences();
+        when(repository.updateDraft(any())).thenReturn(true);
+
+        // When
+        ActivityDefinitionResult result = service.updateDraft(updateCommand(1));
+
+        // Then
+        assertAll(
+                () -> assertEquals(100301L, result.activityCountId()),
+                () -> assertEquals(100001L, result.strategyId()),
+                () -> assertEquals(2, result.version())
+        );
+        verify(repository).updateDraft(any(ActivityDefinitionEntity.class));
+    }
+
+    @Test
+    void shouldRejectUpdatingWhenActivityCountDefinitionDoesNotExist() {
+        // Given
+        when(repository.queryByActivityId(100301L)).thenReturn(Optional.of(
+                definition(100301L, ActivityDefinitionStateVO.DRAFT, 1)));
+        when(activityCountDefinitionRepository.queryByActivityCountId(100301L)).thenReturn(Optional.empty());
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> service.updateDraft(updateCommand(1)));
+
+        // Then
+        assertEquals(BusinessResponseCode.ACTIVITY_COUNT_NOT_FOUND, exception.getResponseCode());
+        verifyNoInteractions(strategyDefinitionRepository);
+        verify(repository, never()).updateDraft(any());
+    }
+
+    @Test
+    void shouldRejectUpdatingWhenStrategyDefinitionDoesNotExist() {
+        // Given
+        when(repository.queryByActivityId(100301L)).thenReturn(Optional.of(
+                definition(100301L, ActivityDefinitionStateVO.DRAFT, 1)));
+        when(activityCountDefinitionRepository.queryByActivityCountId(100301L))
+                .thenReturn(Optional.of(activityCountDefinition()));
+        when(strategyDefinitionRepository.queryByStrategyId(100001L)).thenReturn(Optional.empty());
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> service.updateDraft(updateCommand(1)));
+
+        // Then
+        assertEquals(BusinessResponseCode.STRATEGY_NOT_FOUND, exception.getResponseCode());
+        verify(repository, never()).updateDraft(any());
+    }
+
+    private CreateActivityDefinitionCommand createCommand() {
+        return new CreateActivityDefinitionCommand("新活动", "活动说明", begin(), end(),
+                100301L, 100001L, "total", "admin");
+    }
+
+    private void mockExistingReferences() {
+        when(activityCountDefinitionRepository.queryByActivityCountId(100301L))
+                .thenReturn(Optional.of(activityCountDefinition()));
+        when(strategyDefinitionRepository.queryByStrategyId(100001L))
+                .thenReturn(Optional.of(strategyDefinition()));
+    }
+
+    private ActivityCountDefinitionEntity activityCountDefinition() {
+        return new ActivityCountDefinitionEntity(100301L, "基础次数包", 100, 10, 50, 1,
+                "admin", "admin", null, null);
+    }
+
+    private StrategyDefinitionAggregate strategyDefinition() {
+        return new StrategyDefinitionAggregate(100001L, "测试策略", null, StrategyDefinitionStateVO.DRAFT,
+                1, "admin", "admin", null, null, List.of(), List.of());
     }
 
     private UpdateActivityDefinitionCommand updateCommand(int version) {

@@ -8,6 +8,8 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
+import static com.lavyoung.marketforge.types.validation.ModelPreconditions.requireText;
+
 /**
  * 用户中奖记录创建集成事件。
  *
@@ -80,9 +82,4 @@ public record SendAwardRecordEvent(
         return MqConstants.USER_AWARD_EXCHANGE;
     }
 
-    private static void requireText(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-    }
 }

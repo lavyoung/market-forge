@@ -18,6 +18,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -48,6 +49,28 @@ public class ActivitySkuDefinitionRepository implements IActivitySkuDefinitionRe
     public Optional<ActivitySkuDefinitionEntity> queryBySku(Long sku) {
         Objects.requireNonNull(sku, "sku must not be null");
         return activitySkuDao.queryBySku(sku).map(activitySkuDefinitionAssembler::toEntity);
+    }
+
+    /**
+     * 查询指定活动的全部 SKU 运营定义。
+     *
+     * <p>DAO 使用一条带活动索引条件的 SQL 完成批量读取，Assembler 负责统一转换。
+     * 返回值使用不可变副本，防止外层就绪检查意外修改仓储查询结果。</p>
+     *
+     * @param activityId 活动业务标识
+     * @return 当前活动的不可变 SKU 定义集合
+     * @throws NullPointerException     活动标识为空时抛出
+     * @throws IllegalArgumentException 活动标识不是正数时抛出
+     */
+    @Override
+    public List<ActivitySkuDefinitionEntity> queryByActivityId(Long activityId) {
+        Objects.requireNonNull(activityId, "activityId must not be null");
+        if (activityId <= 0) {
+            throw new IllegalArgumentException("activityId must be positive");
+        }
+
+        List<ActivitySkuPO> poList = activitySkuDao.queryByActivityId(activityId);
+        return List.copyOf(activitySkuDefinitionAssembler.toEntities(poList));
     }
 
     @Override

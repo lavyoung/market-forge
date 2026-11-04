@@ -7,6 +7,8 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
 import org.mapstruct.ReportingPolicy;
 
+import java.util.List;
+
 /**
  * 活动次数配置运营定义持久化装配器。
  *
@@ -27,6 +29,17 @@ public interface ActivityCountDefinitionAssembler {
      * @return 活动次数配置运营定义
      */
     ActivityCountDefinitionEntity toEntity(ActivityCountPO source);
+
+    /**
+     * 批量转换活动次数配置持久化对象。
+     *
+     * <p>MapStruct 会复用单对象 {@link #toEntity(ActivityCountPO)} 的字段映射规则，
+     * 避免手工循环转换时遗漏名称、版本或审计字段。</p>
+     *
+     * @param sources 活动次数配置持久化对象集合
+     * @return 活动次数配置领域定义集合
+     */
+    List<ActivityCountDefinitionEntity> toEntities(List<ActivityCountPO> sources);
 
     /**
      * 将运营领域定义转换为持久化对象。

@@ -13,10 +13,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DuplicateKeyException;
 
+import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * 活动次数配置运营仓储测试。
@@ -50,6 +53,65 @@ class ActivityCountDefinitionRepositoryTest {
 
         // Then
         assertEquals(Optional.of(expected), actual);
+    }
+
+    @Test
+    void shouldQueryDefinitionsInOneBatchAndReturnImmutableList() {
+        // Given
+        Set<Long> activityCountIds = Set.of(100301L, 100302L);
+        ActivityCountPO firstPO = new ActivityCountPO();
+        ActivityCountPO secondPO = new ActivityCountPO();
+        List<ActivityCountPO> poList = List.of(firstPO, secondPO);
+        ActivityCountDefinitionEntity first = definition();
+        ActivityCountDefinitionEntity second = new ActivityCountDefinitionEntity(
+                100302L, "高级次数包", 200, 20, 100, 1, "admin", "admin", null, null);
+        when(activityCountDao.queryByActivityCountIds(activityCountIds)).thenReturn(poList);
+        when(assembler.toEntities(poList)).thenReturn(List.of(first, second));
+
+        // When
+        List<ActivityCountDefinitionEntity> actual = repository.queryByActivityCountIds(activityCountIds);
+
+        // Then
+        assertAll(
+                () -> assertEquals(List.of(first, second), actual),
+                () -> assertThrows(UnsupportedOperationException.class, () -> actual.add(first)),
+                () -> verify(activityCountDao).queryByActivityCountIds(activityCountIds),
+                () -> verify(assembler).toEntities(poList)
+        );
+    }
+
+    @Test
+    void shouldReturnEmptyListWithoutQueryingDatabase() {
+        // When
+        List<ActivityCountDefinitionEntity> actual = repository.queryByActivityCountIds(Set.of());
+
+        // Then
+        assertTrue(actual.isEmpty());
+        verifyNoInteractions(activityCountDao, assembler);
+    }
+
+    @Test
+    void shouldRejectInvalidBatchIdentifiersBeforeQueryingDatabase() {
+        // Given
+        Set<Long> idsWithNull = new HashSet<>();
+        idsWithNull.add(100301L);
+        idsWithNull.add(null);
+
+        // When
+        NullPointerException nullSetException = assertThrows(NullPointerException.class,
+                () -> repository.queryByActivityCountIds(null));
+        NullPointerException nullElementException = assertThrows(NullPointerException.class,
+                () -> repository.queryByActivityCountIds(idsWithNull));
+        IllegalArgumentException nonPositiveException = assertThrows(IllegalArgumentException.class,
+                () -> repository.queryByActivityCountIds(Set.of(0L)));
+
+        // Then
+        assertAll(
+                () -> assertEquals("activityCountIds must not be null", nullSetException.getMessage()),
+                () -> assertNotNull(nullElementException),
+                () -> assertEquals("activityCountIds must contain only positive identifiers", nonPositiveException.getMessage()),
+                () -> verifyNoInteractions(activityCountDao, assembler)
+        );
     }
 
     @Test

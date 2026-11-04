@@ -41,6 +41,40 @@ export async function queryStrategyDefinitions(params: StrategyDefinitionQuery):
 }
 
 /**
+ * 查询可供活动草稿引用的策略选项。
+ *
+ * <p>活动草稿可以引用仍在配置的草稿策略或已经生效的策略，但不能新引用已经停用的
+ * 历史策略。纯数字关键字按策略标识精确查询，其他关键字按策略描述搜索。</p>
+ *
+ * @param keywords 策略标识或策略描述关键字
+ * @returns 活动定义选择器可以直接消费的策略选项
+ */
+export async function queryActivityStrategyOptions(keywords?: string): Promise<Array<{
+    label: string;
+    value: string
+}>> {
+    const normalizedKeywords = normalizeText(keywords);
+    const numericKeywords = normalizedKeywords && /^[1-9][0-9]{0,18}$/.test(normalizedKeywords);
+    const commonQuery: StrategyDefinitionQuery = {
+        current: 1,
+        pageSize: 100,
+        strategyId: numericKeywords ? normalizedKeywords : undefined,
+        strategyDesc: normalizedKeywords && !numericKeywords ? normalizedKeywords : undefined,
+    };
+    const [draftPage, activePage] = await Promise.all([
+        queryStrategyDefinitions({...commonQuery, state: 'draft'}),
+        queryStrategyDefinitions({...commonQuery, state: 'active'}),
+    ]);
+    const strategies = new Map(
+        [...activePage.data, ...draftPage.data].map((strategy) => [strategy.strategyId, strategy]),
+    );
+    return [...strategies.values()].map((strategy) => ({
+        label: `${strategy.strategyDesc} (${strategy.strategyId}) · ${strategy.state === 'active' ? '已生效' : '草稿'}`,
+        value: strategy.strategyId,
+    }));
+}
+
+/**
  * 查询包含奖品和规则的完整策略定义。
  *
  * @param strategyId 策略业务标识

@@ -10,8 +10,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * 活动次数配置运营仓储实现。
@@ -34,6 +36,21 @@ public class ActivityCountDefinitionRepository implements IActivityCountDefiniti
     public Optional<ActivityCountDefinitionEntity> queryByActivityCountId(Long activityCountId) {
         Objects.requireNonNull(activityCountId, "activityCountId must not be null");
         return activityCountDao.queryByActivityCountId(activityCountId).map(activityCountDefinitionAssembler::toEntity);
+    }
+
+    @Override
+    public List<ActivityCountDefinitionEntity> queryByActivityCountIds(Set<Long> activityCountIds) {
+        Set<Long> validActivityCountIds = Set.copyOf(Objects.requireNonNull(activityCountIds, "activityCountIds must not be null"));
+
+        if (validActivityCountIds.isEmpty()) {
+            return List.of();
+        }
+        if (validActivityCountIds.stream().anyMatch(activityCountId -> activityCountId <= 0)) {
+            throw new IllegalArgumentException("activityCountIds must contain only positive identifiers");
+        }
+
+        return List.copyOf(activityCountDefinitionAssembler.toEntities(
+                activityCountDao.queryByActivityCountIds(validActivityCountIds)));
     }
 
     @Override

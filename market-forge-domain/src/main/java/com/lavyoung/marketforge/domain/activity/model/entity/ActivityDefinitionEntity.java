@@ -6,6 +6,8 @@ import com.lavyoung.marketforge.domain.activity.model.vo.AwardUnlockScopeVO;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+import static com.lavyoung.marketforge.types.validation.ModelPreconditions.requireText;
+
 /**
  * 运营活动定义领域实体。
  *
@@ -107,19 +109,4 @@ public record ActivityDefinitionEntity(
         return state.canEdit();
     }
 
-    /**
-     * 校验必填文本内容。
-     *
-     * @param value         待校验文本
-     * @param fieldName     字段名称，用于异常信息
-     * @param maximumLength 允许的最大字符数
-     * @throws NullPointerException     文本为空时抛出
-     * @throws IllegalArgumentException 文本为空白或超过最大长度时抛出
-     */
-    private static void requireText(String value, String fieldName, int maximumLength) {
-        Objects.requireNonNull(value, fieldName + " must not be null");
-        if (value.isBlank() || value.length() > maximumLength) {
-            throw new IllegalArgumentException(fieldName + " is blank or too long");
-        }
-    }
 }

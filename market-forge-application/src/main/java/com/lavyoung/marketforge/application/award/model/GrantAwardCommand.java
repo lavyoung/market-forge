@@ -4,6 +4,8 @@ import com.lavyoung.marketforge.domain.award.event.AwardFulfillmentSnapshot;
 
 import java.util.Objects;
 
+import static com.lavyoung.marketforge.types.validation.ModelPreconditions.requireText;
+
 /**
  * 发放用户中奖奖品的应用命令。
  *
@@ -49,16 +51,4 @@ public record GrantAwardCommand(
         }
     }
 
-    /**
-     * 校验必要文本字段。
-     *
-     * @param value     待校验内容
-     * @param fieldName 字段名称
-     * @throws IllegalArgumentException 内容为空或空白时抛出
-     */
-    private static void requireText(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-    }
 }

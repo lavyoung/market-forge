@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  *
@@ -42,6 +43,14 @@ public interface IActivityCountDao extends BaseMapper<ActivityCountPO> {
      * @return 次数配置持久化对象；不存在时返回 {@link Optional#empty()}
      */
     Optional<ActivityCountPO> queryByActivityCountId(@Param("activityCountId") Long activityCountId);
+
+    /**
+     * 根据业务标识集合批量查询活动次数配置。
+     *
+     * @param activityCountIds 活动次数配置标识集合
+     * @return 按业务标识升序排列的持久化对象
+     */
+    List<ActivityCountPO> queryByActivityCountIds(@Param("activityCountIds") Set<Long> activityCountIds);
 
     /**
      * 使用排他锁查询活动次数配置。

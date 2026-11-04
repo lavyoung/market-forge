@@ -19,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DuplicateKeyException;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -68,6 +69,60 @@ class ActivitySkuDefinitionRepositoryTest {
 
         // Then
         assertEquals(Optional.of(expected), actual);
+    }
+
+    @Test
+    void shouldQueryDefinitionsByActivityIdAndReturnImmutableList() {
+        // Given
+        ActivitySkuPO firstPO = new ActivitySkuPO();
+        ActivitySkuPO secondPO = new ActivitySkuPO();
+        List<ActivitySkuPO> poList = List.of(firstPO, secondPO);
+        ActivitySkuDefinitionEntity first = definition();
+        ActivitySkuDefinitionEntity second = new ActivitySkuDefinitionEntity(
+                9012L, 100301L, 100303L, 200, 160, 100L,
+                5, "admin", "operator", null, null);
+        when(activitySkuDao.queryByActivityId(100301L)).thenReturn(poList);
+        when(definitionAssembler.toEntities(poList)).thenReturn(List.of(first, second));
+
+        // When
+        List<ActivitySkuDefinitionEntity> actual = repository.queryByActivityId(100301L);
+
+        // Then
+        assertAll(
+                () -> assertEquals(List.of(first, second), actual),
+                () -> assertThrows(UnsupportedOperationException.class, () -> actual.add(first)),
+                () -> verify(activitySkuDao).queryByActivityId(100301L),
+                () -> verify(definitionAssembler).toEntities(poList)
+        );
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenActivityHasNoSku() {
+        // Given
+        when(activitySkuDao.queryByActivityId(100301L)).thenReturn(List.of());
+        when(definitionAssembler.toEntities(List.of())).thenReturn(List.of());
+
+        // When
+        List<ActivitySkuDefinitionEntity> actual = repository.queryByActivityId(100301L);
+
+        // Then
+        assertTrue(actual.isEmpty());
+    }
+
+    @Test
+    void shouldRejectInvalidActivityIdBeforeQueryingSkuDefinitions() {
+        // When
+        NullPointerException nullException = assertThrows(NullPointerException.class,
+                () -> repository.queryByActivityId(null));
+        IllegalArgumentException nonPositiveException = assertThrows(IllegalArgumentException.class,
+                () -> repository.queryByActivityId(0L));
+
+        // Then
+        assertAll(
+                () -> assertEquals("activityId must not be null", nullException.getMessage()),
+                () -> assertEquals("activityId must be positive", nonPositiveException.getMessage()),
+                () -> verifyNoInteractions(activitySkuDao, definitionAssembler)
+        );
     }
 
     @Test
