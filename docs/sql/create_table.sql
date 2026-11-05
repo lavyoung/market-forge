@@ -188,6 +188,32 @@ CREATE TABLE raffle_activity_stage
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='活动展台表';
 
+CREATE TABLE raffle_activity_stage_publication
+(
+    id             bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    publication_id bigint      NOT NULL COMMENT '发布任务业务标识',
+    stage_id       bigint      NOT NULL COMMENT '活动展台业务标识',
+    stage_version  int         NOT NULL COMMENT '本次发布对应的展台版本',
+    activity_id    bigint      NOT NULL COMMENT '本次发布的活动ID快照',
+    channel        varchar(32) NOT NULL COMMENT '投放渠道快照',
+    source         varchar(32) NOT NULL COMMENT '流量来源快照',
+    state          varchar(16) NOT NULL COMMENT '发布状态：processing、succeeded、failed',
+    phase          varchar(16) NOT NULL COMMENT '发布阶段：checking、preheating、switching、completed',
+    attempt_count  int         NOT NULL DEFAULT 1 COMMENT '发布尝试次数',
+    operator       varchar(64) NOT NULL COMMENT '最近一次执行发布的运营人员',
+    failure_code   varchar(128) COMMENT '最近一次失败的稳定错误码',
+    failure_reason varchar(512) COMMENT '最近一次失败的安全说明',
+    published_at   datetime COMMENT '发布成功时间',
+    create_time    datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time    datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_stage_publication_id (publication_id),
+    UNIQUE KEY uq_stage_publication_version (stage_id, stage_version),
+    KEY            idx_stage_publication_history (stage_id, update_time, id),
+    KEY            idx_stage_publication_state (state, update_time, id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='活动展台发布记录表';
+
 CREATE TABLE raffle_activity_count
 (
     id                bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
