@@ -9,9 +9,12 @@ import com.lavyoung.marketforge.domain.activity.model.entity.ActivityCountDefini
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityDefinitionEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityDefinitionStateChange;
 import com.lavyoung.marketforge.domain.activity.model.vo.ActivityDefinitionStateVO;
+import com.lavyoung.marketforge.domain.activity.model.vo.ActivityReadinessIssueVO;
+import com.lavyoung.marketforge.domain.activity.model.vo.ActivityReadinessReportVO;
 import com.lavyoung.marketforge.domain.activity.model.vo.AwardUnlockScopeVO;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityCountDefinitionRepository;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityDefinitionRepository;
+import com.lavyoung.marketforge.domain.activity.service.IActivityDefinitionReadinessChecker;
 import com.lavyoung.marketforge.domain.strategy.model.aggregate.StrategyDefinitionAggregate;
 import com.lavyoung.marketforge.domain.strategy.model.vo.StrategyDefinitionStateVO;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyDefinitionRepository;
@@ -21,10 +24,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,6 +45,10 @@ import static org.mockito.Mockito.*;
  */
 @ExtendWith(MockitoExtension.class)
 class ActivityDefinitionApplicationServiceImplTest {
+    private static final Clock FIXED_CLOCK = Clock.fixed(
+            Instant.parse("2026-11-10T04:00:00Z"), ZoneId.of("Asia/Shanghai"));
+    private static final LocalDateTime FIXED_TIME = LocalDateTime.of(2026, 11, 10, 12, 0);
+
     @Mock
     private IActivityDefinitionRepository repository;
 
@@ -47,12 +58,15 @@ class ActivityDefinitionApplicationServiceImplTest {
     @Mock
     private IStrategyDefinitionRepository strategyDefinitionRepository;
 
+    @Mock
+    private IActivityDefinitionReadinessChecker activityDefinitionReadinessChecker;
+
     private ActivityDefinitionApplicationServiceImpl service;
 
     @BeforeEach
     void setUp() {
         service = new ActivityDefinitionApplicationServiceImpl(repository, activityCountDefinitionRepository,
-                strategyDefinitionRepository);
+                strategyDefinitionRepository, activityDefinitionReadinessChecker, FIXED_CLOCK);
     }
 
     @Test
@@ -143,10 +157,11 @@ class ActivityDefinitionApplicationServiceImplTest {
         // Given
         ActivityDefinitionEntity draft = definition(100301L, ActivityDefinitionStateVO.DRAFT, 1);
         ActivityDefinitionEntity opened = definition(100301L, ActivityDefinitionStateVO.OPEN, 2);
-        when(repository.queryByActivityId(100301L)).thenReturn(Optional.of(draft), Optional.of(opened));
-        when(activityCountDefinitionRepository.lockByActivityCountId(100301L)).thenReturn(Optional.of(
-                new ActivityCountDefinitionEntity(100301L, "基础次数包", 100, 10, 50, 1,
-                        "admin", "admin", null, null)));
+        when(repository.lockByActivityId(100301L)).thenReturn(Optional.of(draft));
+        when(repository.queryByActivityId(100301L)).thenReturn(Optional.of(opened));
+        when(activityCountDefinitionRepository.lockByActivityCountId(100301L))
+                .thenReturn(Optional.of(activityCountDefinition()));
+        when(activityDefinitionReadinessChecker.check(draft, FIXED_TIME)).thenReturn(readyReport());
         when(repository.changeState(any())).thenReturn(true);
 
         // When
@@ -159,13 +174,18 @@ class ActivityDefinitionApplicationServiceImplTest {
         assertAll(() -> assertEquals(ActivityDefinitionStateVO.OPEN, captor.getValue().targetState()),
                 () -> assertEquals(1, captor.getValue().expectedVersion()),
                 () -> assertEquals("open", result.state()));
+        InOrder inOrder = inOrder(repository, activityCountDefinitionRepository, activityDefinitionReadinessChecker);
+        inOrder.verify(repository).lockByActivityId(100301L);
+        inOrder.verify(activityCountDefinitionRepository).lockByActivityCountId(100301L);
+        inOrder.verify(activityDefinitionReadinessChecker).check(draft, FIXED_TIME);
+        inOrder.verify(repository).changeState(any(ActivityDefinitionStateChange.class));
     }
 
     @Test
     void shouldRejectOpeningWhenActivityCountDefinitionDoesNotExist() {
         // Given
         ActivityDefinitionEntity draft = definition(100301L, ActivityDefinitionStateVO.DRAFT, 1);
-        when(repository.queryByActivityId(100301L)).thenReturn(Optional.of(draft));
+        when(repository.lockByActivityId(100301L)).thenReturn(Optional.of(draft));
         when(activityCountDefinitionRepository.lockByActivityCountId(100301L)).thenReturn(Optional.empty());
 
         // When
@@ -174,7 +194,69 @@ class ActivityDefinitionApplicationServiceImplTest {
 
         // Then
         assertEquals(BusinessResponseCode.ACTIVITY_COUNT_NOT_FOUND, exception.getResponseCode());
+        verifyNoInteractions(activityDefinitionReadinessChecker);
         verify(repository, never()).changeState(any());
+    }
+
+    @Test
+    void shouldRejectOpeningWhenReadinessReportContainsErrors() {
+        // Given
+        ActivityDefinitionEntity draft = definition(100301L, ActivityDefinitionStateVO.DRAFT, 1);
+        ActivityReadinessIssueVO issue = new ActivityReadinessIssueVO(
+                "activity.sku.missing", "skus", "活动至少需要配置一个额度 SKU");
+        ActivityReadinessReportVO report = new ActivityReadinessReportVO(
+                100301L, List.of(issue), List.of(), List.of());
+        when(repository.lockByActivityId(100301L)).thenReturn(Optional.of(draft));
+        when(activityCountDefinitionRepository.lockByActivityCountId(100301L))
+                .thenReturn(Optional.of(activityCountDefinition()));
+        when(activityDefinitionReadinessChecker.check(draft, FIXED_TIME)).thenReturn(report);
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class, () -> service.changeState(
+                new ChangeActivityDefinitionStateCommand(100301L, "open", 1, "admin")));
+
+        // Then
+        assertEquals(BusinessResponseCode.ACTIVITY_DEFINITION_NOT_READY, exception.getResponseCode());
+        verify(repository, never()).changeState(any());
+        verify(repository, never()).queryByActivityId(anyLong());
+    }
+
+    @Test
+    void shouldCloseOpenActivityWithoutRunningOpenReadinessChecks() {
+        // Given
+        ActivityDefinitionEntity opened = definition(100301L, ActivityDefinitionStateVO.OPEN, 2);
+        ActivityDefinitionEntity closed = definition(100301L, ActivityDefinitionStateVO.CLOSE, 3);
+        when(repository.queryByActivityId(100301L)).thenReturn(Optional.of(opened), Optional.of(closed));
+        when(repository.changeState(any())).thenReturn(true);
+
+        // When
+        ActivityDefinitionResult result = service.changeState(
+                new ChangeActivityDefinitionStateCommand(100301L, "close", 2, "admin"));
+
+        // Then
+        assertEquals("close", result.state());
+        verify(repository, never()).lockByActivityId(anyLong());
+        verifyNoInteractions(activityDefinitionReadinessChecker);
+        verify(activityCountDefinitionRepository, never()).lockByActivityCountId(anyLong());
+    }
+
+    @Test
+    void shouldReportLostStateUpdateAsConflictAfterReadinessPasses() {
+        // Given
+        ActivityDefinitionEntity draft = definition(100301L, ActivityDefinitionStateVO.DRAFT, 1);
+        when(repository.lockByActivityId(100301L)).thenReturn(Optional.of(draft));
+        when(activityCountDefinitionRepository.lockByActivityCountId(100301L))
+                .thenReturn(Optional.of(activityCountDefinition()));
+        when(activityDefinitionReadinessChecker.check(draft, FIXED_TIME)).thenReturn(readyReport());
+        when(repository.changeState(any())).thenReturn(false);
+
+        // When
+        BusinessException exception = assertThrows(BusinessException.class, () -> service.changeState(
+                new ChangeActivityDefinitionStateCommand(100301L, "open", 1, "admin")));
+
+        // Then
+        assertEquals(BusinessResponseCode.ACTIVITY_DEFINITION_CONFLICT, exception.getResponseCode());
+        verify(repository, never()).queryByActivityId(anyLong());
     }
 
     @Test
@@ -269,6 +351,10 @@ class ActivityDefinitionApplicationServiceImplTest {
     private StrategyDefinitionAggregate strategyDefinition() {
         return new StrategyDefinitionAggregate(100001L, "测试策略", null, StrategyDefinitionStateVO.DRAFT,
                 1, "admin", "admin", null, null, List.of(), List.of());
+    }
+
+    private ActivityReadinessReportVO readyReport() {
+        return new ActivityReadinessReportVO(100301L, List.of(), List.of(), List.of());
     }
 
     private UpdateActivityDefinitionCommand updateCommand(int version) {

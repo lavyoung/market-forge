@@ -5,6 +5,7 @@ import com.lavyoung.marketforge.api.activity.request.ChangeActivityDefinitionSta
 import com.lavyoung.marketforge.api.activity.request.CreateActivityDefinitionRequest;
 import com.lavyoung.marketforge.api.activity.request.UpdateActivityDefinitionRequest;
 import com.lavyoung.marketforge.api.activity.response.ActivityDefinitionResponse;
+import com.lavyoung.marketforge.api.activity.response.ActivityReadinessResponse;
 import com.lavyoung.marketforge.types.model.PageResult;
 import com.lavyoung.marketforge.types.model.Response;
 import io.swagger.v3.oas.annotations.Operation;
@@ -77,6 +78,19 @@ public interface IActivityDefinitionAdminApi {
     @Operation(operationId = "getActivityDefinition", summary = "查询活动定义详情")
     @GetMapping("/{activityId}")
     Response<ActivityDefinitionResponse> getActivityDefinition(@Positive(message = "活动标识必须为正数") @PathVariable Long activityId);
+
+    /**
+     * 检查活动是否满足开放条件。
+     *
+     * <p>该接口只执行只读检查，不修改活动状态、不预热策略，也不切换活动展台。</p>
+     *
+     * @param activityId 活动业务标识
+     * @return 包含错误、警告和建议的活动就绪检查结果
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 活动不存在时抛出
+     */
+    @Operation(operationId = "checkActivityReadiness", summary = "检查活动开放就绪状态")
+    @GetMapping("/{activityId}/readiness")
+    Response<ActivityReadinessResponse> checkActivityReadiness(@Positive(message = "活动标识必须为正数") @PathVariable("activityId") Long activityId);
 
     /**
      * 修改活动草稿。

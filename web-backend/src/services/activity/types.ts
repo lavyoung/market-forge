@@ -221,6 +221,36 @@ export interface ActivityDefinitionFormValues {
 }
 
 /**
+ * 活动运行就绪检查发现的问题。
+ */
+export interface ActivityReadinessIssue {
+    /** 稳定的问题编码。 */
+    code: string;
+    /** 问题对应的活动配置路径。 */
+    path: string;
+    /** 面向运营人员的问题说明。 */
+    message: string;
+}
+
+/**
+ * 活动运行就绪检查结果。
+ */
+export interface ActivityReadinessReport {
+    /** 被检查的活动业务标识。 */
+    activityId: string;
+    /** 服务端执行检查的业务时间。 */
+    checkedAt: string;
+    /** 是否满足活动开放或展台发布条件。 */
+    ready: boolean;
+    /** 阻止活动开放或展台发布的错误。 */
+    errors: ActivityReadinessIssue[];
+    /** 不阻止当前操作的风险提示。 */
+    warnings: ActivityReadinessIssue[];
+    /** 配置优化建议。 */
+    suggestions: ActivityReadinessIssue[];
+}
+
+/**
  * 活动次数配置列表项及详情。
  */
 export interface ActivityCountDefinitionItem {

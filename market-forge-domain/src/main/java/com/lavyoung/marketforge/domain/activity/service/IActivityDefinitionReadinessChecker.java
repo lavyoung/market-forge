@@ -6,10 +6,13 @@ import com.lavyoung.marketforge.domain.activity.model.vo.ActivityReadinessReport
 import java.time.LocalDateTime;
 
 /**
- * 活动定义开放就绪检查器。
+ * 活动配置运行就绪检查器。
  *
  * <p>该领域服务负责检查一个活动定义及其关联的次数配置、活动 SKU 和抽奖策略，
- * 判断活动是否具备从草稿状态切换为开放状态的完整业务条件。</p>
+ * 判断配置是否满足活动开放以及展台发布所需的完整业务条件。</p>
+ *
+ * <p>活动生命周期的精确状态由具体应用用例负责校验：开放用例要求草稿状态，
+ * 展台发布用例要求开放状态。该检查器聚焦配置完整性，不替代状态迁移规则。</p>
  *
  * <p>检查结果使用报告形式返回，而不是遇到第一个配置错误就抛出异常。这样运营人员
  * 可以一次看到活动当前存在的全部阻断错误、风险提示和配置建议，减少反复修改和检查。</p>
@@ -24,7 +27,7 @@ import java.time.LocalDateTime;
 public interface IActivityDefinitionReadinessChecker {
 
     /**
-     * 检查活动是否满足开放条件。
+     * 检查活动配置是否满足开放或展台发布条件。
      *
      * <p>实现需要完成以下检查：</p>
      *

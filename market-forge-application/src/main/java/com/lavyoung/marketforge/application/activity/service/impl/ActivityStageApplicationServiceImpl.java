@@ -1,10 +1,8 @@
 package com.lavyoung.marketforge.application.activity.service.impl;
 
-import com.lavyoung.marketforge.application.activity.model.ActivityStageResult;
-import com.lavyoung.marketforge.application.activity.model.CreateActivityStageCommand;
-import com.lavyoung.marketforge.application.activity.model.PublishActivityStageCommand;
-import com.lavyoung.marketforge.application.activity.model.UpdateActivityStageCommand;
+import com.lavyoung.marketforge.application.activity.model.*;
 import com.lavyoung.marketforge.application.activity.service.IActivityRaffleApplicationService;
+import com.lavyoung.marketforge.application.activity.service.IActivityReadinessApplicationService;
 import com.lavyoung.marketforge.application.activity.service.IActivityStageApplicationService;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityStageEntity;
@@ -40,6 +38,7 @@ public class ActivityStageApplicationServiceImpl implements IActivityStageApplic
 
     private final IActivityStageRepository activityStageRepository;
     private final IActivityRepository activityRepository;
+    private final IActivityReadinessApplicationService activityReadinessApplicationService;
     private final IActivityRaffleApplicationService activityRaffleApplicationService;
     private final ActivityStagePublicationTransaction publicationTransaction;
 
@@ -70,6 +69,30 @@ public class ActivityStageApplicationServiceImpl implements IActivityStageApplic
         return toResult(queryRequired(current.stageId()));
     }
 
+    /**
+     * 预热并发布指定活动展台。
+     *
+     * <p>发布流程按以下顺序执行：</p>
+     *
+     * <ol>
+     *     <li>校验操作人，确保所有发布副作用都有明确审计主体。</li>
+     *     <li>读取展台草稿并校验生命周期状态和乐观锁版本。</li>
+     *     <li>确认关联活动处于开放状态。</li>
+     *     <li>重新检查活动、次数配置、SKU、策略和奖品是否满足运行条件。</li>
+     *     <li>预热活动及抽奖策略运行时缓存。</li>
+     *     <li>通过独立数据库事务失效旧展台并激活目标展台。</li>
+     * </ol>
+     *
+     * <p>就绪检查和缓存预热均位于展台切换事务之前。检查或预热失败时不会调用
+     * 发布事务，因此当前已经生效的展台保持不变，也不会长时间占用数据库连接
+     * 和行锁。</p>
+     *
+     * @param command 展台发布命令
+     * @return 发布完成后的展台配置
+     * @throws NullPointerException 命令为空时抛出
+     * @throws BusinessException    展台不存在、状态错误、版本冲突、活动未开放、
+     *                              配置尚未就绪、预热失败或事务切换失败时抛出
+     */
     @Override
     public ActivityStageResult publish(PublishActivityStageCommand command) {
         PublishActivityStageCommand validCommand = Objects.requireNonNull(command, "command must not be null");
@@ -77,6 +100,7 @@ public class ActivityStageApplicationServiceImpl implements IActivityStageApplic
         ActivityStageEntity stage = queryRequired(validCommand.stageId());
         ensureDraftAndVersion(stage, validCommand.expectedVersion());
         ensureActivityCanPublish(stage.activityId());
+        ensureActivityReadyToPublish(stage.activityId());
 
         activityRaffleApplicationService.armory(stage.activityId());
         publicationTransaction.publish(stage, validCommand.expectedVersion(), operator);
@@ -137,6 +161,28 @@ public class ActivityStageApplicationServiceImpl implements IActivityStageApplic
         ActivityEntity activity = activityRepository.getActivityEntityByIdActivityId(activityId);
         if (!ActivityStateVO.OPEN.getCode().equals(activity.state())) {
             throw BusinessException.of(BusinessResponseCode.ACTIVITY_STATE_ERROR, activityId, activity.state());
+        }
+    }
+
+    /**
+     * 确认开放活动的全部运行配置仍然满足展台发布条件。
+     *
+     * <p>即使活动开放时已经执行过一次就绪检查，展台发布前仍然需要重新检查。
+     * 该防线可以覆盖历史数据、人工修改数据库以及旧版本服务产生的不完整开放活动，
+     * 同时防止调用方绕过运营后台直接请求发布接口。</p>
+     *
+     * <p>完整问题列表由就绪检查接口提供给运营后台。本方法只负责阻断发布，
+     * 因此业务异常中记录活动标识、错误数量和首个稳定问题编码。</p>
+     *
+     * @param activityId 准备发布到展台的活动业务标识
+     * @throws BusinessException 活动存在阻断性配置错误时抛出
+     * @throws RuntimeException  就绪检查依赖的数据库或其他系统资源不可用时抛出
+     */
+    private void ensureActivityReadyToPublish(Long activityId) {
+        ActivityReadinessResult readiness = activityReadinessApplicationService.check(activityId);
+        if (!readiness.ready()) {
+            throw BusinessException.of(BusinessResponseCode.ACTIVITY_DEFINITION_NOT_READY,
+                    activityId, readiness.errors().size(), readiness.errors().get(0).code());
         }
     }
 

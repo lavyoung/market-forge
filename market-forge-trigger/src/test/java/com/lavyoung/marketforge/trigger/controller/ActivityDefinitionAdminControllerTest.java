@@ -3,12 +3,15 @@ package com.lavyoung.marketforge.trigger.controller;
 import com.lavyoung.marketforge.api.activity.request.ActivityDefinitionSearchRequest;
 import com.lavyoung.marketforge.api.activity.request.CreateActivityDefinitionRequest;
 import com.lavyoung.marketforge.api.activity.response.ActivityDefinitionResponse;
+import com.lavyoung.marketforge.api.activity.response.ActivityReadinessResponse;
 import com.lavyoung.marketforge.api.admin.auth.response.AdminOperatorResponse;
 import com.lavyoung.marketforge.application.activity.model.ActivityDefinitionResult;
 import com.lavyoung.marketforge.application.activity.model.ActivityDefinitionSearchQuery;
+import com.lavyoung.marketforge.application.activity.model.ActivityReadinessResult;
 import com.lavyoung.marketforge.application.activity.model.CreateActivityDefinitionCommand;
 import com.lavyoung.marketforge.application.activity.service.IActivityDefinitionApplicationService;
 import com.lavyoung.marketforge.application.activity.service.IActivityDefinitionSearchService;
+import com.lavyoung.marketforge.application.activity.service.IActivityReadinessApplicationService;
 import com.lavyoung.marketforge.trigger.assembler.ActivityDefinitionApiAssembler;
 import com.lavyoung.marketforge.trigger.security.AdminSessionManager;
 import com.lavyoung.marketforge.types.model.PageRequest;
@@ -21,6 +24,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -40,6 +44,9 @@ class ActivityDefinitionAdminControllerTest {
 
     @Mock
     private IActivityDefinitionApplicationService activityDefinitionApplicationService;
+
+    @Mock
+    private IActivityReadinessApplicationService activityReadinessApplicationService;
 
     @Mock
     private ActivityDefinitionApiAssembler activityDefinitionApiAssembler;
@@ -95,5 +102,25 @@ class ActivityDefinitionAdminControllerTest {
         // Then
         assertEquals(response, actual.data());
         verify(activityDefinitionApplicationService).create(command);
+    }
+
+    @Test
+    void shouldDelegateActivityReadinessCheckAndWrapResponse() {
+        // Given
+        LocalDateTime checkedAt = LocalDateTime.of(2026, 11, 5, 12, 0);
+        ActivityReadinessResult result = new ActivityReadinessResult(
+                100301L, checkedAt, List.of(), List.of(), List.of());
+        ActivityReadinessResponse expected = new ActivityReadinessResponse(
+                "100301", checkedAt, true, List.of(), List.of(), List.of());
+        when(activityReadinessApplicationService.check(100301L)).thenReturn(result);
+        when(activityDefinitionApiAssembler.toReadinessResponse(result)).thenReturn(expected);
+
+        // When
+        Response<ActivityReadinessResponse> actual = controller.checkActivityReadiness(100301L);
+
+        // Then
+        assertEquals(expected, actual.data());
+        verify(activityReadinessApplicationService).check(100301L);
+        verify(activityDefinitionApiAssembler).toReadinessResponse(result);
     }
 }

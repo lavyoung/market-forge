@@ -8,9 +8,11 @@ import com.lavyoung.marketforge.application.activity.service.IActivityDefinition
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityDefinitionEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityDefinitionStateChange;
 import com.lavyoung.marketforge.domain.activity.model.vo.ActivityDefinitionStateVO;
+import com.lavyoung.marketforge.domain.activity.model.vo.ActivityReadinessReportVO;
 import com.lavyoung.marketforge.domain.activity.model.vo.AwardUnlockScopeVO;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityCountDefinitionRepository;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityDefinitionRepository;
+import com.lavyoung.marketforge.domain.activity.service.IActivityDefinitionReadinessChecker;
 import com.lavyoung.marketforge.domain.strategy.repository.IStrategyDefinitionRepository;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
@@ -19,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
@@ -47,6 +51,8 @@ public class ActivityDefinitionApplicationServiceImpl implements IActivityDefini
     private final IActivityDefinitionRepository activityDefinitionRepository;
     private final IActivityCountDefinitionRepository activityCountDefinitionRepository;
     private final IStrategyDefinitionRepository strategyDefinitionRepository;
+    private final IActivityDefinitionReadinessChecker activityDefinitionReadinessChecker;
+    private final Clock clock;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -90,21 +96,20 @@ public class ActivityDefinitionApplicationServiceImpl implements IActivityDefini
     @Transactional(rollbackFor = Exception.class)
     public ActivityDefinitionResult changeState(ChangeActivityDefinitionStateCommand command) {
         ChangeActivityDefinitionStateCommand validCommand = Objects.requireNonNull(command, "command must not be null");
-        ActivityDefinitionEntity current = queryRequired(validCommand.activityId());
-        ensureExpectedVersion(current, validCommand.expectedVersion());
-
         ActivityDefinitionStateVO targetState = ActivityDefinitionStateVO.of(validCommand.targetState())
                 .orElseThrow(() -> BusinessException.of(BusinessResponseCode.ACTIVITY_DEFINITION_STATE_ERROR,
                         validCommand.targetState()));
+        ActivityDefinitionEntity current = targetState == ActivityDefinitionStateVO.OPEN
+                ? lockRequired(validCommand.activityId())
+                : queryRequired(validCommand.activityId());
+        ensureExpectedVersion(current, validCommand.expectedVersion());
 
         if (!current.state().canTransitionTo(targetState)) {
             throw BusinessException.of(BusinessResponseCode.ACTIVITY_DEFINITION_STATE_ERROR,
                     current.activityId(), current.state().getCode(), targetState.getCode());
         }
         if (targetState == ActivityDefinitionStateVO.OPEN) {
-            activityCountDefinitionRepository.lockByActivityCountId(current.activityCountId())
-                    .orElseThrow(() -> BusinessException.of(
-                            BusinessResponseCode.ACTIVITY_COUNT_NOT_FOUND, current.activityCountId()));
+            ensureReadyToOpen(current);
         }
         ActivityDefinitionStateChange stateChange = new ActivityDefinitionStateChange(current.activityId(),
                 current.state(), targetState, validCommand.expectedVersion(), validCommand.operator());
@@ -113,6 +118,33 @@ public class ActivityDefinitionApplicationServiceImpl implements IActivityDefini
             throw conflict(current.activityId(), validCommand.expectedVersion());
         }
         return toResult(queryRequired(current.activityId()));
+    }
+
+    /**
+     * 在活动状态变更事务内确认活动满足开放条件。
+     *
+     * <p>先锁定活动引用的次数配置，再调用领域就绪检查器读取 SKU、策略及概率规则。
+     * 活动行已经由 {@link #lockRequired(Long)} 锁定，因此并发的 SKU 修改会等待本次
+     * 开放事务结束；次数配置行锁则避免检查期间发生额度配置变更。</p>
+     *
+     * <p>就绪报告中的警告和建议不会阻止开放，只有错误集合非空时才抛出稳定的
+     * 业务异常。异常参数保留错误数量和首个问题编码，便于服务端日志定位，完整的
+     * 问题列表仍通过独立的就绪检查接口提供给运营页面。</p>
+     *
+     * @param current 已加排他锁的草稿活动定义
+     * @throws BusinessException 活动次数配置不存在或活动存在阻断错误时抛出
+     * @throws RuntimeException  就绪检查依赖的数据库或外部资源不可用时抛出
+     */
+    private void ensureReadyToOpen(ActivityDefinitionEntity current) {
+        activityCountDefinitionRepository.lockByActivityCountId(current.activityCountId())
+                .orElseThrow(() -> BusinessException.of(BusinessResponseCode.ACTIVITY_COUNT_NOT_FOUND,
+                        current.activityCountId()));
+
+        ActivityReadinessReportVO report = activityDefinitionReadinessChecker.check(current, LocalDateTime.now(clock));
+        if (!report.ready()) {
+            throw BusinessException.of(BusinessResponseCode.ACTIVITY_DEFINITION_NOT_READY,
+                    current.activityId(), report.errors().size(), report.errors().get(0).code());
+        }
     }
 
     /**
@@ -198,6 +230,23 @@ public class ActivityDefinitionApplicationServiceImpl implements IActivityDefini
     private ActivityDefinitionEntity queryRequired(Long activityId) {
         Long validActivityId = Objects.requireNonNull(activityId, "activityId must not be null");
         return activityDefinitionRepository.queryByActivityId(validActivityId)
+                .orElseThrow(() -> BusinessException.of(BusinessResponseCode.LOTTERY_ACTIVITY_NOT_FOUND, validActivityId));
+    }
+
+    /**
+     * 使用排他锁查询准备开放的活动定义。
+     *
+     * <p>开放活动和修改活动 SKU 都锁定同一条活动记录，使“检查关联配置并开放”与
+     * “修改关联配置”串行执行，避免活动通过检查后、状态更新前被并发改坏。</p>
+     *
+     * @param activityId 活动业务标识
+     * @return 已在当前事务中加排他锁的活动定义
+     * @throws NullPointerException 活动标识为空时抛出
+     * @throws BusinessException    活动不存在时抛出
+     */
+    private ActivityDefinitionEntity lockRequired(Long activityId) {
+        Long validActivityId = Objects.requireNonNull(activityId, "activityId must not be null");
+        return activityDefinitionRepository.lockByActivityId(validActivityId)
                 .orElseThrow(() -> BusinessException.of(BusinessResponseCode.LOTTERY_ACTIVITY_NOT_FOUND, validActivityId));
     }
 

@@ -5,6 +5,8 @@ import com.lavyoung.marketforge.api.activity.request.ChangeActivityDefinitionSta
 import com.lavyoung.marketforge.api.activity.request.CreateActivityDefinitionRequest;
 import com.lavyoung.marketforge.api.activity.request.UpdateActivityDefinitionRequest;
 import com.lavyoung.marketforge.api.activity.response.ActivityDefinitionResponse;
+import com.lavyoung.marketforge.api.activity.response.ActivityReadinessIssueResponse;
+import com.lavyoung.marketforge.api.activity.response.ActivityReadinessResponse;
 import com.lavyoung.marketforge.application.activity.model.*;
 import com.lavyoung.marketforge.types.model.PageRequest;
 import com.lavyoung.marketforge.types.model.PageResult;
@@ -79,6 +81,32 @@ public interface ActivityDefinitionApiAssembler {
      * @return 活动定义 API 响应
      */
     ActivityDefinitionResponse toResponse(ActivityDefinitionResult result);
+
+    /**
+     * 将活动就绪应用结果转换为 API 响应。
+     *
+     * @param result 活动就绪应用结果
+     * @return 活动就绪 API 响应
+     * @throws NullPointerException 应用结果为空时抛出
+     */
+    default ActivityReadinessResponse toReadinessResponse(ActivityReadinessResult result) {
+        Objects.requireNonNull(result, "result must not be null");
+        return new ActivityReadinessResponse(result.activityId().toString(), result.checkedAt(), result.ready(),
+                toReadinessIssueResponses(result.errors()), toReadinessIssueResponses(result.warnings()),
+                toReadinessIssueResponses(result.suggestions()));
+    }
+
+    /**
+     * 批量转换活动就绪问题。
+     *
+     * @param issues 活动就绪应用问题
+     * @return 活动就绪 API 问题响应
+     */
+    default List<ActivityReadinessIssueResponse> toReadinessIssueResponses(List<ActivityReadinessIssueResult> issues) {
+        return issues.stream()
+                .map(issue -> new ActivityReadinessIssueResponse(issue.code(), issue.path(), issue.message()))
+                .toList();
+    }
 
     /**
      * 批量转换活动定义应用结果。

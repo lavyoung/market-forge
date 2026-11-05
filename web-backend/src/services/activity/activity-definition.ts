@@ -8,6 +8,7 @@ import type {
     ActivityDefinitionPage,
     ActivityDefinitionQuery,
     ActivityDefinitionState,
+    ActivityReadinessReport,
 } from './types';
 
 /** 活动定义运营查询接口地址。 */
@@ -45,6 +46,22 @@ export async function queryActivityDefinitions(params: ActivityDefinitionQuery):
 export async function getActivityDefinition(activityId: string): Promise<ActivityDefinitionItem> {
     const response = await request<ApiResponse<ActivityDefinitionItem>>(
         `${ACTIVITY_DEFINITION_PATH}/${encodeURIComponent(activityId)}`,
+        {method: 'GET', withCredentials: true},
+    );
+    return requireResponseData(response);
+}
+
+/**
+ * 检查活动配置是否满足开放或展台发布条件。
+ *
+ * <p>该请求只读取活动及其关联配置，不修改活动状态。</p>
+ *
+ * @param activityId 活动业务标识
+ * @returns 包含错误、警告和建议的活动运行就绪报告
+ */
+export async function checkActivityReadiness(activityId: string): Promise<ActivityReadinessReport> {
+    const response = await request<ApiResponse<ActivityReadinessReport>>(
+        `${ACTIVITY_DEFINITION_PATH}/${encodeURIComponent(activityId)}/readiness`,
         {method: 'GET', withCredentials: true},
     );
     return requireResponseData(response);

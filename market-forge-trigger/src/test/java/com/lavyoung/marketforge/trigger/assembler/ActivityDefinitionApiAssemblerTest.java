@@ -3,9 +3,8 @@ package com.lavyoung.marketforge.trigger.assembler;
 import com.lavyoung.marketforge.api.activity.request.ActivityDefinitionSearchRequest;
 import com.lavyoung.marketforge.api.activity.request.CreateActivityDefinitionRequest;
 import com.lavyoung.marketforge.api.activity.response.ActivityDefinitionResponse;
-import com.lavyoung.marketforge.application.activity.model.ActivityDefinitionResult;
-import com.lavyoung.marketforge.application.activity.model.ActivityDefinitionSearchQuery;
-import com.lavyoung.marketforge.application.activity.model.CreateActivityDefinitionCommand;
+import com.lavyoung.marketforge.api.activity.response.ActivityReadinessResponse;
+import com.lavyoung.marketforge.application.activity.model.*;
 import com.lavyoung.marketforge.types.model.PageResult;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
@@ -90,6 +89,30 @@ class ActivityDefinitionApiAssemblerTest {
     void shouldRejectNullPageResult() {
         // When / Then
         assertThrows(NullPointerException.class, () -> ASSEMBLER.toPageResponse(null));
+    }
+
+    @Test
+    void shouldMapReadinessResultAndPreserveLongActivityIdAsString() {
+        // Given
+        LocalDateTime checkedAt = LocalDateTime.of(2026, 11, 5, 12, 0);
+        ActivityReadinessIssueResult error = new ActivityReadinessIssueResult(
+                "activity.sku.missing", "skus", "活动至少需要配置一个额度 SKU");
+        ActivityReadinessResult result = new ActivityReadinessResult(
+                ACTIVITY_ID, checkedAt, List.of(error), List.of(), List.of());
+
+        // When
+        ActivityReadinessResponse response = ASSEMBLER.toReadinessResponse(result);
+
+        // Then
+        assertAll(
+                () -> assertEquals(ACTIVITY_ID.toString(), response.activityId()),
+                () -> assertEquals(checkedAt, response.checkedAt()),
+                () -> assertFalse(response.ready()),
+                () -> assertEquals(error.code(), response.errors().get(0).code()),
+                () -> assertEquals(error.path(), response.errors().get(0).path()),
+                () -> assertTrue(response.warnings().isEmpty()),
+                () -> assertTrue(response.suggestions().isEmpty())
+        );
     }
 
     private ActivityDefinitionResult result() {

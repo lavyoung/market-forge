@@ -6,10 +6,12 @@ import com.lavyoung.marketforge.api.activity.request.ChangeActivityDefinitionSta
 import com.lavyoung.marketforge.api.activity.request.CreateActivityDefinitionRequest;
 import com.lavyoung.marketforge.api.activity.request.UpdateActivityDefinitionRequest;
 import com.lavyoung.marketforge.api.activity.response.ActivityDefinitionResponse;
+import com.lavyoung.marketforge.api.activity.response.ActivityReadinessResponse;
 import com.lavyoung.marketforge.api.admin.auth.response.AdminOperatorResponse;
 import com.lavyoung.marketforge.application.activity.model.*;
 import com.lavyoung.marketforge.application.activity.service.IActivityDefinitionApplicationService;
 import com.lavyoung.marketforge.application.activity.service.IActivityDefinitionSearchService;
+import com.lavyoung.marketforge.application.activity.service.IActivityReadinessApplicationService;
 import com.lavyoung.marketforge.trigger.assembler.ActivityDefinitionApiAssembler;
 import com.lavyoung.marketforge.trigger.security.AdminSessionManager;
 import com.lavyoung.marketforge.types.model.PageResult;
@@ -34,6 +36,7 @@ public class ActivityDefinitionAdminController implements IActivityDefinitionAdm
 
     private final IActivityDefinitionSearchService activityDefinitionSearchService;
     private final IActivityDefinitionApplicationService activityDefinitionApplicationService;
+    private final IActivityReadinessApplicationService activityReadinessApplicationService;
     private final ActivityDefinitionApiAssembler activityDefinitionApiAssembler;
     private final AdminSessionManager adminSessionManager;
 
@@ -54,6 +57,12 @@ public class ActivityDefinitionAdminController implements IActivityDefinitionAdm
     public Response<ActivityDefinitionResponse> getActivityDefinition(Long activityId) {
         return Response.success(activityDefinitionApiAssembler.toResponse(
                 activityDefinitionApplicationService.queryByActivityId(activityId)));
+    }
+
+    @Override
+    public Response<ActivityReadinessResponse> checkActivityReadiness(Long activityId) {
+        ActivityReadinessResult result = activityReadinessApplicationService.check(activityId);
+        return Response.success(activityDefinitionApiAssembler.toReadinessResponse(result));
     }
 
     @Override

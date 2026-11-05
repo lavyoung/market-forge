@@ -1,5 +1,6 @@
 import {
     changeActivityDefinitionState,
+    checkActivityReadiness,
     createActivityDefinition,
     getActivityDefinition,
     queryActivityDefinitions,
@@ -11,10 +12,11 @@ import type {
     ActivityDefinitionFormValues,
     ActivityDefinitionItem,
     ActivityDefinitionQuery,
-    ActivityDefinitionState
+    ActivityDefinitionState,
+    ActivityReadinessReport,
 } from '@/services/activity/types';
 import {getApiErrorMessage} from '@/services/errors';
-import {CheckCircleOutlined, EditOutlined, EyeOutlined, PlusOutlined, StopOutlined} from '@ant-design/icons';
+import {CheckCircleOutlined, EditOutlined, EyeOutlined, PlusOutlined} from '@ant-design/icons';
 import type {ActionType, ProColumns} from '@ant-design/pro-components';
 import {
     ModalForm,
@@ -27,6 +29,7 @@ import {
 } from '@ant-design/pro-components';
 import {Button, Descriptions, Drawer, message, Modal, Tag} from 'antd';
 import {useRef, useState} from 'react';
+import {ActivityReadinessSummary} from '../ActivityReadinessSummary';
 
 const stateLabels: Record<ActivityDefinitionState, { color: string; text: string }> = {
     draft: {color: 'default', text: '草稿'},
@@ -82,16 +85,31 @@ function ActivityDefinitionPage() {
         }
     };
 
-    const confirmStateChange = (activity: ActivityDefinitionItem, targetState: 'open' | 'close') => {
+    const confirmStateChange = async (activity: ActivityDefinitionItem, targetState: 'open' | 'close') => {
         const opening = targetState === 'open';
+        let readinessReport: ActivityReadinessReport | undefined;
+        if (opening) {
+            try {
+                readinessReport = await checkActivityReadiness(activity.activityId);
+            } catch (error) {
+                message.error(getApiErrorMessage(error, '活动开放检查失败'));
+                return;
+            }
+        }
+
         Modal.confirm({
             title: opening ? '开放活动' : '关闭活动',
             content: opening
-                ? `确认开放“${activity.activityName}”？开放后核心配置不可再编辑。`
+                ? <ActivityReadinessSummary
+                    report={readinessReport!}
+                    operationName="开放"
+                    description="开放后核心配置不可直接编辑。"
+                />
                 : `确认关闭“${activity.activityName}”？关闭后用户不能继续参与。`,
-            okText: opening ? '开放' : '关闭',
+            width: opening ? 720 : 520,
+            okText: opening && !readinessReport?.ready ? '存在阻断项' : opening ? '确认开放' : '关闭',
             cancelText: '取消',
-            okButtonProps: {danger: !opening},
+            okButtonProps: {danger: !opening, disabled: opening && !readinessReport?.ready},
             async onOk() {
                 try {
                     await changeActivityDefinitionState(activity.activityId, targetState, activity.version);

@@ -138,6 +138,7 @@ public enum BusinessResponseCode implements IResponseCode {
     ACTIVITY_ARCHIVE_FAILED(500_002_014, "activity.archive-failed", "活动归档失败"),
     ACTIVITY_DEGRADED(500_002_015, "activity.degraded", "活动火爆，请稍后再试"),
     ACTIVITY_ACCESS_DENIED(500_002_016, "activity.access.denied", "当前用户不允许参与活动"),
+    ACTIVITY_DEFINITION_NOT_READY(500_002_017, "activity.definition.not-ready", "活动配置尚未满足开放条件"),
 
     ACTIVITY_SKU_NOT_FOUND(500_003_001, "activity.sku.not-found", "活动 SKU 不存在"),
     ACTIVITY_SKU_STOCK_NOT_ENOUGH(500_003_002, "activity.sku.stock.not-enough", "活动 SKU 库存不足"),

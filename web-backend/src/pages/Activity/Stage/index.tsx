@@ -5,8 +5,9 @@ import {
     queryActivityStages,
     updateActivityStage,
 } from '@/services/activity/activity-stage';
-import {queryOpenActivityOptions} from '@/services/activity/activity-definition';
+import {checkActivityReadiness, queryOpenActivityOptions} from '@/services/activity/activity-definition';
 import type {
+    ActivityReadinessReport,
     ActivityStageFormValues,
     ActivityStageItem,
     ActivityStageQuery,
@@ -18,6 +19,7 @@ import type {ActionType, ProColumns} from '@ant-design/pro-components';
 import {ModalForm, PageContainer, ProForm, ProFormSelect, ProFormText, ProTable} from '@ant-design/pro-components';
 import {Button, Descriptions, Drawer, message, Modal, Tag} from 'antd';
 import {useRef, useState} from 'react';
+import {ActivityReadinessSummary} from '../ActivityReadinessSummary';
 
 const stateLabels: Record<ActivityStageState, { color: string; text: string }> = {
     create: {color: 'default', text: '待上架'},
@@ -36,6 +38,7 @@ function ActivityStagePage() {
     const [editingStage, setEditingStage] = useState<ActivityStageItem>();
     const [detailStage, setDetailStage] = useState<ActivityStageItem>();
     const [detailLoading, setDetailLoading] = useState(false);
+    const [checkingStageId, setCheckingStageId] = useState<string>();
 
     const reloadTable = async () => {
         await actionRef.current?.reload();
@@ -86,15 +89,41 @@ function ActivityStagePage() {
         }
     };
 
-    const confirmPublish = (stage: ActivityStageItem) => {
+    const confirmPublish = async (stage: ActivityStageItem) => {
+        setCheckingStageId(stage.stageId);
+        let latestStage: ActivityStageItem;
+        let readinessReport: ActivityReadinessReport;
+        try {
+            latestStage = await getActivityStage(stage.stageId);
+            if (latestStage.state !== 'create') {
+                message.warning('当前展台状态已经变化，请刷新列表后重试');
+                await reloadTable();
+                return;
+            }
+            readinessReport = await checkActivityReadiness(latestStage.activityId);
+        } catch (error) {
+            message.error(getApiErrorMessage(error, '活动发布检查失败'));
+            return;
+        } finally {
+            setCheckingStageId(undefined);
+        }
+
         Modal.confirm({
             title: '发布活动',
-            content: `将先预热活动 ${stage.activityId}，成功后替换 ${stage.channel}/${stage.source} 当前生效的活动。确认继续？`,
-            okText: '预热并发布',
+            content: (
+                <ActivityReadinessSummary
+                    report={readinessReport}
+                    operationName="发布"
+                    description={`检查通过后将预热活动，并替换 ${latestStage.channel}/${latestStage.source} 当前生效的活动。`}
+                />
+            ),
+            width: 720,
+            okText: readinessReport.ready ? '预热并发布' : '存在阻断项',
             cancelText: '取消',
+            okButtonProps: {disabled: !readinessReport.ready},
             async onOk() {
                 try {
-                    await publishActivityStage(stage.stageId, stage.version);
+                    await publishActivityStage(latestStage.stageId, latestStage.version);
                     message.success('活动已完成预热并发布');
                     await reloadTable();
                 } catch (error) {
@@ -140,7 +169,8 @@ function ActivityStagePage() {
                     </Button>
                 ) : null,
                 record.state === 'create' ? (
-                    <Button key="publish" type="link" icon={<RocketOutlined/>} onClick={() => confirmPublish(record)}>
+                    <Button key="publish" type="link" icon={<RocketOutlined/>}
+                            loading={checkingStageId === record.stageId} onClick={() => confirmPublish(record)}>
                         发布
                     </Button>
                 ) : null,

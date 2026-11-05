@@ -3,6 +3,7 @@ package com.lavyoung.marketforge.domain.activity.service.impl;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityCountDefinitionEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityDefinitionEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivitySkuDefinitionEntity;
+import com.lavyoung.marketforge.domain.activity.model.vo.ActivityDefinitionStateVO;
 import com.lavyoung.marketforge.domain.activity.model.vo.ActivityReadinessIssueVO;
 import com.lavyoung.marketforge.domain.activity.model.vo.ActivityReadinessReportVO;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityCountDefinitionRepository;
@@ -23,17 +24,17 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * 活动定义开放就绪检查器默认实现。
+ * 活动配置运行就绪检查器默认实现。
  *
  * <p>该检查器负责聚合活动、次数配置、活动 SKU 和抽奖策略的只读状态，
- * 将阻止活动开放的问题、运营风险和配置建议组织成统一报告。</p>
+ * 将阻止活动开放或展台发布的问题、运营风险和配置建议组织成统一报告。</p>
  *
  * <p>活动自身规则和关联对象规则使用同一次业务检查时间。次数配置使用批量查询，
  * 避免按照 SKU 数量产生 N+1 数据库访问。策略内部规则复用现有策略就绪检查器，
  * 保证活动检查和策略发布使用相同的概率、奖品及规则标准。</p>
  *
- * <p>该实现不修改任何聚合，也不预热 Redis。检查通过只代表配置满足开放条件，
- * 真正的活动状态迁移和策略预热仍由 Application Service 在事务中编排。</p>
+ * <p>该实现不修改任何聚合，也不预热 Redis。检查通过只代表配置满足运行条件，
+ * 真正的活动状态迁移、策略预热和展台切换仍由 Application Service 编排。</p>
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -74,21 +75,26 @@ public class ActivityDefinitionReadinessChecker implements IActivityDefinitionRe
     }
 
     /**
-     * 检查活动自身的生命周期状态和时间范围。
+     * 检查活动生命周期状态和有效时间。
      *
-     * <p>只有草稿活动可以执行“开放”操作。活动结束时间已经到达时必须阻止开放；
-     * 活动开始时间已经到达但尚未结束时允许开放，不过需要提示运营人员活动将立即生效。</p>
+     * <p>草稿活动执行该检查，是为了判断其能否开放；开放活动执行该检查，
+     * 是为了判断其能否继续进入展台预热和发布流程。因此，就绪检查器允许
+     * 草稿和开放两种状态，具体操作所要求的精确状态由对应应用服务校验。</p>
      *
-     * @param definition 活动定义
-     * @param checkedAt  本次检查时间
-     * @param issues     问题收集器
+     * <p>关闭状态是不可逆终态，不能再次开放或发布。活动结束时间已经到达时
+     * 必须阻止后续操作；活动已经开始但尚未结束时允许继续，不过需要提醒
+     * 运营人员活动将在发布后立即对用户生效。</p>
+     *
+     * @param definition 待检查的活动定义
+     * @param checkedAt  本次检查采用的业务时间
+     * @param issues     用于收集阻断错误、警告和建议的问题上下文
      */
     private void collectActivityIssues(ActivityDefinitionEntity definition, LocalDateTime checkedAt, ReadinessIssues issues) {
-        if (!definition.canEdit()) {
+        if (definition.state() == ActivityDefinitionStateVO.CLOSE) {
             issues.error(
-                    "activity.state.not-draft",
+                    "activity.state.closed",
                     "state",
-                    "只有草稿状态的活动可以执行开放操作"
+                    "活动已经关闭，不能再次开放或发布"
             );
         }
 
@@ -96,7 +102,7 @@ public class ActivityDefinitionReadinessChecker implements IActivityDefinitionRe
             issues.error(
                     "activity.time.expired",
                     "endDateTime",
-                    "活动结束时间已经到达，不能继续开放"
+                    "活动结束时间已经到达，不能继续开放或发布"
             );
             return;
         }
@@ -105,7 +111,7 @@ public class ActivityDefinitionReadinessChecker implements IActivityDefinitionRe
             issues.warning(
                     "activity.time.already-started",
                     "beginDateTime",
-                    "活动开始时间已经到达，开放后将立即允许用户参与"
+                    "活动开始时间已经到达，发布后将立即允许用户参与"
             );
         }
     }
@@ -288,7 +294,7 @@ public class ActivityDefinitionReadinessChecker implements IActivityDefinitionRe
      * <p>快照将活动定义、活动 SKU 和批量读取的次数配置作为一个完整检查上下文，
      * 防止检查方法参数持续膨胀。集合在构造时复制，避免检查期间被外部修改。</p>
      *
-     * @param definition       活动定义
+     * @param definition       活动定义x
      * @param skuDefinitions   当前活动全部 SKU
      * @param countDefinitions 活动和 SKU 引用的次数配置
      */
