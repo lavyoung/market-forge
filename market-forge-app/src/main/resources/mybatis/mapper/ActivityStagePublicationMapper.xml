@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lavyoung.marketforge.infrastructure.persistent.dao.activity.IActivityStagePublicationDao">
+
+    <resultMap id="activityStagePublicationResultMap"
+               type="com.lavyoung.marketforge.infrastructure.persistent.po.activity.ActivityStagePublicationPO">
+        <id column="id" property="id"/>
+        <result column="publication_id" property="publicationId"/>
+        <result column="stage_id" property="stageId"/>
+        <result column="stage_version" property="stageVersion"/>
+        <result column="activity_id" property="activityId"/>
+        <result column="channel" property="channel"/>
+        <result column="source" property="source"/>
+        <result column="state" property="state"/>
+        <result column="phase" property="phase"/>
+        <result column="attempt_count" property="attemptCount"/>
+        <result column="operator" property="operator"/>
+        <result column="failure_code" property="failureCode"/>
+        <result column="failure_reason" property="failureReason"/>
+        <result column="published_at" property="publishedAt"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="activityStagePublicationColumns">
+        id, publication_id, stage_id, stage_version, activity_id,
+        channel, source, state, phase, attempt_count, operator,
+        failure_code, failure_reason, published_at, create_time, update_time
+    </sql>
+
+    <select id="queryByStageAndVersion" resultMap="activityStagePublicationResultMap">
+        SELECT
+        <include refid="activityStagePublicationColumns"/>
+        FROM raffle_activity_stage_publication
+        WHERE stage_id = #{stageId}
+        AND stage_version = #{stageVersion}
+        LIMIT 1
+    </select>
+
+    <update id="transition"
+            parameterType="com.lavyoung.marketforge.infrastructure.persistent.model.ActivityStagePublicationTransitionParam">
+        UPDATE raffle_activity_stage_publication
+        SET state = #{targetState},
+            phase = #{targetPhase},
+            attempt_count = #{targetAttemptCount},
+            operator = #{operator},
+            failure_code = #{failureCode},
+            failure_reason = #{failureReason},
+            published_at = #{publishedAt},
+            update_time = #{updateTime}
+        WHERE publication_id = #{publicationId}
+        AND state = #{expectedState}
+        AND phase = #{expectedPhase}
+        AND attempt_count = #{expectedAttemptCount}
+    </update>
+
+</mapper>

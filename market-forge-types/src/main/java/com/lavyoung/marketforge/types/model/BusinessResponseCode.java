@@ -189,6 +189,9 @@ public enum BusinessResponseCode implements IResponseCode {
     ACTIVITY_STAGE_DUPLICATED(500_006_004, "activity.stage.duplicated", "活动展台已存在"),
     ACTIVITY_STAGE_STATE_ERROR(500_006_005, "activity.stage.state-error", "活动展台状态异常"),
     ACTIVITY_STAGE_CONFLICT(500_006_006, "activity.stage.conflict", "活动展台已被修改，请刷新后重试"),
+    ACTIVITY_STAGE_PUBLICATION_CREATE_FAILED(500_006_007, "activity.stage.publication.create-failed", "活动展台发布记录创建失败"),
+    ACTIVITY_STAGE_PUBLICATION_ID_CONFLICT(500_006_008, "activity.stage.publication.id-conflict", "活动展台发布标识冲突"),
+    ACTIVITY_STAGE_PUBLICATION_UPDATE_FAILED(500_006_009, "activity.stage.publication.update-failed", "活动展台发布记录更新失败"),
 
     ACTIVITY_COUNT_DEFINITION_CREATE_FAILED(500_007_001, "activity.count.definition.create-failed", "活动次数配置创建失败"),
     ACTIVITY_COUNT_DEFINITION_DUPLICATED(500_007_002, "activity.count.definition.duplicated", "活动次数配置已存在"),
