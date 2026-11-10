@@ -21,16 +21,9 @@ import org.springframework.dao.DuplicateKeyException;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * 活动展台发布记录仓储测试。
@@ -75,6 +68,40 @@ class ActivityStagePublicationRepositoryTest {
 
         // Then
         assertEquals(Optional.of(expected), actual);
+    }
+
+    /**
+     * 验证最近发布任务查询会通过转换器返回领域实体。
+     */
+    @Test
+    void shouldQueryLatestPublicationByStageId() {
+        // Given
+        ActivityStagePublicationPO po = new ActivityStagePublicationPO();
+        ActivityStagePublicationEntity expected = publication(910001L);
+        when(activityStagePublicationDao.queryLatestByStageId(900001L)).thenReturn(Optional.of(po));
+        when(activityStagePublicationAssembler.toEntity(po)).thenReturn(expected);
+
+        // When
+        Optional<ActivityStagePublicationEntity> actual = repository.queryLatestByStageId(900001L);
+
+        // Then
+        assertEquals(Optional.of(expected), actual);
+    }
+
+    /**
+     * 验证空展台标识会在访问 DAO 前被拒绝。
+     */
+    @Test
+    void shouldRejectNullStageIdWhenQueryingLatestPublication() {
+        // When
+        NullPointerException exception = assertThrows(
+                NullPointerException.class, () -> repository.queryLatestByStageId(null));
+
+        // Then
+        assertAll(
+                () -> assertEquals("stageId must not be null", exception.getMessage()),
+                () -> verify(activityStagePublicationDao, never()).queryLatestByStageId(any())
+        );
     }
 
     /**

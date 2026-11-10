@@ -375,6 +375,47 @@ class ActivityStagePublicationApplicationServiceImplTest {
                 exception.getResponseCode());
     }
 
+    /**
+     * 验证最近发布任务查询不依赖当前展台版本，并完整转换发布结果。
+     */
+    @Test
+    void shouldQueryLatestPublicationByStageId() {
+        // Given
+        ActivityStagePublicationEntity succeeded = succeededPublication();
+        when(activityStagePublicationRepository.queryLatestByStageId(STAGE_ID))
+                .thenReturn(Optional.of(succeeded));
+
+        // When
+        ActivityStagePublicationResult result = applicationService.queryLatest(STAGE_ID);
+
+        // Then
+        assertAll(
+                () -> assertEquals(PUBLICATION_ID, result.publicationId()),
+                () -> assertEquals(STAGE_ID, result.stageId()),
+                () -> assertEquals(STAGE_VERSION, result.stageVersion()),
+                () -> assertEquals("succeeded", result.state()),
+                () -> assertEquals("completed", result.phase())
+        );
+    }
+
+    /**
+     * 验证从未发布的展台查询最近任务时返回发布任务专属错误码。
+     */
+    @Test
+    void shouldRejectMissingLatestPublication() {
+        // Given
+        when(activityStagePublicationRepository.queryLatestByStageId(STAGE_ID))
+                .thenReturn(Optional.empty());
+
+        // When
+        BusinessException exception = assertThrows(
+                BusinessException.class, () -> applicationService.queryLatest(STAGE_ID));
+
+        // Then
+        assertEquals(BusinessResponseCode.ACTIVITY_STAGE_PUBLICATION_NOT_FOUND,
+                exception.getResponseCode());
+    }
+
     private void stubNewPublication(ActivityStageEntity stage) {
         when(activityStageRepository.queryByStageId(STAGE_ID)).thenReturn(Optional.of(stage));
         when(activityStagePublicationRepository.queryByStageAndVersion(STAGE_ID, STAGE_VERSION))

@@ -49,4 +49,17 @@ public interface IActivityStagePublicationApplicationService {
      * @throws com.lavyoung.marketforge.types.exception.BusinessException 发布任务不存在时抛出
      */
     ActivityStagePublicationResult query(Long stageId, int stageVersion);
+
+    /**
+     * 查询指定展台最近一次发布任务。
+     *
+     * <p>该查询不依赖当前展台版本，适用于展台发布成功、失败或后续失效后，
+     * 运营后台重新加载页面并查看最近一次发布结果。</p>
+     *
+     * @param stageId 展台业务标识
+     * @return 最近一次发布任务
+     * @throws NullPointerException                                       展台标识为空时抛出
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 展台从未产生发布任务时抛出
+     */
+    ActivityStagePublicationResult queryLatest(Long stageId);
 }

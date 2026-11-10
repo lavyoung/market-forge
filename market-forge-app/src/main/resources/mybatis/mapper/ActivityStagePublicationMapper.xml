@@ -39,6 +39,15 @@
         LIMIT 1
     </select>
 
+    <select id="queryLatestByStageId" resultMap="activityStagePublicationResultMap">
+        SELECT
+        <include refid="activityStagePublicationColumns"/>
+        FROM raffle_activity_stage_publication
+        WHERE stage_id = #{stageId}
+        ORDER BY stage_version DESC
+        LIMIT 1
+    </select>
+
     <update id="transition"
             parameterType="com.lavyoung.marketforge.infrastructure.persistent.model.ActivityStagePublicationTransitionParam">
         UPDATE raffle_activity_stage_publication

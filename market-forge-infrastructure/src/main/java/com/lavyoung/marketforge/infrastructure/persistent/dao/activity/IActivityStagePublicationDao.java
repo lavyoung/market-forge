@@ -32,6 +32,14 @@ public interface IActivityStagePublicationDao extends BaseMapper<ActivityStagePu
                                                                 @Param("stageVersion") int stageVersion);
 
     /**
+     * 查询指定展台版本最大的发布记录。
+     *
+     * @param stageId 展台业务标识
+     * @return 最近一次发布记录；该展台从未发布时返回空
+     */
+    Optional<ActivityStagePublicationPO> queryLatestByStageId(@Param("stageId") Long stageId);
+
+    /**
      * 使用原状态快照作为条件更新发布进度。
      *
      * @param transition 发布记录迁移参数

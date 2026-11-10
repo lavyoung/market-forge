@@ -27,6 +27,18 @@ public interface IActivityStagePublicationRepository {
     Optional<ActivityStagePublicationEntity> queryByStageAndVersion(Long stageId, int stageVersion);
 
     /**
+     * 查询指定展台最近一次创建的发布任务。
+     *
+     * <p>最近一次任务按照展台版本确定，而不是按照更新时间确定。失败重试会更新同一条任务的
+     * 更新时间，但不会产生新的展台版本，因此展台版本才能准确表达配置发布顺序。</p>
+     *
+     * @param stageId 展台业务标识
+     * @return 最近一次发布任务；该展台从未发布时返回空
+     * @throws NullPointerException 展台标识为空时抛出
+     */
+    Optional<ActivityStagePublicationEntity> queryLatestByStageId(Long stageId);
+
+    /**
      * 幂等创建发布记录。
      *
      * <p>数据库必须对 {@code stage_id + stage_version} 建立唯一约束。

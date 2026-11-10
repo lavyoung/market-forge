@@ -44,6 +44,13 @@ public class ActivityStagePublicationRepository implements IActivityStagePublica
     }
 
     @Override
+    public Optional<ActivityStagePublicationEntity> queryLatestByStageId(Long stageId) {
+        Long validStageId = Objects.requireNonNull(stageId, "stageId must not be null");
+        return activityStagePublicationDao.queryLatestByStageId(validStageId)
+                .map(activityStagePublicationAssembler::toEntity);
+    }
+
+    @Override
     public boolean createIfAbsent(ActivityStagePublicationEntity publication) {
         Objects.requireNonNull(publication, "publication must not be null");
         try {

@@ -75,6 +75,15 @@ public class ActivityStagePublicationApplicationServiceImpl implements IActivity
         return toResult(queryPublicationRequired(stageId, stageVersion));
     }
 
+    @Override
+    public ActivityStagePublicationResult queryLatest(Long stageId) {
+        Long validStageId = Objects.requireNonNull(stageId, "stageId must not be null");
+        return activityStagePublicationRepository.queryLatestByStageId(validStageId)
+                .map(this::toResult)
+                .orElseThrow(() -> BusinessException.of(
+                        BusinessResponseCode.ACTIVITY_STAGE_PUBLICATION_NOT_FOUND, validStageId));
+    }
+
     /**
      * 准备发布任务并判断当前请求是否取得执行权。
      *
