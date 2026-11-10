@@ -1,15 +1,19 @@
 import {
     createActivityStage,
     getActivityStage,
+    getActivityStagePublication,
     publishActivityStage,
     queryActivityStages,
     updateActivityStage,
+    waitForActivityStagePublication,
 } from '@/services/activity/activity-stage';
 import {checkActivityReadiness, queryOpenActivityOptions} from '@/services/activity/activity-definition';
 import type {
     ActivityReadinessReport,
     ActivityStageFormValues,
     ActivityStageItem,
+    ActivityStagePublicationItem,
+    ActivityStagePublicationPhase,
     ActivityStageQuery,
     ActivityStageState,
 } from '@/services/activity/types';
@@ -27,6 +31,13 @@ const stateLabels: Record<ActivityStageState, { color: string; text: string }> =
     expire: {color: 'error', text: '已失效'},
 };
 
+const publicationPhaseLabels: Record<ActivityStagePublicationPhase, string> = {
+    checking: '配置检查',
+    preheating: '运行数据预热',
+    switching: '生效展台切换',
+    completed: '发布完成',
+};
+
 /**
  * 活动展台运营管理页面。
  *
@@ -39,6 +50,7 @@ function ActivityStagePage() {
     const [detailStage, setDetailStage] = useState<ActivityStageItem>();
     const [detailLoading, setDetailLoading] = useState(false);
     const [checkingStageId, setCheckingStageId] = useState<string>();
+    const [publishingStageId, setPublishingStageId] = useState<string>();
 
     const reloadTable = async () => {
         await actionRef.current?.reload();
@@ -122,13 +134,19 @@ function ActivityStagePage() {
             cancelText: '取消',
             okButtonProps: {disabled: !readinessReport.ready},
             async onOk() {
+                setPublishingStageId(latestStage.stageId);
                 try {
-                    await publishActivityStage(latestStage.stageId, latestStage.version);
-                    message.success('活动已完成预热并发布');
+                    let publication = await publishActivityStage(latestStage.stageId, latestStage.version);
+                    if (publication.state === 'processing') {
+                        publication = await waitForActivityStagePublication(latestStage.stageId, latestStage.version);
+                    }
+                    showPublicationResult(publication);
                     await reloadTable();
                 } catch (error) {
-                    message.error(getApiErrorMessage(error, '活动发布失败，原生效活动保持不变'));
+                    await showPublicationFailure(latestStage.stageId, latestStage.version, error);
                     throw error;
+                } finally {
+                    setPublishingStageId(undefined);
                 }
             },
         });
@@ -170,7 +188,8 @@ function ActivityStagePage() {
                 ) : null,
                 record.state === 'create' ? (
                     <Button key="publish" type="link" icon={<RocketOutlined/>}
-                            loading={checkingStageId === record.stageId} onClick={() => confirmPublish(record)}>
+                            loading={checkingStageId === record.stageId || publishingStageId === record.stageId}
+                            onClick={() => confirmPublish(record)}>
                         发布
                     </Button>
                 ) : null,
@@ -276,6 +295,36 @@ function toFormValues(stage?: ActivityStageItem): ActivityStageFormValues {
 
 function loadOpenActivityOptions({keyWords}: { keyWords?: string }) {
     return queryOpenActivityOptions(keyWords);
+}
+
+function showPublicationResult(publication: ActivityStagePublicationItem) {
+    if (publication.state === 'succeeded') {
+        message.success(`活动已完成预热并发布，本次为第 ${publication.attemptCount} 次尝试`);
+        return;
+    }
+    if (publication.state === 'failed') {
+        message.error(formatPublicationFailure(publication));
+        return;
+    }
+    message.warning(`发布任务仍在${publicationPhaseLabels[publication.phase]}，请稍后刷新查看结果`);
+}
+
+async function showPublicationFailure(stageId: string, stageVersion: number, error: unknown) {
+    try {
+        const publication = await getActivityStagePublication(stageId, stageVersion);
+        if (publication.state === 'failed') {
+            message.error(formatPublicationFailure(publication));
+            return;
+        }
+    } catch {
+        // 发布任务可能尚未创建，继续展示原始接口错误。
+    }
+    message.error(getApiErrorMessage(error, '活动发布失败，原生效活动保持不变'));
+}
+
+function formatPublicationFailure(publication: ActivityStagePublicationItem): string {
+    const phase = publicationPhaseLabels[publication.phase];
+    return `${phase}失败：${publication.failureReason ?? '请检查活动配置后重试'}`;
 }
 
 export default ActivityStagePage;

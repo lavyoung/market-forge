@@ -105,6 +105,52 @@ export interface ActivityStageItem {
 }
 
 /**
+ * 活动展台发布任务状态。
+ */
+export type ActivityStagePublicationState = 'processing' | 'succeeded' | 'failed';
+
+/**
+ * 活动展台发布执行阶段。
+ */
+export type ActivityStagePublicationPhase = 'checking' | 'preheating' | 'switching' | 'completed';
+
+/**
+ * 活动展台发布任务详情。
+ */
+export interface ActivityStagePublicationItem {
+    /** 发布任务业务标识。 */
+    publicationId: string;
+    /** 活动展台业务标识。 */
+    stageId: string;
+    /** 本次发布对应的展台版本。 */
+    stageVersion: number;
+    /** 本次发布的活动标识快照。 */
+    activityId: string;
+    /** 投放渠道快照。 */
+    channel: string;
+    /** 流量来源快照。 */
+    source: string;
+    /** 发布任务整体状态。 */
+    state: ActivityStagePublicationState;
+    /** 当前执行阶段或失败所在阶段。 */
+    phase: ActivityStagePublicationPhase;
+    /** 已执行的发布尝试次数。 */
+    attemptCount: number;
+    /** 最近一次执行发布的运营人员。 */
+    operator: string;
+    /** 最近一次失败的稳定错误编码。 */
+    failureCode: string | null;
+    /** 最近一次失败的安全说明。 */
+    failureReason: string | null;
+    /** 发布成功时间。 */
+    publishedAt: string | null;
+    /** 发布任务创建时间。 */
+    createTime: string;
+    /** 最近一次状态变化时间。 */
+    updateTime: string;
+}
+
+/**
  * ProTable 提交的活动展台查询条件。
  */
 export interface ActivityStageQuery {

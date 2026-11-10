@@ -1,43 +1,40 @@
 package com.lavyoung.marketforge.application.activity.service;
 
-import com.lavyoung.marketforge.application.activity.model.*;
+import com.lavyoung.marketforge.application.activity.model.ActivityStageResult;
+import com.lavyoung.marketforge.application.activity.model.CreateActivityStageCommand;
+import com.lavyoung.marketforge.application.activity.model.PublishActivityStageCommand;
+import com.lavyoung.marketforge.application.activity.model.UpdateActivityStageCommand;
 import com.lavyoung.marketforge.application.activity.service.impl.ActivityStageApplicationServiceImpl;
-import com.lavyoung.marketforge.application.activity.service.impl.ActivityStagePublicationTransaction;
-import com.lavyoung.marketforge.domain.activity.model.entity.ActivityEntity;
 import com.lavyoung.marketforge.domain.activity.model.entity.ActivityStageEntity;
 import com.lavyoung.marketforge.domain.activity.model.vo.ActivityStageStateVO;
-import com.lavyoung.marketforge.domain.activity.model.vo.ActivityStateVO;
-import com.lavyoung.marketforge.domain.activity.model.vo.AwardUnlockScopeVO;
-import com.lavyoung.marketforge.domain.activity.repository.IActivityRepository;
 import com.lavyoung.marketforge.domain.activity.repository.IActivityStageRepository;
 import com.lavyoung.marketforge.types.exception.BusinessException;
 import com.lavyoung.marketforge.types.model.BusinessResponseCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 /**
- * 活动展台应用服务测试。
+ * 活动展台维护应用服务测试。
  *
- * <p>验证草稿创建与修改、发布前活动校验、预热和事务切换顺序，
- * 以及用户端按渠道来源解析当前活动。</p>
+ * <p>验证草稿创建与修改、当前生效活动解析，以及旧发布入口只负责委托新的发布应用服务。
+ * 发布检查、预热、幂等与事务一致性由专门的发布应用服务测试覆盖。</p>
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
- * @date 2026/10/22
+ * @date 2026/11/10
  */
+@SuppressWarnings("deprecation")
 @ExtendWith(MockitoExtension.class)
 class ActivityStageApplicationServiceTest {
 
@@ -45,28 +42,18 @@ class ActivityStageApplicationServiceTest {
     private IActivityStageRepository activityStageRepository;
 
     @Mock
-    private IActivityRepository activityRepository;
-
-    @Mock
-    private IActivityReadinessApplicationService activityReadinessApplicationService;
-
-    @Mock
-    private IActivityRaffleApplicationService activityRaffleApplicationService;
-
-    @Mock
-    private ActivityStagePublicationTransaction publicationTransaction;
+    private IActivityStagePublicationApplicationService activityStagePublicationApplicationService;
 
     private ActivityStageApplicationServiceImpl applicationService;
 
     @BeforeEach
     void setUp() {
         applicationService = new ActivityStageApplicationServiceImpl(
-                activityStageRepository, activityRepository, activityReadinessApplicationService,
-                activityRaffleApplicationService, publicationTransaction);
+                activityStageRepository, activityStagePublicationApplicationService);
     }
 
     /**
-     * 验证创建命令会生成业务标识并以 CREATE 状态保存。
+     * 验证创建命令会生成业务标识并以待上架状态保存。
      */
     @Test
     void shouldCreateDraftStage() {
@@ -76,8 +63,7 @@ class ActivityStageApplicationServiceTest {
             savedStage.set(invocation.getArgument(0, ActivityStageEntity.class));
             return null;
         }).when(activityStageRepository).create(any());
-        when(activityStageRepository.queryByStageId(anyLong()))
-                .thenAnswer(invocation -> Optional.of(savedStage.get()));
+        when(activityStageRepository.queryByStageId(anyLong())).thenAnswer(invocation -> Optional.of(savedStage.get()));
 
         // When
         ActivityStageResult result = applicationService.create(
@@ -104,8 +90,8 @@ class ActivityStageApplicationServiceTest {
                 900001L, "app", "home", 100002L, 1, "operator-002");
 
         // When
-        BusinessException exception = assertThrows(
-                BusinessException.class, () -> applicationService.updateDraft(command));
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> applicationService.updateDraft(command));
 
         // Then
         assertEquals(BusinessResponseCode.ACTIVITY_STAGE_CONFLICT, exception.getResponseCode());
@@ -113,115 +99,63 @@ class ActivityStageApplicationServiceTest {
     }
 
     /**
-     * 验证活动预热成功后才执行展台发布事务。
+     * 验证旧发布入口只委托新的发布应用服务，并在执行后查询最新展台状态。
      */
     @Test
-    void shouldPreheatBeforePublishingStage() {
+    void shouldDelegateLegacyPublishToPublicationApplicationService() {
         // Given
-        ActivityStageEntity draft = stage(ActivityStageStateVO.CREATE, 1);
+        PublishActivityStageCommand command = new PublishActivityStageCommand(900001L, 1, "operator-002");
         ActivityStageEntity active = stage(ActivityStageStateVO.ACTIVE, 2);
-        when(activityStageRepository.queryByStageId(900001L))
-                .thenReturn(Optional.of(draft), Optional.of(active));
-        when(activityRepository.getActivityEntityByIdActivityId(100001L)).thenReturn(openActivity());
-        when(activityReadinessApplicationService.check(100001L)).thenReturn(readyReport());
+        when(activityStageRepository.queryByStageId(900001L)).thenReturn(Optional.of(active));
 
         // When
-        ActivityStageResult result = applicationService.publish(
-                new PublishActivityStageCommand(900001L, 1, "operator-002"));
+        ActivityStageResult result = applicationService.publish(command);
 
         // Then
-        InOrder inOrder = inOrder(activityRepository, activityReadinessApplicationService,
-                activityRaffleApplicationService, publicationTransaction);
-        inOrder.verify(activityRepository).getActivityEntityByIdActivityId(100001L);
-        inOrder.verify(activityReadinessApplicationService).check(100001L);
-        inOrder.verify(activityRaffleApplicationService).armory(100001L);
-        inOrder.verify(publicationTransaction).publish(draft, 1, "operator-002");
-        assertEquals("active", result.state());
+        assertAll(
+                () -> assertEquals("active", result.state()),
+                () -> assertEquals(2, result.version()),
+                () -> verify(activityStagePublicationApplicationService).publish(command),
+                () -> verify(activityStageRepository).queryByStageId(900001L)
+        );
     }
 
     /**
-     * 验证活动尚未开放时在昂贵的就绪检查和缓存预热之前终止发布。
+     * 验证发布服务失败时原异常直接向上抛出，并且不查询可能仍未变化的展台。
      */
     @Test
-    void shouldRejectPublishingBeforeReadinessCheckWhenActivityIsNotOpen() {
+    void shouldPropagatePublicationFailureWithoutQueryingStage() {
         // Given
-        ActivityStageEntity draft = stage(ActivityStageStateVO.CREATE, 1);
-        when(activityStageRepository.queryByStageId(900001L)).thenReturn(Optional.of(draft));
-        when(activityRepository.getActivityEntityByIdActivityId(100001L)).thenReturn(closedActivity());
+        PublishActivityStageCommand command = new PublishActivityStageCommand(900001L, 1, "operator-002");
+        BusinessException failure = BusinessException.of(
+                BusinessResponseCode.ACTIVITY_ASSEMBLY_FAILED, 100001L);
+        when(activityStagePublicationApplicationService.publish(command)).thenThrow(failure);
 
         // When
-        BusinessException exception = assertThrows(BusinessException.class, () -> applicationService.publish(
-                new PublishActivityStageCommand(900001L, 1, "operator-002")));
+        BusinessException actual = assertThrows(BusinessException.class,
+                () -> applicationService.publish(command));
 
         // Then
-        assertEquals(BusinessResponseCode.ACTIVITY_STATE_ERROR, exception.getResponseCode());
-        verifyNoInteractions(activityReadinessApplicationService, activityRaffleApplicationService,
-                publicationTransaction);
+        assertSame(failure, actual);
+        verifyNoInteractions(activityStageRepository);
     }
 
     /**
-     * 验证就绪报告包含阻断错误时不会产生缓存预热或展台切换副作用。
+     * 验证空发布命令在调用发布服务前被拒绝。
      */
     @Test
-    void shouldRejectPublishingWithoutPreheatingWhenActivityIsNotReady() {
-        // Given
-        ActivityStageEntity draft = stage(ActivityStageStateVO.CREATE, 1);
-        ActivityReadinessIssueResult issue = new ActivityReadinessIssueResult(
-                "activity.sku.missing", "skus", "活动至少需要配置一个额度 SKU");
-        ActivityReadinessResult notReady = new ActivityReadinessResult(
-                100001L, LocalDateTime.of(2026, 11, 5, 12, 0), List.of(issue), List.of(), List.of());
-        when(activityStageRepository.queryByStageId(900001L)).thenReturn(Optional.of(draft));
-        when(activityRepository.getActivityEntityByIdActivityId(100001L)).thenReturn(openActivity());
-        when(activityReadinessApplicationService.check(100001L)).thenReturn(notReady);
-
+    void shouldRejectNullLegacyPublishCommand() {
         // When
-        BusinessException exception = assertThrows(BusinessException.class, () -> applicationService.publish(
-                new PublishActivityStageCommand(900001L, 1, "operator-002")));
+        NullPointerException exception = assertThrows(NullPointerException.class,
+                () -> applicationService.publish(null));
 
         // Then
-        assertEquals(BusinessResponseCode.ACTIVITY_DEFINITION_NOT_READY, exception.getResponseCode());
-        verifyNoInteractions(activityRaffleApplicationService, publicationTransaction);
+        assertEquals("command must not be null", exception.getMessage());
+        verifyNoInteractions(activityStageRepository, activityStagePublicationApplicationService);
     }
 
     /**
-     * 验证预热失败时不能执行数据库生效切换。
-     */
-    @Test
-    void shouldNotPublishWhenPreheatingFails() {
-        // Given
-        ActivityStageEntity draft = stage(ActivityStageStateVO.CREATE, 1);
-        when(activityStageRepository.queryByStageId(900001L)).thenReturn(Optional.of(draft));
-        when(activityRepository.getActivityEntityByIdActivityId(100001L)).thenReturn(openActivity());
-        when(activityReadinessApplicationService.check(100001L)).thenReturn(readyReport());
-        doThrow(BusinessException.of(BusinessResponseCode.ACTIVITY_ASSEMBLY_FAILED, 100001L))
-                .when(activityRaffleApplicationService).armory(100001L);
-
-        // When & Then
-        assertThrows(BusinessException.class, () -> applicationService.publish(
-                new PublishActivityStageCommand(900001L, 1, "operator-002")));
-        verify(publicationTransaction, never()).publish(any(), anyInt(), any());
-    }
-
-    /**
-     * 验证操作人非法时必须在活动查询和缓存预热之前失败，避免产生无审计主体的副作用。
-     */
-    @Test
-    void shouldRejectBlankOperatorBeforePreheating() {
-        // Given
-        PublishActivityStageCommand command = new PublishActivityStageCommand(900001L, 1, " ");
-
-        // When
-        BusinessException exception = assertThrows(BusinessException.class, () -> applicationService.publish(command));
-
-        // Then
-        assertEquals(BusinessResponseCode.ACTIVITY_CONFIG_INVALID, exception.getResponseCode());
-        verify(activityStageRepository, never()).queryByStageId(anyLong());
-        verify(activityRaffleApplicationService, never()).armory(anyLong());
-        verify(publicationTransaction, never()).publish(any(), anyInt(), any());
-    }
-
-    /**
-     * 验证用户端可以根据 SC 获取当前生效活动。
+     * 验证用户端可以根据渠道和来源获取当前生效活动。
      */
     @Test
     void shouldResolveActiveActivityId() {
@@ -240,22 +174,5 @@ class ActivityStageApplicationServiceTest {
         return new ActivityStageEntity(
                 900001L, "wechat", "campaign", 100001L, state, version,
                 "operator-001", "operator-002", null, null);
-    }
-
-    private ActivityEntity openActivity() {
-        return new ActivityEntity(
-                100001L, "测试活动", "发布测试", LocalDateTime.now().minusDays(1), LocalDateTime.now().plusDays(7),
-                200001L, 300001L, AwardUnlockScopeVO.TOTAL, ActivityStateVO.OPEN.getCode());
-    }
-
-    private ActivityEntity closedActivity() {
-        return new ActivityEntity(
-                100001L, "测试活动", "发布测试", LocalDateTime.now().minusDays(1), LocalDateTime.now().plusDays(7),
-                200001L, 300001L, AwardUnlockScopeVO.TOTAL, ActivityStateVO.CLOSE.getCode());
-    }
-
-    private ActivityReadinessResult readyReport() {
-        return new ActivityReadinessResult(
-                100001L, LocalDateTime.of(2026, 11, 5, 12, 0), List.of(), List.of(), List.of());
     }
 }

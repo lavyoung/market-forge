@@ -2,7 +2,13 @@ import {request} from '@umijs/max';
 import {getAdminCsrfToken} from '../auth/auth';
 import type {ApiResponse, PageResult} from '../types';
 import {requireResponseData} from '../types';
-import type {ActivityStageFormValues, ActivityStageItem, ActivityStagePage, ActivityStageQuery} from './types';
+import type {
+    ActivityStageFormValues,
+    ActivityStageItem,
+    ActivityStagePage,
+    ActivityStagePublicationItem,
+    ActivityStageQuery,
+} from './types';
 
 /** 活动展台运营管理接口地址。 */
 const ACTIVITY_STAGE_PATH = '/api/admin/activity-stages';
@@ -76,11 +82,50 @@ export async function updateActivityStage(stageId: string, expectedVersion: numb
  *
  * @param stageId 展台业务标识
  * @param expectedVersion 页面最近读取到的乐观锁版本
- * @returns 发布后的活动展台
+ * @returns 发布任务最新状态
  */
-export async function publishActivityStage(stageId: string, expectedVersion: number): Promise<ActivityStageItem> {
-    const response = await writeActivityStage<ActivityStageItem>(`${ACTIVITY_STAGE_PATH}/${encodeURIComponent(stageId)}/publish`, 'POST', {expectedVersion});
+export async function publishActivityStage(stageId: string, expectedVersion: number): Promise<ActivityStagePublicationItem> {
+    const response = await writeActivityStage<ActivityStagePublicationItem>(`${ACTIVITY_STAGE_PATH}/${encodeURIComponent(stageId)}/publish`, 'POST', {expectedVersion});
     return requireResponseData(response);
+}
+
+/**
+ * 查询指定展台版本的发布任务进度。
+ *
+ * @param stageId 展台业务标识
+ * @param stageVersion 发布任务对应的展台版本
+ * @returns 发布任务最新状态
+ */
+export async function getActivityStagePublication(stageId: string, stageVersion: number): Promise<ActivityStagePublicationItem> {
+    const path = `${ACTIVITY_STAGE_PATH}/${encodeURIComponent(stageId)}/publications/${stageVersion}`;
+    const response = await request<ApiResponse<ActivityStagePublicationItem>>(path, {
+        method: 'GET',
+        withCredentials: true,
+    });
+    return requireResponseData(response);
+}
+
+/**
+ * 轮询处理中发布任务，直到任务结束或达到页面等待上限。
+ *
+ * <p>轮询仅用于当前请求命中其他发布请求时同步展示进度。达到上限后返回最新的处理中任务，
+ * 不把前端等待超时误判为服务端发布失败。</p>
+ *
+ * @param stageId 展台业务标识
+ * @param stageVersion 发布任务对应的展台版本
+ * @returns 终态任务或等待上限时的最新任务
+ */
+export async function waitForActivityStagePublication(stageId: string, stageVersion: number): Promise<ActivityStagePublicationItem> {
+    const maxAttempts = 30;
+    const intervalMillis = 1000;
+    let latest = await getActivityStagePublication(stageId, stageVersion);
+
+    for (let attempt = 1; latest.state === 'processing' && attempt < maxAttempts; attempt += 1) {
+        await delay(intervalMillis);
+        latest = await getActivityStagePublication(stageId, stageVersion);
+    }
+
+    return latest;
 }
 
 /**
@@ -108,4 +153,8 @@ function normalizeFormValues(values: ActivityStageFormValues): ActivityStageForm
 function normalizeText(value?: string): string | undefined {
     const normalized = value?.trim();
     return normalized || undefined;
+}
+
+function delay(milliseconds: number): Promise<void> {
+    return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }

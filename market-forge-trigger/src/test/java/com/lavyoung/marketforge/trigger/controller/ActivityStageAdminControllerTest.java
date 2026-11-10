@@ -3,13 +3,12 @@ package com.lavyoung.marketforge.trigger.controller;
 import com.lavyoung.marketforge.api.activity.request.ActivityStageSearchRequest;
 import com.lavyoung.marketforge.api.activity.request.CreateActivityStageRequest;
 import com.lavyoung.marketforge.api.activity.request.PublishActivityStageRequest;
+import com.lavyoung.marketforge.api.activity.response.ActivityStagePublicationResponse;
 import com.lavyoung.marketforge.api.activity.response.ActivityStageResponse;
 import com.lavyoung.marketforge.api.admin.auth.response.AdminOperatorResponse;
-import com.lavyoung.marketforge.application.activity.model.ActivityStageResult;
-import com.lavyoung.marketforge.application.activity.model.ActivityStageSearchQuery;
-import com.lavyoung.marketforge.application.activity.model.CreateActivityStageCommand;
-import com.lavyoung.marketforge.application.activity.model.PublishActivityStageCommand;
+import com.lavyoung.marketforge.application.activity.model.*;
 import com.lavyoung.marketforge.application.activity.service.IActivityStageApplicationService;
+import com.lavyoung.marketforge.application.activity.service.IActivityStagePublicationApplicationService;
 import com.lavyoung.marketforge.application.activity.service.IActivityStageSearchService;
 import com.lavyoung.marketforge.trigger.assembler.ActivityStageApiAssembler;
 import com.lavyoung.marketforge.trigger.security.AdminSessionManager;
@@ -37,6 +36,9 @@ class ActivityStageAdminControllerTest {
 
     @Mock
     private IActivityStageApplicationService activityStageApplicationService;
+
+    @Mock
+    private IActivityStagePublicationApplicationService activityStagePublicationApplicationService;
 
     @Mock
     private IActivityStageSearchService activityStageSearchService;
@@ -95,18 +97,37 @@ class ActivityStageAdminControllerTest {
         Long stageId = 1001L;
         PublishActivityStageRequest request = new PublishActivityStageRequest(2);
         PublishActivityStageCommand command = new PublishActivityStageCommand(stageId, 2, "admin");
-        ActivityStageResult result = mock(ActivityStageResult.class);
-        ActivityStageResponse expected = mock(ActivityStageResponse.class);
+        ActivityStagePublicationResult result = mock(ActivityStagePublicationResult.class);
+        ActivityStagePublicationResponse expected = mock(ActivityStagePublicationResponse.class);
         when(adminSessionManager.currentOperator()).thenReturn(new AdminOperatorResponse("admin", "系统管理员", Set.of("ROLE_ADMIN")));
         when(activityStageApiAssembler.toPublishCommand(stageId, request, "admin")).thenReturn(command);
-        when(activityStageApplicationService.publish(command)).thenReturn(result);
-        when(activityStageApiAssembler.toResponse(result)).thenReturn(expected);
+        when(activityStagePublicationApplicationService.publish(command)).thenReturn(result);
+        when(activityStageApiAssembler.toPublicationResponse(result)).thenReturn(expected);
 
         // When
-        Response<ActivityStageResponse> actual = controller.publishActivityStage(stageId, request);
+        Response<ActivityStagePublicationResponse> actual = controller.publishActivityStage(stageId, request);
 
         // Then
         assertEquals(expected, actual.data());
-        verify(activityStageApplicationService).publish(command);
+        verify(activityStagePublicationApplicationService).publish(command);
+    }
+
+    @Test
+    void shouldQueryPublicationProgressWithoutReadingOperatorSession() {
+        // Given
+        Long stageId = 1001L;
+        int stageVersion = 2;
+        ActivityStagePublicationResult result = mock(ActivityStagePublicationResult.class);
+        ActivityStagePublicationResponse expected = mock(ActivityStagePublicationResponse.class);
+        when(activityStagePublicationApplicationService.query(stageId, stageVersion)).thenReturn(result);
+        when(activityStageApiAssembler.toPublicationResponse(result)).thenReturn(expected);
+
+        // When
+        Response<ActivityStagePublicationResponse> actual =
+                controller.getActivityStagePublication(stageId, stageVersion);
+
+        // Then
+        assertEquals(expected, actual.data());
+        verifyNoInteractions(adminSessionManager);
     }
 }

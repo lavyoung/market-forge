@@ -8,8 +8,8 @@ import com.lavyoung.marketforge.application.activity.model.UpdateActivityStageCo
 /**
  * 活动展台应用服务。
  *
- * <p>负责编排展台草稿维护、活动预热、渠道生效配置切换和用户端活动解析。
- * 生命周期合法性由领域对象判断，数据库并发安全由展台仓储和发布事务共同保证。</p>
+ * <p>负责展台草稿的创建、修改、查询和当前生效活动解析。展台发布已经迁移至
+ * {@link IActivityStagePublicationApplicationService}，旧发布入口仅用于兼容尚未完成迁移的调用方。</p>
  *
  * @author <a href="mailto:lavyoung1325@outlook.com">lavyoung</a>
  * @version 1.0.0
@@ -45,14 +45,18 @@ public interface IActivityStageApplicationService {
     ActivityStageResult updateDraft(UpdateActivityStageCommand command);
 
     /**
-     * 预热并发布指定活动展台。
+     * 使用兼容协议发布指定活动展台。
      *
-     * <p>只有活动与策略运行时数据成功预热后，展台才会切换为生效状态。</p>
+     * <p>该方法将发布命令委托给 {@link IActivityStagePublicationApplicationService}，但仍返回旧版展台结果，
+     * 无法完整表达处理中、失败阶段和重试次数。新的 HTTP 接口应直接调用发布应用服务并返回发布任务结果。</p>
      *
      * @param command 发布命令
-     * @return 发布后的展台配置
-     * @throws com.lavyoung.marketforge.types.exception.BusinessException 活动不可发布、预热失败或并发冲突时抛出
+     * @return 发布请求执行后的最新展台配置
+     * @throws NullPointerException 命令为空时抛出
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 发布任务创建、检查、预热或切换失败时抛出
+     * @deprecated 使用 {@link IActivityStagePublicationApplicationService#publish(PublishActivityStageCommand)}
      */
+    @Deprecated(since = "1.0.0", forRemoval = false)
     ActivityStageResult publish(PublishActivityStageCommand command);
 
     /**

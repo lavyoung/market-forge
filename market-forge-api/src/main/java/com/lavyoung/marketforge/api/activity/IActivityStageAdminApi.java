@@ -4,12 +4,14 @@ import com.lavyoung.marketforge.api.activity.request.ActivityStageSearchRequest;
 import com.lavyoung.marketforge.api.activity.request.CreateActivityStageRequest;
 import com.lavyoung.marketforge.api.activity.request.PublishActivityStageRequest;
 import com.lavyoung.marketforge.api.activity.request.UpdateActivityStageRequest;
+import com.lavyoung.marketforge.api.activity.response.ActivityStagePublicationResponse;
 import com.lavyoung.marketforge.api.activity.response.ActivityStageResponse;
 import com.lavyoung.marketforge.types.model.PageResult;
 import com.lavyoung.marketforge.types.model.Response;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -83,10 +85,22 @@ public interface IActivityStageAdminApi {
      *
      * @param stageId 展台业务标识
      * @param request 发布请求
-     * @return 发布后的展台配置
+     * @return 发布任务最新状态
      * @throws com.lavyoung.marketforge.types.exception.BusinessException 活动不可发布、预热失败或版本冲突时抛出
      */
     @Operation(operationId = "publishActivityStage", summary = "发布活动展台")
     @PostMapping(value = "/{stageId}/publish", consumes = MediaType.APPLICATION_JSON_VALUE)
-    Response<ActivityStageResponse> publishActivityStage(@Positive(message = "展台标识必须为正数") @PathVariable("stageId") Long stageId, @Valid @RequestBody PublishActivityStageRequest request);
+    Response<ActivityStagePublicationResponse> publishActivityStage(@Positive(message = "展台标识必须为正数") @PathVariable("stageId") Long stageId, @Valid @RequestBody PublishActivityStageRequest request);
+
+    /**
+     * 查询指定展台版本的发布任务。
+     *
+     * @param stageId      展台业务标识
+     * @param stageVersion 发布任务对应的展台版本
+     * @return 发布任务最新状态
+     * @throws com.lavyoung.marketforge.types.exception.BusinessException 发布任务不存在时抛出
+     */
+    @Operation(operationId = "getActivityStagePublication", summary = "查询活动展台发布进度")
+    @GetMapping("/{stageId}/publications/{stageVersion}")
+    Response<ActivityStagePublicationResponse> getActivityStagePublication(@Positive(message = "展台标识必须为正数") @PathVariable("stageId") Long stageId, @Min(value = 1, message = "展台版本不能小于 1") @PathVariable("stageVersion") int stageVersion);
 }

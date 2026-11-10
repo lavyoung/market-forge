@@ -5,12 +5,14 @@ import com.lavyoung.marketforge.api.activity.request.ActivityStageSearchRequest;
 import com.lavyoung.marketforge.api.activity.request.CreateActivityStageRequest;
 import com.lavyoung.marketforge.api.activity.request.PublishActivityStageRequest;
 import com.lavyoung.marketforge.api.activity.request.UpdateActivityStageRequest;
+import com.lavyoung.marketforge.api.activity.response.ActivityStagePublicationResponse;
 import com.lavyoung.marketforge.api.activity.response.ActivityStageResponse;
 import com.lavyoung.marketforge.application.activity.model.ActivityStageSearchQuery;
 import com.lavyoung.marketforge.application.activity.model.CreateActivityStageCommand;
 import com.lavyoung.marketforge.application.activity.model.PublishActivityStageCommand;
 import com.lavyoung.marketforge.application.activity.model.UpdateActivityStageCommand;
 import com.lavyoung.marketforge.application.activity.service.IActivityStageApplicationService;
+import com.lavyoung.marketforge.application.activity.service.IActivityStagePublicationApplicationService;
 import com.lavyoung.marketforge.application.activity.service.IActivityStageSearchService;
 import com.lavyoung.marketforge.trigger.assembler.ActivityStageApiAssembler;
 import com.lavyoung.marketforge.trigger.security.AdminSessionManager;
@@ -34,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ActivityStageAdminController implements IActivityStageAdminApi {
 
     private final IActivityStageApplicationService activityStageApplicationService;
+    private final IActivityStagePublicationApplicationService activityStagePublicationApplicationService;
     private final IActivityStageSearchService activityStageSearchService;
     private final ActivityStageApiAssembler activityStageApiAssembler;
     private final AdminSessionManager adminSessionManager;
@@ -62,9 +65,16 @@ public class ActivityStageAdminController implements IActivityStageAdminApi {
     }
 
     @Override
-    public Response<ActivityStageResponse> publishActivityStage(Long stageId, PublishActivityStageRequest request) {
+    public Response<ActivityStagePublicationResponse> publishActivityStage(Long stageId, PublishActivityStageRequest request) {
         PublishActivityStageCommand command = activityStageApiAssembler.toPublishCommand(stageId, request, currentOperator());
-        return Response.success(activityStageApiAssembler.toResponse(activityStageApplicationService.publish(command)));
+        return Response.success(activityStageApiAssembler.toPublicationResponse(
+                activityStagePublicationApplicationService.publish(command)));
+    }
+
+    @Override
+    public Response<ActivityStagePublicationResponse> getActivityStagePublication(Long stageId, int stageVersion) {
+        return Response.success(activityStageApiAssembler.toPublicationResponse(
+                activityStagePublicationApplicationService.query(stageId, stageVersion)));
     }
 
     private String currentOperator() {

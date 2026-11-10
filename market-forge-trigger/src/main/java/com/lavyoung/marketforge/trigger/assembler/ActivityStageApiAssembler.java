@@ -4,6 +4,7 @@ import com.lavyoung.marketforge.api.activity.request.ActivityStageSearchRequest;
 import com.lavyoung.marketforge.api.activity.request.CreateActivityStageRequest;
 import com.lavyoung.marketforge.api.activity.request.PublishActivityStageRequest;
 import com.lavyoung.marketforge.api.activity.request.UpdateActivityStageRequest;
+import com.lavyoung.marketforge.api.activity.response.ActivityStagePublicationResponse;
 import com.lavyoung.marketforge.api.activity.response.ActivityStageResponse;
 import com.lavyoung.marketforge.application.activity.model.*;
 import com.lavyoung.marketforge.types.model.PageRequest;
@@ -82,6 +83,17 @@ public interface ActivityStageApiAssembler {
      * @return 活动展台 API 响应
      */
     ActivityStageResponse toResponse(ActivityStageResult result);
+
+    /**
+     * 将发布任务应用结果转换为 API 响应。
+     *
+     * <p>MapStruct 在协议边界把 {@link Long} 业务标识转换为十进制字符串，
+     * 避免浏览器解析 JSON 数字时损失精度。</p>
+     *
+     * @param result 发布任务应用结果
+     * @return 发布任务 API 响应
+     */
+    ActivityStagePublicationResponse toPublicationResponse(ActivityStagePublicationResult result);
 
     /**
      * 批量转换活动展台应用结果。

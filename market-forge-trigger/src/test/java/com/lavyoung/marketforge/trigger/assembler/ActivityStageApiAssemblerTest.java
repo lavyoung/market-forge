@@ -4,6 +4,7 @@ import com.lavyoung.marketforge.api.activity.request.ActivityStageSearchRequest;
 import com.lavyoung.marketforge.api.activity.request.CreateActivityStageRequest;
 import com.lavyoung.marketforge.api.activity.request.PublishActivityStageRequest;
 import com.lavyoung.marketforge.api.activity.request.UpdateActivityStageRequest;
+import com.lavyoung.marketforge.api.activity.response.ActivityStagePublicationResponse;
 import com.lavyoung.marketforge.api.activity.response.ActivityStageResponse;
 import com.lavyoung.marketforge.application.activity.model.*;
 import com.lavyoung.marketforge.types.model.PageResult;
@@ -25,6 +26,7 @@ class ActivityStageApiAssemblerTest {
 
     private static final Long STAGE_ID = 9_007_199_254_740_993L;
     private static final Long ACTIVITY_ID = 9_007_199_254_740_994L;
+    private static final Long PUBLICATION_ID = 9_007_199_254_740_995L;
     private static final ActivityStageApiAssembler ASSEMBLER = Mappers.getMapper(ActivityStageApiAssembler.class);
 
     @Test
@@ -71,6 +73,31 @@ class ActivityStageApiAssemblerTest {
                 () -> assertEquals(ACTIVITY_ID.toString(), response.activityId()),
                 () -> assertEquals(21L, pageResponse.total()),
                 () -> assertEquals(response, pageResponse.records().get(0))
+        );
+    }
+
+    @Test
+    void shouldMapPublicationResultAndPreserveLongIdentifiersAsStrings() {
+        // Given
+        LocalDateTime createTime = LocalDateTime.of(2026, 11, 10, 10, 0);
+        ActivityStagePublicationResult result = new ActivityStagePublicationResult(
+                PUBLICATION_ID, STAGE_ID, 3, ACTIVITY_ID, "web", "official", "failed", "preheating",
+                2, "admin", "activity.assembly.failed", "活动装配失败", null, createTime,
+                createTime.plusMinutes(1));
+
+        // When
+        ActivityStagePublicationResponse response = ASSEMBLER.toPublicationResponse(result);
+
+        // Then
+        assertAll(
+                () -> assertEquals(PUBLICATION_ID.toString(), response.publicationId()),
+                () -> assertEquals(STAGE_ID.toString(), response.stageId()),
+                () -> assertEquals(ACTIVITY_ID.toString(), response.activityId()),
+                () -> assertEquals("failed", response.state()),
+                () -> assertEquals("preheating", response.phase()),
+                () -> assertEquals(2, response.attemptCount()),
+                () -> assertEquals("activity.assembly.failed", response.failureCode()),
+                () -> assertEquals(createTime.plusMinutes(1), response.updateTime())
         );
     }
 
